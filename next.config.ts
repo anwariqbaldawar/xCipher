@@ -73,14 +73,25 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: '/:path*',
+        source: '/',
         has: [
           {
             type: 'host',
             value: 'www.xsypher.com',
           },
         ],
-        destination: 'https://xsypher.com/:path*',
+        destination: 'https://xsypher.com/',
+        permanent: true,
+      },
+      {
+        source: '/:path+',
+        has: [
+          {
+            type: 'host',
+            value: 'www.xsypher.com',
+          },
+        ],
+        destination: 'https://xsypher.com/:path+',
         permanent: true,
       },
     ];

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { getPublicationSettings } from "@/lib/settings";
 import { siteConfig } from "@/lib/seo";
 import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
@@ -63,32 +62,24 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
-// Resolved per request from the settings row, falling back to the values that
-// used to be hardcoded here. generateMetadata rather than a static object
-// because the publication name is now editable without a deploy.
-export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getPublicationSettings();
-  return {
-    metadataBase: new URL(siteConfig.url),
-    alternates: {
-      canonical: siteConfig.url,
-    },
-    title: settings.tagline
-      ? `${settings.siteName} — ${settings.tagline}`
-      : settings.siteName,
-    description: settings.description,
-    icons: {
-      icon: [
-        { url: settings.faviconUrl || "/icon.svg", type: "image/svg+xml" },
-        { url: settings.faviconUrl || "/favicon.ico", sizes: "any" },
-      ],
-      apple: "/apple-icon.png",
-    },
-    verification: {
-      google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-    },
-  };
-}
+export const metadata: Metadata = {
+  metadataBase: new URL(siteConfig.url),
+  alternates: {
+    canonical: siteConfig.url,
+  },
+  title: `${siteConfig.name} — Independent Technology News, Analysis and Reviews`,
+  description: siteConfig.description,
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/apple-icon.png",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+  },
+};
 
 const websiteJsonLd = JSON.stringify({
   "@context": "https://schema.org",

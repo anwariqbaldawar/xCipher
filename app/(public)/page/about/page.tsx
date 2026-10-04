@@ -24,6 +24,8 @@ import {
 import { SocialIcon } from "@/components/author/AuthorProfileView";
 import { siteConfig } from "@/lib/seo";
 
+export const dynamic = "force-static";
+
 export const metadata: Metadata = {
   title: "About xSypher — Decoding the Future of Technology",
   description:

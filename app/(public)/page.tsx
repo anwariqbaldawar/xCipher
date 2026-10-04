@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 // editorial change still appears immediately; the window below is only the
 // ceiling for anything that changes without an explicit revalidation, such as
 // a view count.
+export const dynamic = "force-static";
 export const revalidate = 300; // homepage
 
 export default async function Home() {
