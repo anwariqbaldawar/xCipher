@@ -97,7 +97,6 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/((?!api(?:/|$)|_next/|favicon\\.ico$|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2)$).*)",
-  ],
+  matcher: ['/admin/:path*', '/api/article/:path*', '/api/upload/:path*'],
 };
+
