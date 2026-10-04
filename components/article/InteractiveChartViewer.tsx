@@ -83,7 +83,7 @@ export default function InteractiveChartViewer({ data, config }: Props) {
         })}
       </div>
 
-      <div className="w-full overflow-x-auto no-scrollbar touch-pan-y">
+      <div className="chart-scroll-wrapper touch-pan-y">
         <div className="h-[400px] min-w-[500px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>

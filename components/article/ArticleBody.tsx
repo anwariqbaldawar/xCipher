@@ -92,10 +92,9 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
       table.removeAttribute('border');
       
       // 1. Implement Horizontal Scrolling Wrapper
-      if (table.parentElement && !table.parentElement.classList.contains('overflow-x-auto')) {
+      if (table.parentElement && !table.parentElement.classList.contains('tableWrapper') && !table.parentElement.classList.contains('overflow-x-auto')) {
         const wrapper = document.createElement('div');
-        wrapper.className = 'w-full overflow-x-auto no-scrollbar scroll-smooth';
-        wrapper.style.setProperty('-webkit-overflow-scrolling', 'touch');
+        wrapper.className = 'tableWrapper';
         
         table.parentElement.insertBefore(wrapper, table);
         wrapper.appendChild(table);
@@ -194,8 +193,8 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
 
         if (domNode.name === 'table') {
           return (
-            <div className="w-full overflow-x-auto no-scrollbar relative mb-6">
-              <table className="w-full min-w-max table-auto text-sm">
+            <div className="tableWrapper relative mb-6">
+              <table className="w-full table-auto text-sm">
                 {domToReact(domNode.children as DOMNode[], options)}
               </table>
             </div>
@@ -246,7 +245,7 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
 
   return (
     <>
-      <div ref={containerRef} className="tiptap-content overflow-x-hidden break-words [overflow-wrap:break-word]">
+      <div ref={containerRef} className="tiptap-content break-words [overflow-wrap:break-word]">
         {parse(safeHtml, options)}
       </div>
       <CodeBlockEnhancer />
