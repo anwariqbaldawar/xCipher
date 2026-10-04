@@ -6937,24 +6937,20 @@ select.ed-rail-input {
 }
 
 .prose table {
-    display: block !important;
+    display: table !important;
     width: 100% !important;
-    max-width: 100% !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    border-collapse: collapse;
-    white-space: nowrap;
-    /* Prevents text from crushing */
+    min-width: 600px;
+    border-collapse: collapse !important;
+    table-layout: auto !important;
     margin-top: 1.5em;
     margin-bottom: 1.5em;
 }
 
 .prose th,
 .prose td {
-    word-break: normal !important;
-    overflow-wrap: normal !important;
-    white-space: nowrap !important;
-    min-width: auto !important;
+    word-break: normal;
+    overflow-wrap: break-word;
+    white-space: normal;
     border: 1px solid var(--line);
     padding: 0.75rem 1rem;
     font-size: 0.875rem;
@@ -7167,9 +7163,8 @@ body.is-article .prose code {
 .tiptap-content table {
     display: table !important;
     width: 100% !important;
-    min-width: max-content !important;
-    max-width: none !important;
-    border: 0 !important;
+    min-width: 600px;
+    border: 1px solid var(--line) !important;
     border-radius: 0 !important;
     border-collapse: collapse !important;
     table-layout: auto !important;
@@ -7184,6 +7179,8 @@ body.is-article .prose code {
 }
 
 /* 3. Headers and Cells */
+.tableWrapper table th,
+.tableWrapper table td,
 .prose table th,
 .prose table td,
 .tiptap table th,
@@ -7191,17 +7188,32 @@ body.is-article .prose code {
 .tiptap-content table th,
 .tiptap-content table td {
     padding: 0.75rem 1rem !important;
-    min-width: 120px !important; /* Ensure columns don't squish */
     white-space: normal !important;
     word-break: normal !important;
+    overflow-wrap: break-word !important;
     vertical-align: top !important;
-    border: 0 !important;
     border-right: 1px solid var(--line) !important;
+    border-bottom: 1px solid var(--line) !important;
     font-size: 0.875rem !important;
     line-height: 1.6 !important;
     color: var(--ink) !important;
 }
 
+/* Protect the first column (labels) from over-shrinking and breaking text */
+.tableWrapper table th:first-child,
+.tableWrapper table td:first-child,
+.prose table th:first-child,
+.prose table td:first-child,
+.tiptap table th:first-child,
+.tiptap table td:first-child,
+.tiptap-content table th:first-child,
+.tiptap-content table td:first-child {
+    min-width: 130px !important;
+    word-break: keep-all !important;
+}
+
+.tableWrapper table th:last-child,
+.tableWrapper table td:last-child,
 .prose table th:last-child,
 .prose table td:last-child,
 .tiptap table th:last-child,
@@ -7255,7 +7267,7 @@ body.is-article .prose code {
 .prose .tableWrapper > table,
 .tiptap-content .tableWrapper > table {
     width: 100% !important;
-    min-width: 100% !important;
+    min-width: 600px;
     table-layout: auto !important;
 }
 
@@ -7283,14 +7295,27 @@ body.is-article .prose code {
     z-index: 2;
 }
 
-/* 5. Mobile Responsive Tables */
+/* 5. Mobile Responsive Tables — cells wrap normally; the 600px min-width
+   on the table itself triggers horizontal scroll in the .tableWrapper. */
 @media (max-width: 640px) {
+    .tableWrapper table th,
+    .tableWrapper table td,
     .prose table th,
     .prose table td,
     .tiptap table th,
     .tiptap table td {
-        white-space: nowrap !important;
-        min-width: max-content !important;
+        white-space: normal !important;
+        overflow-wrap: break-word !important;
+    }
+
+    .tableWrapper table th:first-child,
+    .tableWrapper table td:first-child,
+    .prose table th:first-child,
+    .prose table td:first-child,
+    .tiptap table th:first-child,
+    .tiptap table td:first-child {
+        min-width: 130px !important;
+        word-break: keep-all !important;
     }
 }
 
@@ -7463,8 +7488,8 @@ body.is-article .prose pre {
 
 /* 2. Dynamic Table Sizing & Missing Borders */
 .tiptap table, .prose table {
-  width: auto !important;
-  min-width: 100% !important;
+  width: 100% !important;
+  min-width: 600px;
   table-layout: auto !important;
   border-collapse: collapse !important;
   border: 1px solid var(--line) !important;
@@ -7474,6 +7499,7 @@ body.is-article .prose pre {
   padding: 8px 12px !important;
   vertical-align: top !important;
   white-space: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 /* 3. Code Block Editor Font Size */
@@ -7568,21 +7594,23 @@ body.is-article .prose pre {
   }
 }
 
-/* Force Mobile Table Scrolling Overrides */
+/* Table Scrolling Overrides — use fixed min-width so desktop renders
+   normally and only narrow viewports trigger horizontal scroll. */
 .tiptap-content table,
 .prose table {
   width: 100% !important;
-  min-width: 100% !important;
-  max-width: 100% !important;
+  min-width: 600px;
   table-layout: auto !important;
   background: transparent !important;
 }
 
 .tiptap-content table th,
-.prose table th {
+.prose table th,
+.tableWrapper table th {
   padding-top: 0.375rem !important;
   padding-bottom: 0.375rem !important;
   line-height: 1.375 !important;
+  white-space: normal !important;
 }
 
 .prose table td,
@@ -7592,18 +7620,41 @@ body.is-article .prose pre {
   line-height: 1.375 !important;
 }
 
-.prose table th,
-.tiptap-content table th {
-  white-space: nowrap !important;
-}
-
 .overflow-x-auto {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Keep article tables readable on narrow screens. The table scrolls as a
-   unit; cells must not shrink until words break into unreadable fragments. */
+/* Chart horizontal scroll wrapper */
+.chart-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-2) transparent;
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 10px;
+}
+
+.chart-scroll-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Keep article tables readable on narrow screens. The 600px min-width
+   on the table forces horizontal scroll inside its .tableWrapper;
+   cells wrap text normally so content stays readable. */
 @media (max-width: 767px) {
   .tiptap-content > .overflow-x-auto,
   .tiptap-content > .tableWrapper,
@@ -7622,9 +7673,8 @@ body.is-article .prose pre {
   .prose > .tableWrapper > table,
   .tiptap-content > table,
   .prose > table {
-    width: max-content !important;
-    min-width: max-content !important;
-    max-width: none !important;
+    width: 100% !important;
+    min-width: 600px;
     table-layout: auto !important;
   }
 
@@ -7640,9 +7690,28 @@ body.is-article .prose pre {
   .tiptap-content > table td,
   .prose > table th,
   .prose > table td {
-    white-space: nowrap !important;
+    white-space: normal !important;
     word-break: normal !important;
-    overflow-wrap: normal !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Protect the first column (labels) from over-shrinking and breaking text */
+  .tiptap-content > .overflow-x-auto > table th:first-child,
+  .tiptap-content > .overflow-x-auto > table td:first-child,
+  .tiptap-content > .tableWrapper > table th:first-child,
+  .tiptap-content > .tableWrapper > table td:first-child,
+  .prose > .overflow-x-auto > table th:first-child,
+  .prose > .overflow-x-auto > table td:first-child,
+  .prose > .tableWrapper > table th:first-child,
+  .prose > .tableWrapper > table td:first-child,
+  .tiptap-content > table th:first-child,
+  .tiptap-content > table td:first-child,
+  .prose > table th:first-child,
+  .prose > table td:first-child,
+  .tableWrapper table th:first-child,
+  .tableWrapper table td:first-child {
+    min-width: 130px !important;
+    word-break: keep-all !important;
   }
 }
 
