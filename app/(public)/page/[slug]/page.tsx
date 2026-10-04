@@ -22,6 +22,7 @@ export function generateStaticParams() {
 /** Nothing here reads a request, so the output never needs to be recomputed
  *  per visitor. A slug outside PAGES still 404s through notFound(). */
 export const dynamicParams = false;
+export const dynamic = "force-static";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
