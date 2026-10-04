@@ -22,11 +22,15 @@ import {
   FileCode2
 } from "lucide-react";
 import { SocialIcon } from "@/components/author/AuthorProfileView";
+import { siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "About xSypher — Decoding the Future of Technology",
   description:
     "xSypher is an independent technology publication dedicated to deep technical analysis, noise-free reporting, and investigative journalism across AI, Cybersecurity, Software, and Next-Gen Systems.",
+  alternates: {
+    canonical: `${siteConfig.url}/page/about`,
+  },
 };
 
 export default function AboutPage() {

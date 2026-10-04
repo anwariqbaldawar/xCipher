@@ -1,10 +1,14 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { Layers, ArrowRight, Server, Shield, Brain } from "lucide-react";
+import { siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Series & Collections | xSypher",
   description: "Deep-dive technical guides, investigative series, and editorial collections.",
+  alternates: {
+    canonical: `${siteConfig.url}/series`,
+  },
 };
 
 const collections = [

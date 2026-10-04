@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { getImgSrc, fmtViews } from "@/lib/utils";
@@ -10,6 +11,13 @@ import BreakingTicker from "@/components/home/BreakingTicker";
 import EditorialTicker from "@/components/home/EditorialTicker";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import AdUnit from "@/components/common/AdUnit";
+import { siteConfig } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: siteConfig.url,
+  },
+};
 
 // Cached and revalidated on a timer, rather than force-dynamic.
 //
