@@ -39,28 +39,74 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
             primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
             primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',
             primaryTextColor: isDark ? '#ffffff' : '#111111',
-            lineColor: isDark ? '#e0e0e0' : '#333333',
-            edgeLabelBackground: 'transparent',
+            textColor: isDark ? '#ffffff' : '#111111',
+            nodeTextColor: isDark ? '#ffffff' : '#111111',
+            lineColor: isDark ? '#94a3b8' : '#475569',
+            edgeLabelBackground: isDark ? '#1e293b' : '#f1f5f9',
           },
           themeCSS: `
             .node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect { 
               filter: none !important; 
               box-shadow: none !important; 
             }
-            .edgeLabel rect {
-              fill: transparent !important;
+            .node foreignObject {
+              overflow: visible !important;
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
             }
-            .edgeLabel text {
-              fill: var(--ink, #111111) !important;
+            .node foreignObject > div {
+              display: flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              text-align: center !important;
+              width: 100% !important;
+              height: 100% !important;
+              line-height: 1.35 !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .node .nodeLabel, .node .label, .node span, .node p {
+              color: ${isDark ? '#ffffff' : '#111111'} !important;
+              fill: ${isDark ? '#ffffff' : '#111111'} !important;
+              font-size: 13px !important;
               font-weight: 500 !important;
+              line-height: 1.35 !important;
+              text-align: center !important;
+            }
+            .node text {
+              fill: ${isDark ? '#ffffff' : '#111111'} !important;
+              font-weight: 500 !important;
+              dominant-baseline: central !important;
+              alignment-baseline: central !important;
+              text-anchor: middle !important;
+            }
+            .edgeLabel {
+              background-color: ${isDark ? '#1e293b' : '#e2e8f0'} !important;
+              border-radius: 4px !important;
+              padding: 2px 6px !important;
+            }
+            .edgeLabel rect {
+              fill: ${isDark ? '#1e293b' : '#e2e8f0'} !important;
+              stroke: ${isDark ? '#475569' : '#cbd5e1'} !important;
+              stroke-width: 1px !important;
+              rx: 4px !important;
+              ry: 4px !important;
+            }
+            .edgeLabel text, .edgeLabel span {
+              fill: ${isDark ? '#e2e8f0' : '#1e293b'} !important;
+              color: ${isDark ? '#e2e8f0' : '#1e293b'} !important;
+              font-weight: 600 !important;
+              font-size: 11px !important;
             }
             .edgePath path, .flowchart-link {
-              stroke: var(--ink, #333333) !important;
+              stroke: ${isDark ? '#94a3b8' : '#475569'} !important;
+              stroke-width: 1.5px !important;
             }
           `,
           fontFamily: 'inherit',
           flowchart: {
-            htmlLabels: false,
+            htmlLabels: true,
             padding: 20
           }
         });
