@@ -94,6 +94,41 @@ const nextConfig: NextConfig = {
         destination: 'https://xsypher.com/:path+',
         permanent: true,
       },
+      {
+        source: '/page/privacy',
+        destination: '/page/privacy-policy',
+        permanent: true,
+      },
+      {
+        source: '/page/terms',
+        destination: '/page/terms-of-use',
+        permanent: true,
+      },
+      {
+        source: '/page/cookies',
+        destination: '/page/cookie-policy',
+        permanent: true,
+      },
+      {
+        source: '/page/editorial',
+        destination: '/page/editorial-policy',
+        permanent: true,
+      },
+      {
+        source: '/page/standards',
+        destination: '/page/editorial-standards',
+        permanent: true,
+      },
+      {
+        source: '/privacy',
+        destination: '/page/privacy-policy',
+        permanent: true,
+      },
+      {
+        source: '/terms',
+        destination: '/page/terms-of-use',
+        permanent: true,
+      },
     ];
   },
   async headers() {

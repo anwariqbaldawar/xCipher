@@ -48,33 +48,33 @@ export default function SiteFooter() {
           </div>
           <div className="flex flex-col space-y-0">
             <p className="text-xs font-bold tracking-widest uppercase !text-red-500 mb-4 block">Coverage</p>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/latest">Latest Intelligence</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/category/ai">AI & Machine Learning</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/category/cybersecurity">Cybersecurity</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/category/software">Software Architecture</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/category/gadgets">Hardware & Gadgets</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/category/business">Tech Business</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/series">Editorial Collections</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/latest">Latest Intelligence</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/category/ai">AI & Machine Learning</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/category/cybersecurity">Cybersecurity</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/category/software">Software Architecture</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/category/gadgets">Hardware & Gadgets</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/category/business">Tech Business</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/series">Editorial Collections</Link>
           </div>
           <div className="flex flex-col space-y-0">
             <p className="text-xs font-bold tracking-widest uppercase !text-red-500 mb-4 block">The Newsroom</p>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/about">About xSypher</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/contact">Contact Desk</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/advertising">Advertising & Partnerships</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/careers">Careers</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/media-kit">Media Kit</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/newsletters#subscribe">Newsletters</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/feed.xml">RSS Feed</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/about">About xSypher</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/contact">Contact Desk</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/advertising">Advertising & Partnerships</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/careers">Careers</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/media-kit">Media Kit</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/newsletters#subscribe">Newsletters</Link>
+            <a className="!text-gray-400 hover:!text-white transition-colors" href="/feed.xml" target="_blank" rel="noopener noreferrer">RSS Feed</a>
           </div>
           <div className="flex flex-col space-y-0">
             <p className="text-xs font-bold tracking-widest uppercase !text-red-500 mb-4 block">Standards & Legal</p>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/editorial-standards">Editorial Standards</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/corrections">Corrections Policy</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/transparency">Transparency Report</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/privacy-policy">Privacy Policy</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/terms-of-use">Terms of Use</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/cookie-policy">Cookie Policy</Link>
-            <Link className="!text-gray-400 hover:!text-white transition-colors" href="/page/disclaimer">Technical Disclaimer</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/editorial-standards">Editorial Standards</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/corrections">Corrections Policy</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/transparency">Transparency Report</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/privacy-policy">Privacy Policy</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/terms-of-use">Terms of Use</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/cookie-policy">Cookie Policy</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/disclaimer">Technical Disclaimer</Link>
           </div>
         </div>
         <div className="foot-bottom flex items-center justify-center w-full">
