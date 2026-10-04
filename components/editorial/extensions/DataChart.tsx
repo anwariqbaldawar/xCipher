@@ -179,26 +179,43 @@ export const DataChart = Node.create({
             return false;
           }
 
-          let hasNumbers = false;
-          for (const row of dataRows) {
-            for (let i = 1; i < row.length; i++) {
-              if (row[i] !== undefined && !isNaN(Number(row[i].replace(/[^0-9.-]+/g, "")))) {
-                hasNumbers = true;
+          // Detect which columns are genuine numeric metrics vs text/date descriptions
+          const numericColIndices: number[] = [];
+          for (let i = 1; i < headers.length; i++) {
+            let isColNumeric = true;
+            let count = 0;
+            for (const row of dataRows) {
+              const raw = (row[i] || '').trim();
+              if (!raw) continue;
+              // If cell has alphabetic letters (e.g. month names like "Oct", "Nov", descriptions), it is text, NOT a numeric series
+              if (/[a-zA-Z]/.test(raw)) {
+                isColNumeric = false;
+                break;
+              }
+              const cleanVal = raw.replace(/[$,€£¥%\s]/g, '');
+              const num = Number(cleanVal);
+              if (cleanVal !== '' && !isNaN(num)) {
+                count++;
+              } else {
+                isColNumeric = false;
                 break;
               }
             }
-            if (hasNumbers) break;
+            if (isColNumeric && count > 0) {
+              numericColIndices.push(i);
+            }
           }
 
-          if (!hasNumbers) {
-            alert("Selected text could not be parsed as chart data");
+          if (numericColIndices.length === 0) {
+            alert("Selected text could not be parsed as chart data (no numeric series found)");
             return false;
           }
 
           const config = dataRows.map(row => {
             const obj: Record<string, any> = { name: row[0] };
-            for (let i = 1; i < headers.length; i++) {
-              const val = Number(row[i]?.replace(/[^0-9.-]+/g, ""));
+            for (const i of numericColIndices) {
+              const cleanVal = (row[i] || '').replace(/[$,€£¥%\s]/g, '');
+              const val = Number(cleanVal);
               obj[headers[i] || `Value ${i}`] = isNaN(val) ? 0 : val;
             }
             return obj;

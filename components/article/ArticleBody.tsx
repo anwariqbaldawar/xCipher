@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { sanitizeArticleHtml } from "@/lib/sanitize";
 import dynamic from "next/dynamic";
 import CodeBlockEnhancer from "./CodeBlockEnhancer";
 import parse, { DOMNode, Element, domToReact } from 'html-react-parser';
@@ -36,8 +35,8 @@ interface Props {
 export default function ArticleBody({ html, globalLeaderboard, deviceName }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Rely on robust DOMPurify server sanitization
-  const safeHtml = html ? sanitizeArticleHtml(html) : "<p>No content available.</p>";
+  // Content is strictly sanitized via DOMPurify before storing to R2 on publish
+  const safeHtml = html || "<p>No content available.</p>";
 
   // Add copy buttons to code blocks after render
   useEffect(() => {

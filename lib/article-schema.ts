@@ -26,7 +26,7 @@ function visibleText(nodes: DOMNode[]): string {
 
 /** Build structured data from the same saved HTML that readers see. */
 export function withEditorialSchema(base: Record<string, unknown>, html: string | null | undefined): Record<string, unknown> {
-  if (!html) return base;
+  if (!html || !html.includes('data-type=')) return base;
   let verdict: Extract<EditorialBlock, { kind: 'verdict' }> | undefined;
   let technical = false;
   const pros: string[] = [];

@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import SetupForm from "./SetupForm";
 import Logo from "@/components/common/Logo";
 
+export const dynamic = "force-dynamic";
+
 export default async function SetupPage() {
   const userCount = await db.select({ count: sql`count(*)`.mapWith(Number) }).from(userTable).then(res => res[0]?.count || 0);
 

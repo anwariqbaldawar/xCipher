@@ -68,52 +68,76 @@ export const InteractiveChartBlock = Node.create({
         const data: any[] = [];
         const config: Record<string, { prefix: string; suffix: string }> = {};
         
-        let headers: string[] = [];
-
-        tableNode.forEach((rowNode: any, rowIndex: number) => {
+        const allRows: string[][] = [];
+        tableNode.forEach((rowNode: any) => {
           if (rowNode.type.name !== 'tableRow') return;
-
           const cells: string[] = [];
           rowNode.forEach((cellNode: any) => {
             if (cellNode.type.name === 'tableCell' || cellNode.type.name === 'tableHeader') {
               cells.push(cellNode.textContent.trim());
             }
           });
-
-          if (cells.length === 0) return;
-
-          if (rowIndex === 0) {
-            headers = cells;
-            for (let i = 1; i < headers.length; i++) {
-              config[headers[i]] = { prefix: '', suffix: '' };
-            }
-          } else {
-            const rowData: any = { name: cells[0] };
-            for (let i = 1; i < cells.length; i++) {
-              const header = headers[i];
-              if (!header) continue;
-              
-              const cellValue = cells[i] || '';
-              // Regex to extract prefix, number, and suffix
-              const match = cellValue.match(/^([^\d.-]*)([\d,.]+)([^\d]*)$/);
-              
-              if (match && match[2]) {
-                const prefix = match[1].trim();
-                const numStr = match[2].replace(/,/g, '');
-                const suffix = match[3].trim();
-                const numericValue = parseFloat(numStr);
-                
-                rowData[header] = isNaN(numericValue) ? 0 : numericValue;
-                
-                if (prefix && !config[header].prefix) config[header].prefix = prefix;
-                if (suffix && !config[header].suffix) config[header].suffix = suffix;
-              } else {
-                rowData[header] = cellValue;
-              }
-            }
-            data.push(rowData);
-          }
+          if (cells.length > 0) allRows.push(cells);
         });
+
+        if (allRows.length < 2) return false;
+
+        const headers = allRows[0];
+        const dataRows = allRows.slice(1);
+
+        // Filter out non-numeric columns (like date ranges "Oct 15, 2025 – Oct 13, 2026")
+        const numericColIndices: number[] = [];
+        for (let i = 1; i < headers.length; i++) {
+          let isColNumeric = true;
+          let count = 0;
+          for (const row of dataRows) {
+            const raw = (row[i] || '').trim();
+            if (!raw) continue;
+            if (/[a-zA-Z]/.test(raw)) {
+              isColNumeric = false;
+              break;
+            }
+            const clean = raw.replace(/[$,€£¥%\s]/g, '');
+            if (clean !== '' && !isNaN(Number(clean))) {
+              count++;
+            } else {
+              isColNumeric = false;
+              break;
+            }
+          }
+          if (isColNumeric && count > 0) {
+            numericColIndices.push(i);
+          }
+        }
+
+        if (numericColIndices.length === 0) return false;
+
+        for (const i of numericColIndices) {
+          config[headers[i]] = { prefix: '', suffix: '' };
+        }
+
+        for (const row of dataRows) {
+          const rowData: any = { name: row[0] };
+          for (const i of numericColIndices) {
+            const header = headers[i];
+            const cellValue = row[i] || '';
+            const match = cellValue.match(/^([^\d.-]*)([\d,.]+)([^\d]*)$/);
+            if (match && match[2]) {
+              const prefix = match[1].trim();
+              const numStr = match[2].replace(/,/g, '');
+              const suffix = match[3].trim();
+              const numericValue = parseFloat(numStr);
+              rowData[header] = isNaN(numericValue) ? 0 : numericValue;
+              if (prefix && !config[header].prefix) config[header].prefix = prefix;
+              if (suffix && !config[header].suffix) config[header].suffix = suffix;
+            } else {
+              const clean = cellValue.replace(/[$,€£¥%\s]/g, '');
+              const num = parseFloat(clean);
+              rowData[header] = isNaN(num) ? 0 : num;
+            }
+          }
+          data.push(rowData);
+        }
 
         const chartType = state.schema.nodes.interactiveChartBlock;
         if (!chartType) return false;

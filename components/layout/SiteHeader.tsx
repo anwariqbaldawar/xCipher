@@ -46,6 +46,32 @@ export default function SiteHeader() {
     year: "numeric",
   });
 
+  const [currentDate, setCurrentDate] = useState<{ full: string; compact: string } | null>(null);
+
+  useEffect(() => {
+    const updateDate = () => {
+      const d = new Date();
+      setCurrentDate({
+        full: d.toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        compact: d.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        }),
+      });
+    };
+
+    updateDate();
+    const interval = setInterval(updateDate, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
 
     let ticking = false;
@@ -116,8 +142,8 @@ export default function SiteHeader() {
             {/* Left: Date */}
             <div className="flex-1 flex justify-start shrink-0">
               <span id="todayDate" className="util-date !font-mono font-medium tracking-tight normal-case whitespace-nowrap">
-                <span className="date-full" suppressHydrationWarning>{todayDateFull}</span>
-                <span className="date-compact" suppressHydrationWarning>{todayDateCompact}</span>
+                <span className="date-full" suppressHydrationWarning>{currentDate ? currentDate.full : todayDateFull}</span>
+                <span className="date-compact" suppressHydrationWarning>{currentDate ? currentDate.compact : todayDateCompact}</span>
               </span>
             </div>
 
