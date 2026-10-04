@@ -279,7 +279,7 @@ export default async function ArticlePage({ params }: Props) {
         {(!article.tags || article.tags.length === 0) && <div className="border-t border-[var(--line)] my-4"></div>}
 
         <div className={article.tags && article.tags.length > 0 ? "border-t border-[var(--line)] pt-4 mb-4" : "mb-4"}>
-          <ShareRow title={article.title} slug={article.slug} />
+          <ShareRow title={article.title} slug={article.slug} deck={article.deck || undefined} />
         </div>
         
         <div className="fact-note">

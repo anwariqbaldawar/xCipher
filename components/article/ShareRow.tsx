@@ -4,7 +4,7 @@ import { Link2 } from "lucide-react";
 import { showToast } from "@/lib/utils";
 import { SocialIcon } from "@/components/author/AuthorProfileView";
 
-export default function ShareRow({ title, slug }: { title: string; slug: string }) {
+export default function ShareRow({ title, slug, deck }: { title: string; slug: string; deck?: string }) {
   const url = typeof window !== 'undefined' ? `${window.location.origin}/article/${slug}` : `https://xsypher.com/article/${slug}`;
 
   const copyLink = () => {
@@ -15,6 +15,8 @@ export default function ShareRow({ title, slug }: { title: string; slug: string 
         .catch(() => showToast("Failed to copy link"));
     }
   };
+
+  const whatsappText = `*${title}*\n\n${deck ? deck + '\n\n' : ''}${url}`;
 
   return (
     <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-4 mt-0 mb-4 py-2 border-b border-[var(--line)]">
@@ -31,7 +33,7 @@ export default function ShareRow({ title, slug }: { title: string; slug: string 
           <SocialIcon platform="x" /> <span className="hidden sm:inline">X</span>
         </a>
         <a 
-          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(title + " " + url)}`}
+          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
