@@ -7,6 +7,7 @@ import { publicFeedWhere, queryPublicFeed } from "@/lib/feed";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import Sidebar from "@/components/layout/Sidebar";
 import Link from "next/link";
+import { siteConfig } from "@/lib/seo";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -30,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${tag.name} News & Articles — xSypher`,
     description: tag.description || `Read the latest news and analysis about ${tag.name}.`,
     alternates: {
-      canonical: `/tag/${tag.slug}`,
+      canonical: `${siteConfig.url}/tag/${tag.slug}`,
     },
     robots: {
       index: count >= 3,

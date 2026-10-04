@@ -32,7 +32,11 @@ export function constructMetadata({
   modifiedTime?: string;
   authors?: string[];
 } = {}) {
-  const url = canonical ? `${siteConfig.url}${canonical}` : siteConfig.url;
+  const url = canonical
+    ? (canonical.startsWith("http://") || canonical.startsWith("https://")
+        ? canonical
+        : `${siteConfig.url}${canonical.startsWith("/") ? canonical : `/${canonical}`}`)
+    : siteConfig.url;
 
   return {
     title,

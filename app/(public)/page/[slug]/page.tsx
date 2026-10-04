@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PAGES } from "@/lib/mockData";
 import { sanitizeArticleHtml } from "@/lib/sanitize";
+import { siteConfig } from "@/lib/seo";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -32,6 +33,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   return {
     title: `${page.t} — xSypher`,
+    alternates: {
+      canonical: `${siteConfig.url}/page/${slug}`,
+    },
   };
 }
 

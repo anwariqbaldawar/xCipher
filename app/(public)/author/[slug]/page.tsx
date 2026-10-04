@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${authorName} — ${siteConfig.name}`,
     description: author.overview || author.bio?.slice(0, 160) || `${authorName} on ${siteConfig.name}.`,
     alternates: {
-      canonical: `/author/${slug}`,
+      canonical: `${siteConfig.url}/author/${slug}`,
     },
     openGraph: {
       title: `${authorName} — ${siteConfig.name}`,

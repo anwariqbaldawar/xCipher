@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${catName} — ${siteConfig.name}`,
     description: catDesc || `${catName} news and updates on ${siteConfig.name}.`,
     alternates: {
-      canonical: `/category/${slug}`,
+      canonical: `${siteConfig.url}/category/${slug}`,
     },
   };
 }

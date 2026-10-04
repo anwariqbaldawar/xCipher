@@ -69,7 +69,10 @@ const jetbrainsMono = JetBrains_Mono({
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicationSettings();
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+    metadataBase: new URL(siteConfig.url),
+    alternates: {
+      canonical: siteConfig.url,
+    },
     title: settings.tagline
       ? `${settings.siteName} — ${settings.tagline}`
       : settings.siteName,

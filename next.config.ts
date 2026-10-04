@@ -70,6 +70,21 @@ function r2RemotePattern(): NonNullable<NonNullable<NextConfig["images"]>["remot
 const nextConfig: NextConfig = {
   // env block removed because Auth.js infers host dynamically via trustHost
   allowedDevOrigins: localNetworkOrigins(),
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.xsypher.com',
+          },
+        ],
+        destination: 'https://xsypher.com/:path*',
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

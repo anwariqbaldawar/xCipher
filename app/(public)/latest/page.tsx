@@ -3,10 +3,14 @@ import { getLatestArticles } from "@/lib/cached-queries";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import { LATEST_ARTICLE_LIMIT } from "@/lib/queries";
 import Sidebar from "@/components/layout/Sidebar";
+import { siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Latest Technology News — xSypher",
   description: "Every xSypher story, newest first — reporting, analysis, reviews and guides as they publish.",
+  alternates: {
+    canonical: `${siteConfig.url}/latest`,
+  },
 };
 
 // Cached and revalidated on a timer, rather than force-dynamic.
