@@ -17,6 +17,7 @@ export default async function Sidebar() {
         slug: true,
         title: true,
         contentUrl: true,
+        readingTime: true,
       },
       with: {
         category: {
@@ -27,17 +28,13 @@ export default async function Sidebar() {
 
     if (dbMostRead && dbMostRead.length > 0) {
       mostRead = dbMostRead.map((a: any, idx: number) => {
-        const text = (a.contentHtml || "").replace(/<[^>]*>?/gm, '');
-        const wordCount = text.split(/\s+/).filter(Boolean).length;
-        const calculatedTime = Math.max(1, Math.ceil(wordCount / 200));
-        
         return {
           id: a.id,
           rank: idx + 1,
           slug: a.slug,
           title: a.title,
           catName: a.category?.name || "News",
-          calculatedTime
+          calculatedTime: a.readingTime || 1
         };
       });
     }

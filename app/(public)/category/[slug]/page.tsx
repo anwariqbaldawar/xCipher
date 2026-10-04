@@ -66,7 +66,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   }
 
   const subcategories = await db.query.category.findMany({
-    where: sql`${categoryTable.parentId} IN (SELECT id FROM "Category" WHERE slug = ${slug})`,
+    where: sql`${categoryTable.parentId} IN (SELECT id FROM "Category" WHERE slug = ${slug}) AND EXISTS (SELECT 1 FROM "Article" WHERE "Article"."categoryId" = ${categoryTable.id} AND "Article"."status" = 'PUBLISHED')`,
     orderBy: (c, { asc }) => [asc(c.name)],
     columns: { name: true, slug: true }
   });
