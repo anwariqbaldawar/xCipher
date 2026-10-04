@@ -84,7 +84,7 @@ export default async function ArticlePage({ params }: Props) {
     limit: 1,
     columns: {
       id: true, slug: true, title: true, deck: true, img: true, featuredImageAlt: true, featuredImageCaption: true, featuredImageCredit: true, author: true, role: true, views: true,
-      status: true, createdAt: true, publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true, isAnonymous: true
+      status: true, createdAt: true, publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true, isAnonymous: true, readingTime: true
     },
     with: { category: { with: { parent: true } }, authorModel: true, tags: { with: { tag: true } } } 
   });
@@ -115,10 +115,7 @@ export default async function ArticlePage({ params }: Props) {
     getArticleRecommendations(article.id, article.tags.map(tag => tag.B), mainCat?.id ?? article.categoryId, catSlug),
   ]);
   const articleHtml = typeof r2Content === "object" ? r2Content?.html : r2Content || "<p>Content could not be loaded.</p>";
-  
-  const textContent = articleHtml.replace(/<[^>]*>?/gm, '');
-  const wordCount = textContent.split(/\s+/).filter((word: string) => word.length > 0).length;
-  const calculatedReadingTime = Math.max(1, Math.ceil(wordCount / 200));
+
 
   const related = relatedDb.map(a => ({
     ...a,
@@ -212,7 +209,7 @@ export default async function ArticlePage({ params }: Props) {
                   <span className="hidden sm:inline">·</span>
                   <span>Updated <b>{article.updatedAt.toLocaleDateString("en-US")}</b></span>
                   <span className="hidden sm:inline">·</span>
-                  <span><b>{calculatedReadingTime} min</b> read</span>
+                  <span><b>{article.readingTime || 1} min</b> read</span>
                 </div>
               </div>
               
