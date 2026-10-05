@@ -860,8 +860,18 @@ export default function ArticleEditor({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(plainPayload),
         });
-        result = await res.json();
+        if (!res.ok) {
+          console.error(`[API Error] upsert returned status ${res.status}`);
+          try {
+            result = await res.json();
+          } catch {
+            result = { success: false, error: `Server error: ${res.status}` };
+          }
+        } else {
+          result = await res.json();
+        }
       } catch (e) {
+        console.error("Network error on upsert:", e);
         result = { success: false, error: "Network error occurred." };
       }
 
@@ -897,8 +907,20 @@ export default function ArticleEditor({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "submit", articleId: result.article.id }),
             });
-            trans = await res.json();
-          } catch (e) { trans = { ok: false, message: "Network error." }; }
+            if (!res.ok) {
+              console.error(`[API Error] workflow (submit) returned status ${res.status}`);
+              try {
+                trans = await res.json();
+              } catch {
+                trans = { ok: false, message: `Server error: ${res.status}` };
+              }
+            } else {
+              trans = await res.json();
+            }
+          } catch (e) {
+            console.error("Network error on workflow (submit):", e);
+            trans = { ok: false, message: "Network error." };
+          }
 
           if (!trans.ok) {
             setValue("status", result.article.status as any);
@@ -916,8 +938,20 @@ export default function ArticleEditor({
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ action: "publish", articleId: result.article.id }),
             });
-            trans = await res.json();
-          } catch (e) { trans = { ok: false, message: "Network error." }; }
+            if (!res.ok) {
+              console.error(`[API Error] workflow (publish) returned status ${res.status}`);
+              try {
+                trans = await res.json();
+              } catch {
+                trans = { ok: false, message: `Server error: ${res.status}` };
+              }
+            } else {
+              trans = await res.json();
+            }
+          } catch (e) {
+            console.error("Network error on workflow (publish):", e);
+            trans = { ok: false, message: "Network error." };
+          }
 
           if (!trans.ok) {
             setValue("status", result.article.status as any);

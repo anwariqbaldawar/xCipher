@@ -34,7 +34,7 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
 
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'base',
+          theme: 'dark',
           themeVariables: {
             primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
             primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',

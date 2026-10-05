@@ -36,7 +36,7 @@ export default async function middleware(req: NextRequest) {
     
     // 1. Subdomain rewriting
     if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite")) {
-      effectivePath = `/admin${pathname}`;
+      effectivePath = `/admin${pathname === '/' ? '' : pathname}`;
     }
     
     // 2. Apex domain redirection for /admin (Production only)
@@ -83,7 +83,7 @@ export default async function middleware(req: NextRequest) {
     
     // 4. Perform the rewrite if it's the admin subdomain
     if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite")) {
-      url.pathname = effectivePath;
+      url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
     }
     
@@ -97,6 +97,14 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/article/:path*', '/api/upload/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico, sitemap.xml, robots.txt (metadata files)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)',
+  ],
 };
 

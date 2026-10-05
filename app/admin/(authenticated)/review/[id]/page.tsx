@@ -56,7 +56,7 @@ export default async function ReviewScreen({ params }: ReviewScreenProps) {
   const hasTitle = Boolean(article.title?.trim());
   const hasDeck = Boolean(article.deck?.trim());
   const hasContent = Boolean(articleHtml?.trim());
-  const wordCount = articleHtml ? articleHtml.replace(/<[^>]*>?/gm, '').split(/\s+/).length : 0;
+  const wordCount = articleHtml ? articleHtml.replace(/<[^>]+>/g, '').split(/\s+/).length : 0;
   const hasImage = Boolean(article.img);
   const isSufficientLength = wordCount >= 300; // arbitrary checklist criteria
   
