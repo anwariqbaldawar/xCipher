@@ -42,15 +42,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Cached and revalidated on a timer, rather than force-dynamic.
-//
-// force-dynamic meant every visitor triggered a fresh render and a fresh set of
-// queries, and -- more importantly -- it made every revalidatePath() call in the
-// workflow actions a no-op, because there was never a cached entry to
-// invalidate. Publishing already calls revalidatePath for this route, so an
-// editorial change still appears immediately; the window below is only the
-// ceiling for anything that changes without an explicit revalidation, such as
-// a view count.
+export async function generateStaticParams() {
+  try {
+    const categories = await db.query.category.findMany({
+      columns: { slug: true },
+    });
+    return categories.map((category) => ({ slug: category.slug }));
+  } catch (error) {
+    console.warn("[category] Failed to fetch slugs for generateStaticParams:", error);
+    return [];
+  }
+}
+
+// Pre-built at deploy time. force-static keeps unknown slugs off the SSR path
+// so a cache miss cannot spend Worker CPU rendering a listing on request.
+export const dynamic = "force-static";
 export const revalidate = 300; // category listing
 
 export default async function CategoryPage({ params, searchParams }: Props) {
