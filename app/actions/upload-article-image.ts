@@ -131,7 +131,13 @@ export async function processExternalImage(url: string): Promise<UploadResult> {
       return { ok: false, error: `Failed to fetch external image: ${response.statusText}` };
     }
 
-    const arrayBuffer = await response.arrayBuffer();
+    let arrayBuffer: ArrayBuffer;
+    try {
+      arrayBuffer = await response.clone().arrayBuffer();
+    } catch (e) {
+      console.error("[processExternalImage] arrayBuffer conversion failed:", e);
+      return { ok: false, error: "Failed to read external image data." };
+    }
     const input = new Uint8Array(arrayBuffer);
 
     if (input.byteLength > MAX_UPLOAD_BYTES) {

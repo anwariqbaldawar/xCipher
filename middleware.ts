@@ -35,7 +35,7 @@ export default async function middleware(req: NextRequest) {
     let effectivePath = pathname;
     
     // 1. Subdomain rewriting
-    if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite")) {
+    if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite") && !pathname.startsWith("/api")) {
       effectivePath = `/admin${pathname === '/' ? '' : pathname}`;
     }
     
@@ -82,7 +82,7 @@ export default async function middleware(req: NextRequest) {
     }
     
     // 4. Perform the rewrite if it's the admin subdomain
-    if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite")) {
+    if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite") && !pathname.startsWith("/api")) {
       url.pathname = `/admin${pathname === '/' ? '' : pathname}`;
       return NextResponse.rewrite(url);
     }

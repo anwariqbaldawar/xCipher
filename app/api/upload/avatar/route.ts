@@ -9,7 +9,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Sign in to upload images." }, { status: 401 });
     }
 
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (e) {
+      console.error("[api/upload/avatar] formData parsing failed:", e);
+      return NextResponse.json({ ok: false, error: "Failed to parse upload request." }, { status: 400 });
+    }
     const result = await uploadAvatar(formData);
     
     return NextResponse.json(result);
