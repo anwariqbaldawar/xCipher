@@ -12,21 +12,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let authors: any[] = [];
 
   try {
-    const res = await Promise.all([
-      db.query.article.findMany({
-        where: eq(articleTable.status, 'PUBLISHED'),
-        columns: { slug: true, updatedAt: true },
-      }),
-      db.query.category.findMany({
-        columns: { slug: true },
-      }),
-      db.query.author.findMany({
-        columns: { slug: true },
-      }),
-    ]);
-    articles = res[0];
-    categories = res[1];
-    authors = res[2];
+    const publishedArticles = await db.query.article.findMany({
+      where: eq(articleTable.status, 'PUBLISHED'),
+      columns: { slug: true, updatedAt: true },
+    });
+    
+    const publishedCategories = await db.query.category.findMany({
+      columns: { slug: true },
+    });
+    
+    const publishedAuthors = await db.query.author.findMany({
+      columns: { slug: true },
+    });
+    articles = publishedArticles;
+    categories = publishedCategories;
+    authors = publishedAuthors;
   } catch (error) {
     console.warn('[sitemap] Failed to fetch dynamic entries from DB:', error);
   }
