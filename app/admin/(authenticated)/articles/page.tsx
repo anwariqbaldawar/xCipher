@@ -144,59 +144,48 @@ export default async function AdminArticles({ searchParams }: PageProps) {
   const sortField = SORT_FIELDS[sortParam] || "updatedAt";
   const orderByFn = (a: any) => dirParam === "asc" ? [asc(a[sortField]), asc(a.id)] : [desc(a[sortField]), asc(a.id)];
 
-  // ── Execute parallel queries ──────────────────────────────────────────────
-  const [articles, totalCount, statusCounts, authorOptions, categoryOptions] =
-    await Promise.all([
-      // Page of articles (NO body fields)
-      db.query.article.findMany({
-        where,
-        orderBy: (a) => orderByFn(a),
-        offset: (pageParam - 1) * perPage,
-        limit: perPage,
-        columns: ARTICLE_LIST_COLUMNS,
-        with: ARTICLE_LIST_WITH,
-      }),
+  // ── Execute sequential queries to avoid Cloudflare Workers connection limits ──
+  const articles = await db.query.article.findMany({
+    where,
+    orderBy: (a) => orderByFn(a),
+    offset: (pageParam - 1) * perPage,
+    limit: perPage,
+    columns: ARTICLE_LIST_COLUMNS,
+    with: ARTICLE_LIST_WITH,
+  });
 
-      // Total count for pagination
-      db.select({ count: sql`count(*)`.mapWith(Number) }).from(articleTable).where(where).then(res => res[0]?.count || 0),
+  const totalCountRes = await db.select({ count: sql`count(*)`.mapWith(Number) }).from(articleTable).where(where);
+  const totalCount = totalCountRes[0]?.count || 0;
 
-      // Status counts within scope (for filter bar badges)
-      db.select({ status: articleTable.status, _count: sql`count(*)`.mapWith(Number) })
-        .from(articleTable)
-        .where(scopeWhere)
-        .groupBy(articleTable.status)
-        .then((groups) => {
-          const counts: Record<string, number> = {};
-          for (const g of groups) {
-            counts[g.status as string] = Number(g._count);
-          }
-          return counts;
-        }),
+  const statusGroups = await db.select({ status: articleTable.status, _count: sql`count(*)`.mapWith(Number) })
+    .from(articleTable)
+    .where(scopeWhere)
+    .groupBy(articleTable.status);
+    
+  const statusCounts: Record<string, number> = {};
+  for (const g of statusGroups) {
+    statusCounts[g.status as string] = Number(g._count);
+  }
 
-      // Author options (those who actually have articles in scope)
-      db.selectDistinct({ authorId: articleTable.authorId }).from(articleTable).where(scopeWhere)
-        .then(async (rows) => {
-          const ids = rows.map(r => r.authorId).filter(Boolean) as string[];
-          if (!ids.length) return [];
-          const users = await db.select({ id: userTable.id, name: userTable.name }).from(userTable).where(inArray(userTable.id, ids));
-          return users.map(u => ({ value: u.id, label: u.name || "Unknown" })).sort((a, b) => a.label.localeCompare(b.label));
-        }),
+  const authorRows = await db.selectDistinct({ authorId: articleTable.authorId }).from(articleTable).where(scopeWhere);
+  const authorIds = authorRows.map(r => r.authorId).filter(Boolean) as string[];
+  let authorOptions: { value: string, label: string }[] = [];
+  if (authorIds.length > 0) {
+    const users = await db.select({ id: userTable.id, name: userTable.name }).from(userTable).where(inArray(userTable.id, authorIds));
+    authorOptions = users.map(u => ({ value: u.id, label: u.name || "Unknown" })).sort((a, b) => a.label.localeCompare(b.label));
+  }
 
-      // Category options
-      db.select({
-        id: categoryTable.id,
-        name: categoryTable.name,
-        _count: sql`(SELECT count(*) FROM "Article" WHERE "categoryId" = ${categoryTable.id})`.mapWith(Number)
-      }).from(categoryTable)
-        .orderBy(categoryTable.name)
-        .then((cats) =>
-          cats.map((c) => ({
-            value: c.id,
-            label: c.name,
-            count: Number(c._count),
-          }))
-        ),
-    ]);
+  const catRows = await db.select({
+    id: categoryTable.id,
+    name: categoryTable.name,
+    _count: sql`(SELECT count(*) FROM "Article" WHERE "categoryId" = ${categoryTable.id})`.mapWith(Number)
+  }).from(categoryTable).orderBy(categoryTable.name);
+  
+  const categoryOptions = catRows.map((c) => ({
+    value: c.id,
+    label: c.name,
+    count: Number(c._count),
+  }));
 
   const isFiltered = !!(query || statusParam || authorParam || categoryParam || fromParam || toParam);
   const isAuthorOnly = actor.role === "AUTHOR";

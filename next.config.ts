@@ -196,6 +196,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "5mb",
+      allowedOrigins: ["admin.xsypher.com", "xsypher.com", "www.xsypher.com", "localhost:3000", "admin.localhost:3000"],
     },
   },
 };

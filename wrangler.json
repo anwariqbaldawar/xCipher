@@ -30,10 +30,10 @@
 	},
 	"observability": {
 		"logs": {
-			"enabled": true
+			"enabled": false
 		},
 		"traces": {
-			"enabled": true
+			"enabled": false
 		}
 	}
 }
