@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getImgSrc, fmtViews } from "@/lib/utils";
 import RelativeTime from "@/components/common/RelativeTime";
-import { getHomeArticles, getHomeHeroArticle, getHomeBriefing } from "@/lib/cached-queries";
+import { getHomeArticles, getHomeHeroArticle, getHomeBriefing, getHomePicks } from "@/lib/cached-queries";
 import StoryCard from "@/components/article/StoryCard";
 import StoryRow from "@/components/article/StoryRow";
 import ArticleByline from "@/components/article/ArticleByline";
@@ -68,6 +68,7 @@ export default async function Home() {
   const dbHeroArticle = await getHomeHeroArticle();
   const heroArticle = dbHeroArticle || dbArticles[0];
   const dbBriefingRaw = await getHomeBriefing(heroArticle.id);
+  const dbPicksRaw = await getHomePicks();
 
   const lead = {
     ...heroArticle,
@@ -112,8 +113,23 @@ export default async function Home() {
   
   const mostRead = [...mappedArticles].sort((a, b) => b.views - a.views).slice(0, 5).map((a, i) => ({ ...a, most: i + 1 }));
   const trending = mostRead.map((a, i) => ({ ...a, trend: i + 1 }));
-  const placedPicks = mappedArticles.filter((a) => a.pick);
-  const picks = placedPicks.slice(0, 4);
+  
+  const placedPicks = dbPicksRaw.map(a => ({
+    ...a,
+    age: 0,
+    mins: a.readingTime || 1,
+    alt: a.title,
+    breaking: false,
+    pick: true,
+  }));
+  
+  let picks = [...placedPicks];
+  if (picks.length < 4) {
+    const pickIds = picks.map(a => a.id);
+    const fallbackPicks = latest.filter(a => !pickIds.includes(a.id)).slice(0, 4 - picks.length);
+    picks = [...picks, ...fallbackPicks.map(a => ({ ...a, pick: true }))];
+  }
+  
   const pickFeat = picks[0];
   const pickRest = picks.slice(1, 4);
 
