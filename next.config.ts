@@ -198,6 +198,8 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
       allowedOrigins: ["admin.xsypher.com", "xsypher.com", "www.xsypher.com", "localhost:3000", "admin.localhost:3000"],
     },
+    workerThreads: false,
+    cpus: 1,
   },
 };
 
