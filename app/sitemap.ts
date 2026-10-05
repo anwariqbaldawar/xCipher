@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { db } from '@/lib/db';
 import { siteConfig } from '@/lib/seo';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { article as articleTable } from '@/lib/db/schema';
 
 export const revalidate = 3600;
@@ -13,16 +13,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const publishedArticles = await db.query.article.findMany({
-      where: eq(articleTable.status, 'PUBLISHED'),
+      where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
       columns: { slug: true, updatedAt: true },
+      orderBy: (article, { desc }) => [desc(article.publishedAt)],
+      limit: 5000,
     });
     
     const publishedCategories = await db.query.category.findMany({
       columns: { slug: true },
+      limit: 1000,
     });
     
     const publishedAuthors = await db.query.author.findMany({
       columns: { slug: true },
+      limit: 1000,
     });
     articles = publishedArticles;
     categories = publishedCategories;
