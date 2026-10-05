@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS, articleTag, categoryTag } from "./cache-tags";
 import { notifyPublished } from "@/lib/notifications";
-import { eq, lte, and, inArray } from "drizzle-orm";
+import { eq, lte, and, inArray, sql } from "drizzle-orm";
 import { article as articleTable, auditLog } from "@/lib/db/schema";
 
 
@@ -51,7 +51,7 @@ export async function runScheduledPublications(
 
   const due = await db.query.article.findMany({
     where: and(
-      eq(articleTable.status, "SCHEDULED"),
+      sql`${articleTable.status} = 'SCHEDULED'::"ArticleStatus"`,
       lte(articleTable.scheduledFor, now)
     ),
     orderBy: (a, { asc }) => [asc(a.scheduledFor)],
@@ -89,7 +89,7 @@ export async function runScheduledPublications(
           publishedAt: article.scheduledFor ?? now,
       }).where(and(
           eq(articleTable.id, article.id),
-          eq(articleTable.status, "SCHEDULED"),
+          sql`${articleTable.status} = 'SCHEDULED'::"ArticleStatus"`,
           lte(articleTable.scheduledFor, now)
       )).returning({ count: articleTable.id });
 

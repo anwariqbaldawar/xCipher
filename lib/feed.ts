@@ -14,7 +14,7 @@ export interface FeedFilter {
 /** Shared by the initial render, counts, and subsequent pages. */
 export function publicFeedWhere(filter: FeedFilter = {}) {
   return and(
-    eq(article.status, "PUBLISHED"),
+    sql`${article.status} = 'PUBLISHED'::"ArticleStatus"`,
     or(isNull(article.publishedAt), lte(article.publishedAt, new Date())),
     filter.categorySlug
       ? filter.subcategorySlug
