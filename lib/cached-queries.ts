@@ -106,6 +106,31 @@ export const getHomeBriefing = unstable_cache(
   { tags: [CACHE_TAGS.articles, CACHE_TAGS.homepage], revalidate: 300 },
 );
 
+/** Editor's Picks - Fetched independently to prevent them falling out of the recent 60 limit */
+export const getHomePicks = unstable_cache(
+  async () => {
+    try {
+      const articles = await db.query.article.findMany({
+        where: and(
+          eq(articleTable.status, "PUBLISHED"),
+          or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
+          eq(articleTable.homepagePlacement, "picks")
+        ),
+        orderBy: (a, { desc }) => [desc(a.publishedAt)],
+        limit: 4,
+        columns: ARTICLE_CARD_COLUMNS,
+        with: ARTICLE_CARD_WITH,
+      });
+      return articles.map(maskPublicArticle);
+    } catch (error) {
+      console.warn("[cached-queries] Failed to fetch home picks:", error);
+      return [];
+    }
+  },
+  ["home-picks"],
+  { tags: [CACHE_TAGS.articles, CACHE_TAGS.homepage], revalidate: 300 }
+);
+
 /** The /latest wire, newest first. */
 export const getLatestArticles = unstable_cache(
   async () => {
