@@ -5,7 +5,7 @@ import * as schema from './db/schema';
 type Database = ReturnType<typeof createDatabase>;
 
 function createDatabase(connectionString: string) {
-  return drizzle(neon(connectionString), { schema });
+  return drizzle(neon(connectionString, { fetchOptions: { cache: 'no-store' } }), { schema });
 }
 
 let cached: { connectionString: string; database: Database } | undefined;
