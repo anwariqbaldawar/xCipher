@@ -7737,3 +7737,28 @@ body.is-article .prose pre {
     width: 100% !important;
     height: auto !important;
 }
+
+/* Fix Mermaid text vertical alignment and prevent global line-height from breaking nodes */
+.mermaid svg text, 
+[data-mermaid] svg text {
+  line-height: normal !important;
+}
+
+/* Center HTML labels inside Mermaid nodes */
+.mermaid foreignObject div,
+[data-mermaid] foreignObject div {
+  line-height: 1.2 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mermaid foreignObject .nodeLabel,
+[data-mermaid] foreignObject .nodeLabel {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}

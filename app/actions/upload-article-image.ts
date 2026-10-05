@@ -110,14 +110,22 @@ export async function processExternalImage(url: string): Promise<UploadResult> {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "xSypher-Bot/1.0",
-        "Accept": "image/jpeg, image/png, image/webp, image/gif"
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(10000)
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        headers: {
+          "User-Agent": "xSypher-Bot/1.0",
+          "Accept": "image/jpeg, image/png, image/webp, image/gif"
+        },
+        redirect: 'follow',
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       return { ok: false, error: `Failed to fetch external image: ${response.statusText}` };

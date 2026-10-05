@@ -1,6 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
-import { Plugin } from '@tiptap/pm/state';
+
 import { useState } from 'react';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { BLOCK_LABELS, editorialBlockSchema, newEditorialBlock, parseEditorialBlock, socialPost, type BlockKind, type EditorialBlock as BlockData } from '@/lib/editorial-blocks';
@@ -28,28 +28,13 @@ export const EditorialBlock = Node.create({
   parseHTML() { return [{ tag: 'div[data-type="editorial-block"]' }]; },
   renderHTML({ HTMLAttributes }) { return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'editorial-block' })]; },
   addNodeView() { return ReactNodeViewRenderer(EditorialNodeView); },
-  addProseMirrorPlugins() {
-    return [new Plugin({
-      props: {
-        handlePaste: (view, event) => {
-          const parsed = parseComparisonPaste(event);
-          if (!parsed) return false;
 
-          const nodeType = view.state.schema.nodes.editorialBlock;
-          if (!nodeType) return false;
-
-          const node = nodeType.create({ data: parsed });
-          const transaction = view.state.tr.replaceSelectionWith(node);
-          view.dispatch(transaction);
-          return true;
-        },
-      },
-    })];
-  },
   addCommands() { return { insertEditorialBlock: kind => ({ commands }) => commands.insertContent([{ type: this.name, attrs: { data: newEditorialBlock(kind) } }, { type: 'paragraph' }]) }; },
 });
 
 type ComparisonRow = NonNullable<Extract<BlockData, { kind: 'comparison' }>['rows']>[number];
+
+
 
 function cleanCell(value: string): string {
   return value.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
@@ -68,11 +53,8 @@ function parseSpecsText(rawText: string): Record<string, { category: string; val
     if (!line) continue;
     if (HEADERS.has(line.toLowerCase())) continue;
 
-    // Preserve leading/trailing tabs: an empty category or value is still a cell.
-    // TSV rows take precedence even when a vertical spec is awaiting a value.
     if (rawLine.includes('\t')) {
       const cols = rawLine.split('\t').map(cell => cell.trim());
-      // The standalone guard above cannot match a complete TSV header row.
       if (cols[0].toLowerCase() === 'category'
         || HEADERS.has(cols[cols.length >= 3 ? 1 : 0].toLowerCase())) continue;
       if (cols.length >= 3) {
@@ -102,107 +84,6 @@ function parseSpecsText(rawText: string): Record<string, { category: string; val
   }
 
   return specs;
-}
-
-function comparisonRow(_category: string, spec: string, first: string, second: string): ComparisonRow | null {
-  const values = [spec, first, second].map(cleanCell);
-  if (!values[0] || !values[1]) return null;
-  return { spec: values[0], first: values[1], second: values[2], winner: 'none' };
-}
-
-function parseComparisonRows(rows: string[][]): Extract<BlockData, { kind: 'comparison' }> | null {
-  const normalized = rows
-    .map(row => row.map(cleanCell))
-    .filter(row => row.filter(Boolean).length >= 2);
-  if (normalized.length < 2) return null;
-
-  const firstRow = normalized[0];
-  const headerText = firstRow.join(' ').toLowerCase();
-  const hasHeader = /\b(category|specification|spec|device|model|phone)\b/.test(headerText);
-  const headers = hasHeader ? firstRow : [];
-  const dataRows = hasHeader ? normalized.slice(1) : normalized;
-  if (dataRows.length === 0) return null;
-
-  const columnCount = Math.max(...dataRows.map(row => row.length));
-  if (columnCount < 2 || columnCount > 4) return null;
-
-  const first = headers[2] || (columnCount >= 3 ? 'Device A' : 'Device');
-  const second = headers[3] || (columnCount >= 4 ? 'Device B' : '');
-  const parsedRows: ComparisonRow[] = [];
-  let category = '';
-
-  for (const row of dataRows) {
-    if (columnCount >= 4) {
-      category = row[0] || category;
-      const parsed = comparisonRow(category, row[1], row[2], row[3] || '');
-      if (parsed) parsedRows.push(parsed);
-    } else if (columnCount === 3) {
-      const categoryColumn = headers.length > 0 && /\b(category|section|group)\b/.test(headers[0].toLowerCase());
-      const parsed = categoryColumn
-        ? comparisonRow(row[0], row[1], row[2], '')
-        : comparisonRow('', row[0], row[1], row[2]);
-      if (parsed) parsedRows.push(parsed);
-    } else {
-      const parsed = comparisonRow('', row[0], row[1], '');
-      if (parsed) parsedRows.push(parsed);
-    }
-  }
-
-  if (parsedRows.length === 0) return null;
-  return {
-    kind: 'comparison',
-    title: 'Device comparison',
-    first,
-    second: second || 'Device B',
-    rows: parsedRows.slice(0, 100),
-  };
-}
-
-function parseComparisonPaste(event: ClipboardEvent): Extract<BlockData, { kind: 'comparison' }> | null {
-  const html = event.clipboardData?.getData('text/html') || '';
-  const text = event.clipboardData?.getData('text/plain') || '';
-  let rows: string[][] = [];
-
-  if (html && typeof DOMParser !== 'undefined') {
-    const document = new DOMParser().parseFromString(html, 'text/html');
-    const table = document.querySelector('table');
-    if (table) {
-      const grid: string[][] = [];
-      rows = Array.from(table.querySelectorAll('tr')).map((tr, rowIndex) => {
-        const cells = Array.from(tr.querySelectorAll(':scope > th, :scope > td'));
-        const values = grid[rowIndex] || [];
-        grid[rowIndex] = values;
-        let column = 0;
-        for (const cell of cells) {
-          while (values[column] !== undefined) column += 1;
-          const value = cleanCell(cell.textContent || '');
-          const rowSpan = Number(cell.getAttribute('rowspan') || 1);
-          const colSpan = Number(cell.getAttribute('colspan') || 1);
-          for (let rowOffset = 0; rowOffset < rowSpan; rowOffset += 1) {
-            const target = grid[rowIndex + rowOffset] || (grid[rowIndex + rowOffset] = []);
-            for (let colOffset = 0; colOffset < colSpan; colOffset += 1) {
-              target[column + colOffset] = value;
-            }
-          }
-          values[column] = value;
-          column += colSpan;
-        }
-        return values;
-      });
-    }
-  }
-
-  if (rows.length === 0) {
-    rows = text.split(/\r?\n/)
-      .map(line => line.split(/\t|\s+\|\s+|\|/).map(cleanCell))
-      .filter(row => row.filter(Boolean).length >= 2);
-  }
-
-  const parsed = parseComparisonRows(rows);
-  if (!parsed || !/\b(network|display|dimension|cpu|processor|memory|storage|battery|camera|os|price|weight|technology)\b/i.test(text || rows.flat().join(' '))) {
-    return null;
-  }
-  return parsed;
 }
 
 function Field({ label, value, onChange, multiline = false, options }: { label: string; value: string | number; onChange: (value: string) => void; multiline?: boolean; options?: readonly string[] }) {

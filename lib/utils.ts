@@ -109,7 +109,7 @@ export function slugify(text: string): string {
 
 export function calculateReadTime(html?: string | null): number {
   if (!html) return 1;
-  const text = html.replace(/<[^>]*>?/gm, "").trim();
+  const text = html.replace(/<[^>]+>/g, "").trim();
   if (!text) return 1;
   const words = text.split(/\s+/).length;
   const wpm = 200;

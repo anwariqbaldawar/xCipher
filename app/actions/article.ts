@@ -151,7 +151,7 @@ export async function upsertArticle(data: any) {
       status: data.status || "DRAFT",
       deck: data.deck || null,
       contentUrl,
-      textContent: typeof sanitizedBodyHtml === 'string' ? sanitizedBodyHtml.replace(/<[^>]*>?/gm, ' ') : null,
+      textContent: typeof sanitizedBodyHtml === 'string' ? sanitizedBodyHtml.replace(/<[^>]+>/g, ' ') : null,
       author: data.author?.trim() || userSession.name || "xSypher Staff",
       isAnonymous: data.isAnonymous ?? existingArticle?.isAnonymous ?? false,
       role: data.role?.trim() || userSession.role || null,
