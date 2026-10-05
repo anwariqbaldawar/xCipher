@@ -7719,45 +7719,12 @@ body.is-article .prose pre {
 .mermaid-svg-container foreignObject {
     overflow: visible !important;
 }
-.mermaid-svg-container .node foreignObject {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+.mermaid-svg-container .edgeLabel {
+    background-color: transparent !important;
 }
-.mermaid-svg-container .node foreignObject > div {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    width: 100% !important;
-    height: 100% !important;
-    line-height: 1.35 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-.mermaid-svg-container .node .nodeLabel,
-.mermaid-svg-container .node .label,
-.mermaid-svg-container .node span,
-.mermaid-svg-container .node p {
-    text-align: center !important;
-    line-height: 1.35 !important;
-}
-[data-theme="dark"] .mermaid-svg-container .node .nodeLabel,
-[data-theme="dark"] .mermaid-svg-container .node .label,
-[data-theme="dark"] .mermaid-svg-container .node text,
-[data-theme="dark"] .mermaid-svg-container .node span,
-[data-theme="dark"] .mermaid-svg-container .node p {
-    color: #ffffff !important;
-    fill: #ffffff !important;
-}
-[data-theme="dark"] .mermaid-svg-container .edgeLabel rect {
-    fill: #1e293b !important;
-    stroke: #475569 !important;
-}
-[data-theme="dark"] .mermaid-svg-container .edgeLabel text,
-[data-theme="dark"] .mermaid-svg-container .edgeLabel span {
-    fill: #e2e8f0 !important;
-    color: #e2e8f0 !important;
+.mermaid-svg-container .edgeLabel text {
+    fill: var(--ink, #111111) !important;
+    font-weight: 500 !important;
 }
 .mermaid-svg-container .edgePath path,
 .mermaid-svg-container .flowchart-link {
