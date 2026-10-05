@@ -16,14 +16,16 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("middleware CPU exclusions", () => {
   it.each([
-    "/api/article/upsert", "/api/auth/session", "/api/taxonomy", "/api",
+    "/", "/article/story", "/category/ai", "/latest",
+    "/api/article/upsert", "/api/taxonomy", "/api",
     "/_next/static/chunk.js", "/_next/image?url=photo.png&w=640&q=75",
     "/_next/webpack-hmr", "/favicon.ico", "/logo.png", "/fonts/editorial.woff2",
+    "/apiary", "/apiculture",
   ])("does not invoke middleware for %s", url => {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false);
   });
 
-  it.each(["/admin/editor/story", "/article/story", "/apiary", "/apiculture"])("continues matching page %s", url => {
+  it.each(["/admin", "/admin/editor/story", "/admin/login", "/api/auth/session", "/api/auth/callback"])("continues matching page %s", url => {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
   });
 

@@ -50,6 +50,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 // editorial change still appears immediately; the window below is only the
 // ceiling for anything that changes without an explicit revalidation, such as
 // a view count.
+export const dynamic = "force-static";
 export const revalidate = 600; // author profile
 
 export default async function AuthorProfile({ params }: Props) {
