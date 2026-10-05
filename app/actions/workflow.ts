@@ -22,6 +22,7 @@ import {
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
 import { CACHE_TAGS, articleTag, articleMutationTags } from "@/lib/cache-tags";
 import { deleteFileFromR2, deleteKeyFromR2, fetchFromR2, getR2Config } from "@/lib/storage";
+import { triggerGitHubDeployment } from "@/lib/github";
 import { ArticleStatus, Role } from "@/lib/types";
 
 export type ActionResponse<T = any> =
@@ -549,6 +550,9 @@ export async function publishArticle(id: string): Promise<ActionResponse> {
     revalidatePath(`/admin/editor/${id}`);
     revalidatePath(`/admin`, `layout`);
     revalidateArticleRoutes(articleData as any);
+    
+    triggerGitHubDeployment();
+    
     return { ok: true };
   });
 }
@@ -1013,6 +1017,7 @@ async function runBulkTransition(
       revalidateTag(articleTag(slug), 'max');
       revalidatePath(`/article/${slug}`, "page");
     }
+    triggerGitHubDeployment();
   }
 
   return {
