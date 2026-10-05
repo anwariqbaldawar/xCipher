@@ -25,7 +25,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "You do not have permission to upload images." }, { status: 403 });
     }
 
-    const formData = await req.formData();
+    let formData: FormData;
+    try {
+      formData = await req.formData();
+    } catch (e) {
+      console.error("[api/upload] formData parsing failed:", e);
+      return NextResponse.json({ ok: false, error: "Failed to parse upload request." }, { status: 400 });
+    }
+
     const file = formData.get("file");
     if (!file || typeof file === "string") {
       return NextResponse.json({ ok: false, error: "No file was received." }, { status: 400 });
@@ -44,7 +51,13 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
 
-    const arrayBuffer = await blob.arrayBuffer();
+    let arrayBuffer: ArrayBuffer;
+    try {
+      arrayBuffer = await blob.arrayBuffer();
+    } catch (e) {
+      console.error("[api/upload] arrayBuffer conversion failed:", e);
+      return NextResponse.json({ ok: false, error: "Failed to read file data." }, { status: 400 });
+    }
     const input = new Uint8Array(arrayBuffer);
 
     if (input.byteLength > MAX_UPLOAD_BYTES) {
