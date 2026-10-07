@@ -67,6 +67,33 @@ export default function CodeBlockEnhancer() {
       const codeEl = pre.querySelector("code");
       const textToCopy = codeEl ? codeEl.textContent || "" : pre.textContent || "";
 
+      // Fallback label processing if rendered HTML didn't include it
+      if (codeEl && !codeEl.hasAttribute("data-language-label")) {
+        const classNames = codeEl.className.split(" ");
+        const langClass = classNames.find(c => c.startsWith("language-"));
+        let langLabel = "Code";
+        if (langClass) {
+          const rawLang = langClass.replace("language-", "").toLowerCase();
+          const CODE_LANGUAGES: Record<string, string> = {
+            'javascript': 'JavaScript', 'js': 'JavaScript',
+            'typescript': 'TypeScript', 'ts': 'TypeScript',
+            'python': 'Python', 'py': 'Python',
+            'java': 'Java', 'c': 'C', 'cpp': 'C++',
+            'csharp': 'C#', 'cs': 'C#', 'go': 'Go',
+            'rust': 'Rust', 'rs': 'Rust', 'php': 'PHP',
+            'ruby': 'Ruby', 'rb': 'Ruby', 'swift': 'Swift',
+            'kotlin': 'Kotlin', 'html': 'HTML', 'css': 'CSS',
+            'json': 'JSON', 'bash': 'Bash', 'sh': 'Shell',
+            'shell': 'Shell', 'sql': 'SQL', 'xml': 'XML',
+            'yaml': 'YAML', 'yml': 'YAML', 'markdown': 'Markdown',
+            'md': 'Markdown', 'graphql': 'GraphQL',
+            'dockerfile': 'Dockerfile', 'plaintext': 'Plain Text',
+          };
+          langLabel = CODE_LANGUAGES[rawLang] || "Code";
+        }
+        codeEl.setAttribute("data-language-label", langLabel);
+      }
+
       // Create a mount point for the React component
       const mountPoint = document.createElement("div");
       pre.appendChild(mountPoint);

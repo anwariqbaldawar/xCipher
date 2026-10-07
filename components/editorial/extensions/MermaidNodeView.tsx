@@ -94,13 +94,14 @@ export const MermaidNodeView = (props: any) => {
               stroke: var(--ink, #333333) !important;
             }
           `,
-          fontFamily: 'inherit',
+          fontFamily: "var(--f-ui), sans-serif",
           flowchart: {
             htmlLabels: false,
             padding: 20
           }
         });
 
+        if (!cancelled) setSvgContent('');
         const id = `mermaid-svg-${Math.random().toString(36).substr(2, 9)}`;
         const { svg } = await mermaid.render(id, graphDefinition);
         if (!cancelled) {
