@@ -189,14 +189,11 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    // Cloudflare Workers cannot run sharp-based image optimization without
-    // exceeding the CPU time limit. All article images already come through
-    // Cloudinary URL transforms (auto format, quality, crop) and external
-    // avatars are pre-optimised by their CDN, so the Next.js proxy adds
-    // CPU cost with no visual benefit.
-    unoptimized: true,
+    formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com', port: '' },
+      { protocol: 'https', hostname: '*.supabase.co', port: '' },
+      { protocol: 'https', hostname: 'pub-*.r2.dev', port: '' },
       { protocol: 'https', hostname: 'images.unsplash.com', port: '' },
       { protocol: 'https', hostname: 'plus.unsplash.com', port: '' },
       { protocol: 'https', hostname: 'images.pexels.com', port: '' },

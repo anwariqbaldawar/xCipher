@@ -118,18 +118,22 @@ export const MermaidNodeView = (props: any) => {
       } catch (err: any) {
         if (!cancelled) {
           console.error("Mermaid Render Error:", err);
-          setError(err?.message || "Syntax error in Mermaid graph");
+          setError(err?.message || "Invalid Mermaid syntax");
         }
       }
     };
 
     if (!isEditing) {
+      let rAF: number;
       const timeoutId = setTimeout(() => {
-        renderMermaid();
+        rAF = requestAnimationFrame(() => {
+          renderMermaid();
+        });
       }, 100);
       return () => {
         cancelled = true;
         clearTimeout(timeoutId);
+        if (rAF) cancelAnimationFrame(rAF);
       };
     }
 

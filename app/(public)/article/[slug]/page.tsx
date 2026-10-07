@@ -72,7 +72,7 @@ export async function generateStaticParams() {
 // Pre-built at deploy time. force-static keeps unknown slugs off the SSR path
 // so a cache miss cannot spend Worker CPU rendering an article on request.
 export const dynamic = "force-static";
-export const revalidate = 300; // article
+export const revalidate = 3600; // article
 
 
 

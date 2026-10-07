@@ -15,7 +15,6 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { uploadToR2, deleteKeyFromR2 } from "@/lib/storage";
-import { triggerGitHubDeployment } from "@/lib/github";
 import { notifyGoogleIndexing } from "@/lib/google-indexing";
 import { siteConfig } from "@/lib/seo";
 
@@ -340,7 +339,6 @@ export async function upsertArticle(data: any) {
       // Draft autosaves cannot affect a public page. Avoid discarding the
       // publication's caches or every route under its root layout for them.
       if (finalArticle.status === "PUBLISHED" || existingArticle?.status === "PUBLISHED") {
-        triggerGitHubDeployment();
         notifyGoogleIndexing(`${siteConfig.url}/article/${finalArticle.slug}`);
         const slugs = new Set([finalArticle.slug, existingArticle?.slug].filter((slug): slug is string => !!slug));
         const tags = new Set([...slugs].flatMap(slug => articleMutationTags({ slug })));
@@ -352,6 +350,7 @@ export async function upsertArticle(data: any) {
           )),
           ...[...slugs].map(slug => revalidatePath(`/article/${slug}`, "page")),
           revalidatePath("/", "page"),
+          revalidatePath("/latest", "page"),
           revalidatePath("/sitemap.xml"),
           revalidatePath("/feed.xml"),
         );

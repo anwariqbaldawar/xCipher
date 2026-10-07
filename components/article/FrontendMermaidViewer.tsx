@@ -85,7 +85,7 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
   }, [decoded, theme]);
 
   return (
-    <div className="flex justify-center w-full my-8">
+    <div className="flex justify-center w-full my-8 not-prose overflow-x-auto">
       <div
         className="relative"
         style={{

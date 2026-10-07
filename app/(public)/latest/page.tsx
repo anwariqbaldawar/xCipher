@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 // ceiling for anything that changes without an explicit revalidation, such as
 // a view count.
 export const dynamic = "force-static";
-export const revalidate = 180; // latest listing
+export const revalidate = 3600; // latest listing
 
 /** Read once per server render to bucket stories by day.
  *

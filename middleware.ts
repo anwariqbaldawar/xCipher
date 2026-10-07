@@ -25,6 +25,13 @@ export default async function middleware(req: NextRequest) {
       url.hostname.includes("localhost") ||
       url.hostname.includes("127.0.0.1");
 
+    if (!isLocalDev) {
+      // Strip internal container port behind proxy to prevent :3000 from leaking into redirects/rewrites
+      url.port = '';
+      // Enforce HTTPS for production redirects to avoid mixed-content issues
+      url.protocol = 'https:';
+    }
+
     // In local development, ensure the URL retains the local host/port and doesn't get rewritten to live domains
     if (isLocalDev && (url.hostname === "xsypher.com" || url.hostname === "www.xsypher.com" || url.hostname === "admin.xsypher.com")) {
       const localBase = new URL(process.env.NEXTAUTH_URL || "http://localhost:8787");
