@@ -1,0 +1,17 @@
+services:
+  xsypher-web:
+    container_name: xsypher-web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: xsypher-web:latest
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - .env.production
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: '8G'

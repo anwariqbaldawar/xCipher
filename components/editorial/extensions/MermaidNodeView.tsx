@@ -12,9 +12,10 @@ function decodeHtmlEntities(str: string): string {
 
 export const MermaidNodeView = (props: any) => {
   const { node, updateAttributes, selected } = props;
-  const graphDefinition = decodeHtmlEntities(node.attrs.graphDefinition);
+  const graphDefinition = decodeHtmlEntities(node.attrs.graphDefinition || 'graph TD\n  A-->B;');
   const [isEditing, setIsEditing] = useState(false);
   const [svgContent, setSvgContent] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -64,16 +65,21 @@ export const MermaidNodeView = (props: any) => {
     const isDark = theme === 'dark';
 
     const renderMermaid = async () => {
+      if (!graphDefinition || graphDefinition.trim() === '') {
+        if (!cancelled) setSvgContent('');
+        return;
+      }
+      
       try {
         const { default: mermaid } = await import('mermaid');
         if (cancelled) return;
 
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'base',
+          theme: isDark ? 'dark' : 'base',
           themeVariables: {
-            primaryColor: isDark ? '#1a1a1a' : '#f2f2f2', // var(--surface-2)
-            primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6', // var(--line)
+            primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
+            primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',
             primaryTextColor: isDark ? '#ffffff' : '#111111',
             lineColor: isDark ? '#e0e0e0' : '#333333',
             edgeLabelBackground: 'transparent',
@@ -96,31 +102,35 @@ export const MermaidNodeView = (props: any) => {
           `,
           fontFamily: "var(--f-ui), sans-serif",
           flowchart: {
-            htmlLabels: false,
+            htmlLabels: true,
             padding: 20
           }
         });
 
-        if (!cancelled) setSvgContent('');
-        const id = `mermaid-svg-${Math.random().toString(36).substr(2, 9)}`;
+        const id = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
+        
+        // Use a wrapper div for mermaid to render into
         const { svg } = await mermaid.render(id, graphDefinition);
         if (!cancelled) {
           setSvgContent(svg);
+          setError(null);
         }
-      } catch (err) {
+      } catch (err: any) {
         if (!cancelled) {
-          setSvgContent(`<div class="text-red-500">Syntax error in Mermaid graph</div>`);
+          console.error("Mermaid Render Error:", err);
+          setError(err?.message || "Syntax error in Mermaid graph");
         }
       }
     };
 
     if (!isEditing) {
-      // Delay render slightly to ensure DOM container is ready
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          renderMermaid();
-        });
-      }, 50);
+      const timeoutId = setTimeout(() => {
+        renderMermaid();
+      }, 100);
+      return () => {
+        cancelled = true;
+        clearTimeout(timeoutId);
+      };
     }
 
     return () => {
@@ -129,42 +139,52 @@ export const MermaidNodeView = (props: any) => {
   }, [graphDefinition, theme, isEditing]);
 
   const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-    updateAttributes({ graphDefinition: e.target.value.trim() });
+    updateAttributes({ graphDefinition: e.target.value });
     setIsEditing(false);
   };
 
   return (
-    <NodeViewWrapper className={`mermaid-node-wrapper relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`}>
+    <NodeViewWrapper className={`mermaid-node-wrapper relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
       {isEditing ? (
         <textarea
-          className="w-full h-32 p-2 bg-background text-foreground border rounded"
+          className="w-full h-48 p-3 bg-background text-foreground border rounded font-mono text-sm"
           defaultValue={graphDefinition}
           onBlur={handleBlur}
           autoFocus
         />
       ) : (
-        <div className="flex justify-center w-full my-8">
-          <div 
-            ref={resizableRef} 
-            className="relative mx-auto" 
-            style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%' }}
-          >
-            <div
-              ref={containerRef}
-              className="mermaid-svg-container not-prose cursor-pointer overflow-x-auto w-full"
-              style={{ minHeight: '100px' }}
-              onDoubleClick={() => setIsEditing(true)}
-              dangerouslySetInnerHTML={{ __html: svgContent }}
-              spellCheck={false}
-            />
-            {selected && (
+        <div className="flex flex-col items-center justify-center w-full my-8 not-prose cursor-pointer" onDoubleClick={() => setIsEditing(true)}>
+          {error ? (
+            <div className="text-red-500 text-sm p-4 border border-red-500 rounded bg-red-50 dark:bg-red-950 w-full whitespace-pre-wrap font-mono">
+              <strong>Mermaid Syntax Error:</strong>
+              <br/>
+              {error}
+            </div>
+          ) : svgContent ? (
+            <div 
+              ref={resizableRef} 
+              className="relative mx-auto w-full" 
+              style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%' }}
+            >
               <div
-                className="absolute bottom-0 right-0 w-3 h-3 bg-[var(--line)] cursor-se-resize rounded-sm hover:bg-[var(--accent)] transition-colors"
-                onMouseDown={handleMouseDown}
-                title="Drag to resize"
+                ref={containerRef}
+                className="mermaid-svg-container overflow-x-auto w-full flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
+                style={{ minHeight: '100px' }}
+                dangerouslySetInnerHTML={{ __html: svgContent }}
               />
-            )}
-          </div>
+              {selected && (
+                <div
+                  className="absolute bottom-0 right-0 w-3 h-3 bg-[var(--line)] cursor-se-resize rounded-sm hover:bg-[var(--accent)] transition-colors"
+                  onMouseDown={handleMouseDown}
+                  title="Drag to resize"
+                />
+              )}
+            </div>
+          ) : (
+            <div className="animate-pulse bg-[var(--surface)] h-32 w-full rounded flex items-center justify-center text-[var(--muted)]">
+              Rendering diagram...
+            </div>
+          )}
         </div>
       )}
       {!isEditing && (
