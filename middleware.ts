@@ -11,6 +11,12 @@ export default async function middleware(req: NextRequest) {
     const hostname = req.headers.get("host") || "";
     const pathname = url.pathname;
 
+    // Fast path: exit early for normal apex domain traffic that doesn't need protection or rewrites
+    const isSpecialSubdomain = hostname.startsWith("admin.") || hostname.startsWith("preview.");
+    if (!isSpecialSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/api/auth")) {
+      return NextResponse.next();
+    }
+
     const isLocalDev =
       process.env.IS_LOCAL_DEV === "true" ||
       process.env.NEXTAUTH_URL?.includes("localhost") ||
@@ -97,6 +103,15 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/auth/:path*"],
+  matcher: [
+    /*
+     * Match all paths except:
+     * 1. /_next/static (static files)
+     * 2. /_next/image (image optimization files)
+     * 3. /favicon.ico (favicon)
+     * 4. Static assets with extensions (svg, png, jpg, etc.)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
 
