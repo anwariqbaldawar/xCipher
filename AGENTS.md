@@ -84,6 +84,7 @@ When implementing asynchronous operations (such as dynamic imports or heavy rend
 When using `mermaid.render()` dynamically inside React or TipTap components:
 - **Strict Mode Concurrency**: Always include a small delay (`await new Promise(r => setTimeout(r, 50))`) before `import('mermaid')` to allow React 18 Strict Mode to cancel duplicate effects. Otherwise, parallel render queues will hang the browser silently.
 - **No Explicit Containers**: Do NOT pass an explicit hidden container to `mermaid.render(id, text, container)`. Doing so will cause `svg.node().getBBox is not a function` because the browser cannot calculate dimensions for `visibility: hidden` or `display: none` elements. Let Mermaid use its default behavior of appending to `document.body` for measurement.
+- **HTML Labels and Typography Isolation**: Always configure `flowchart: { htmlLabels: true }` alongside `fontFamily: "var(--f-ui), sans-serif"` for proper text wrapping. Wrap Mermaid containers with `not-prose w-full overflow-x-auto` and `.mermaid-wrapper` to isolate diagrams from Tailwind Typography (`.prose`) styling overrides and maintain fluid SVG bounds (`.mermaid-wrapper svg { max-width: 100% !important; height: auto; }`).
 
 ## 3. Code Quality & TypeScript
 - **No Regex Replacements:** Never use Python scripts or blind Regex to refactor code. Use native AST transformations or manually edit code safely to prevent broken syntax and dangling imports.
@@ -102,3 +103,10 @@ xSypher is a premium editorial newsroom CMS and publication.
 3. **Verify:** Check for TypeScript errors after making changes (e.g., suggesting `npx tsc --noEmit`).
 
 By following these rules, you ensure xSypher remains highly performant, globally distributed on Cloudflare, and maintainable.
+
+## 6. Database Migration Safety (CRITICAL)
+- **Fail Fast:** Never swallow errors in database migration scripts. Always catch errors, log them explicitly using `console.error()`, and exit with a non-zero status code (e.g., `process.exit(1)`).
+- **Deployment Pipelines:** Never append `|| true` or use fallback success patterns for migration commands (e.g., `node migrate.mjs`) in CI/CD pipelines (like GitHub Actions). A failed migration MUST halt the deployment pipeline.
+
+### L. Dependency Minimization (Caching)
+When implementing in-memory caching or rate-limiting within a single Node.js instance, prefer using native `Map` with custom garbage collection (e.g., stochastic pruning) instead of adding external dependencies like `lru-cache`.

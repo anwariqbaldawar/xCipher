@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 export function base64urlEncode(source: string | Uint8Array): string {
   let base64: string;
   if (typeof source === "string") {
@@ -10,16 +12,6 @@ export function base64urlEncode(source: string | Uint8Array): string {
     base64 = btoa(binary);
   }
   return base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-
-export function parsePrivateKey(pem: string): ArrayBuffer {
-  const base64 = pem.replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes.buffer as ArrayBuffer;
 }
 
 export async function createJwt(): Promise<string> {
@@ -45,26 +37,8 @@ export async function createJwt(): Promise<string> {
   const encodedPayload = base64urlEncode(JSON.stringify(payload));
   const unsignedToken = `${encodedHeader}.${encodedPayload}`;
 
-  const privateKeyData = parsePrivateKey(privateKeyPem);
-  
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    privateKeyData,
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256",
-    },
-    false,
-    ["sign"]
-  );
-
-  const signatureBuffer = await crypto.subtle.sign(
-    "RSASSA-PKCS1-v1_5",
-    cryptoKey,
-    new TextEncoder().encode(unsignedToken)
-  );
-
-  const encodedSignature = base64urlEncode(new Uint8Array(signatureBuffer));
+  const signature = crypto.createSign("RSA-SHA256").update(unsignedToken).sign(privateKeyPem);
+  const encodedSignature = base64urlEncode(signature);
   return `${unsignedToken}.${encodedSignature}`;
 }
 

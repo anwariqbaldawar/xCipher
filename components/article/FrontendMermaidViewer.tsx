@@ -51,6 +51,12 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
               filter: none !important; 
               box-shadow: none !important; 
             }
+            .nodeLabel, .edgeLabel {
+              line-height: normal !important;
+            }
+            .nodeLabel p, .edgeLabel p {
+              margin: 0 !important;
+            }
             .edgeLabel rect {
               fill: transparent !important;
             }
@@ -68,14 +74,8 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
             padding: 20
           }
         });
-
-        const id = `mermaid-frontend-${Math.random().toString(36).substr(2, 9)}`;
-        const measurementContainer = containerRef.current;
-        if (!measurementContainer) {
-          throw new Error('Mermaid container is not mounted');
-        }
-
-        const { svg } = await mermaid.render(id, decoded, measurementContainer);
+        const id = `mermaid-frontend-${crypto.randomUUID()}`;
+        const { svg } = await mermaid.render(id, decoded);
         if (!cancelled) {
           setSvgContent(svg);
         }
@@ -94,7 +94,7 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
   }, [decoded, theme]);
 
   return (
-    <div className="flex justify-center w-full my-8 not-prose overflow-x-auto">
+    <div className="mermaid-wrapper not-prose w-full overflow-x-auto flex justify-center my-8">
       <div
         className="relative"
         style={{
@@ -105,12 +105,13 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
       >
         <div
           ref={containerRef}
-          className="mermaid-svg-container not-prose overflow-x-auto w-full [&_svg]:!w-full [&_svg]:!h-auto"
+          className="mermaid-svg-container not-prose w-full overflow-x-auto flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
           dangerouslySetInnerHTML={{ __html: svgContent }}
         />
         <style>{`
+          .mermaid-wrapper svg,
           .mermaid-svg-container svg {
-            width: 100% !important;
+            max-width: 100% !important;
             height: auto !important;
           }
         `}</style>

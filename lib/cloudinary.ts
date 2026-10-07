@@ -1,3 +1,5 @@
+import crypto from "crypto";
+
 function getCloudinaryEnv() {
   const env = process.env;
   return {
@@ -21,10 +23,7 @@ export function checkCloudinaryEnv() {
 }
 
 async function sha1(message: string): Promise<string> {
-  const msgBuffer = new TextEncoder().encode(message);
-  const hashBuffer = await crypto.subtle.digest("SHA-1", msgBuffer);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  return crypto.createHash("sha1").update(message).digest("hex");
 }
 
 export async function uploadImageToCloudinary(file: File | Blob, folder: string): Promise<string> {

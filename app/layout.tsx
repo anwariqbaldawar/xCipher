@@ -11,6 +11,7 @@ const kremlin = localFont({
 });
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import Script from "next/script";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type system — three roles, one family each.
@@ -109,9 +110,9 @@ export default function RootLayout({
         {/* Carry a theme chosen under a previous brand over to the current storage key.
             In Next.js 15+ / React 19, inline scripts should be placed inside <head> 
             as native <script> tags to avoid "Encountered a script tag" errors on the client. */}
-        <script
+        <Script
           id="theme-migration"
-          suppressHydrationWarning
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k="xsypher-theme";if(localStorage.getItem(k))return;var old=["xcipher-theme","gridx-theme"];for(var i=0;i<old.length;i++){var v=localStorage.getItem(old[i]);if(v){localStorage.setItem(k,v);return;}}}catch(e){}})();`,
           }}

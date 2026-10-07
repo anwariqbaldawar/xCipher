@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { checkRateLimit } from "@/lib/rateLimit";
-import { sendPasswordResetEmail } from "@/lib/email";
+import { notificationQueue } from "@/lib/queue";
 import { randomHex } from "@/lib/utils";
 import { hashPassword } from "@/lib/crypto";
 import { z } from "zod";
@@ -37,11 +37,7 @@ export async function requestPasswordReset(email: string): Promise<{ success?: s
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
       const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
 
-      const emailResult = await sendPasswordResetEmail({ to: email, resetUrl });
-      
-      if (!emailResult.success) {
-        return { error: "Failed to dispatch password reset email. Please contact support or check server configuration." };
-      }
+      await notificationQueue.add('sendPasswordResetEmail', { to: email, resetUrl });
 
       await db.insert(auditLog).values({
         id: crypto.randomUUID(),

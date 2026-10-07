@@ -4,7 +4,7 @@ import { siteConfig } from '@/lib/seo';
 import { eq, sql } from 'drizzle-orm';
 import { article as articleTable } from '@/lib/db/schema';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let articles: any[] = [];

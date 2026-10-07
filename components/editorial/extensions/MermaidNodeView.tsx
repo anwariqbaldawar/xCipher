@@ -101,22 +101,12 @@ export const MermaidNodeView = (props: any) => {
       if (!codeToRender) return;
 
       setIsRendering(true);
-      const id = `mermaid-svg-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-
-      // Mermaid 12 measures the generated SVG with getBBox(). Passing a
-      // real, off-screen DOM container keeps the SVG browser-measurable while
-      // preventing Mermaid's temporary markup from flashing in the editor.
-      const measurementContainer = document.createElement('div');
-      measurementContainer.style.position = 'fixed';
-      measurementContainer.style.left = '-10000px';
-      measurementContainer.style.top = '0';
-      measurementContainer.style.width = '800px';
-      measurementContainer.style.height = '600px';
-      measurementContainer.style.opacity = '0';
-      measurementContainer.style.pointerEvents = 'none';
-      document.body.appendChild(measurementContainer);
+      const id = `mermaid-svg-${crypto.randomUUID()}`;
 
       try {
+        await new Promise(r => setTimeout(r, 50));
+        if (cancelled) return;
+
         const { default: mermaid } = await import('mermaid');
         if (cancelled) return;
 
@@ -134,6 +124,12 @@ export const MermaidNodeView = (props: any) => {
             .node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect {
               filter: none !important;
               box-shadow: none !important;
+            }
+            .nodeLabel, .edgeLabel {
+              line-height: normal !important;
+            }
+            .nodeLabel p, .edgeLabel p {
+              margin: 0 !important;
             }
             .edgeLabel rect {
               fill: transparent !important;
@@ -153,7 +149,7 @@ export const MermaidNodeView = (props: any) => {
           },
         });
 
-        const { svg } = await mermaid.render(id, codeToRender, measurementContainer);
+        const { svg } = await mermaid.render(id, codeToRender);
         if (!cancelled) {
           setRenderResult({ code: codeToRender, theme, svg });
         }
@@ -167,10 +163,7 @@ export const MermaidNodeView = (props: any) => {
           });
         }
       } finally {
-        if (!cancelled) {
-          setIsRendering(false);
-        }
-        measurementContainer.remove();
+        setIsRendering(false);
       }
     };
 
@@ -211,7 +204,7 @@ export const MermaidNodeView = (props: any) => {
   };
 
   return (
-    <NodeViewWrapper className={`mermaid-node-wrapper relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
+    <NodeViewWrapper className={`mermaid-node-wrapper mermaid-wrapper not-prose w-full overflow-x-auto relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
       {isEditing ? (
         <div className="w-full flex flex-col gap-2">
           <textarea
@@ -253,12 +246,12 @@ export const MermaidNodeView = (props: any) => {
           ) : svgContent ? (
             <div
               ref={resizableRef}
-              className="relative mx-auto w-full"
+              className="mermaid-wrapper not-prose w-full overflow-x-auto relative mx-auto"
               style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%' }}
             >
               <div
                 ref={containerRef}
-                className="mermaid-svg-container overflow-x-auto w-full flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
+                className="mermaid-svg-container not-prose overflow-x-auto w-full flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
                 style={{ minHeight: '100px' }}
                 dangerouslySetInnerHTML={{ __html: svgContent }}
               />

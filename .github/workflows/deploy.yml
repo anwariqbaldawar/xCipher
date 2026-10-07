@@ -22,7 +22,7 @@ jobs:
             
             # Run Drizzle ORM migrations
             # If using migrate.mjs:
-            node migrate.mjs || true
+            node migrate.mjs
             
             # Rebuild and restart the container zero-downtime
             docker compose -f docker-compose.prod.yml build --no-cache

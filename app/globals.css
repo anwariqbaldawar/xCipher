@@ -7710,26 +7710,42 @@ body.is-article .prose pre {
 }
 
 /* Fix Mermaid text clipping & prose conflicts */
-.mermaid-svg-container foreignObject {
+.mermaid-wrapper svg {
+    max-width: 100% !important;
+    height: auto;
+}
+.not-prose.mermaid-wrapper,
+.not-prose.mermaid-svg-container {
+    line-height: normal !important;
+    overflow-x: auto;
+}
+.mermaid-svg-container svg {
+    max-width: 100% !important;
+    height: auto;
+}
+.mermaid-svg-container foreignObject,
+.mermaid-wrapper foreignObject {
     overflow: visible !important;
 }
-.mermaid-svg-container .edgeLabel {
+.mermaid-svg-container .edgeLabel,
+.mermaid-wrapper .edgeLabel {
     background-color: transparent !important;
 }
-.mermaid-svg-container .edgeLabel text {
+.mermaid-svg-container .edgeLabel text,
+.mermaid-wrapper .edgeLabel text {
     fill: var(--ink, #111111) !important;
     font-weight: 500 !important;
 }
 .mermaid-svg-container .edgePath path,
-.mermaid-svg-container .flowchart-link {
+.mermaid-svg-container .flowchart-link,
+.mermaid-wrapper .edgePath path,
+.mermaid-wrapper .flowchart-link {
     stroke: var(--ink, #333333) !important;
 }
-.mermaid-svg-container div {
+.mermaid-svg-container div,
+.mermaid-wrapper div {
     font-family: var(--f-ui) !important;
-}
-.mermaid-svg-container svg {
-    width: 100% !important;
-    height: auto !important;
+    line-height: normal !important;
 }
 
 /* Fix Mermaid text vertical alignment and prevent global line-height from breaking nodes */

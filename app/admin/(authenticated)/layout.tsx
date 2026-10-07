@@ -16,6 +16,8 @@ import { authorize } from "@/lib/capabilities";
 import Logo from "@/components/common/Logo";
 import { Role } from "@/lib/types";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   if (!user) {

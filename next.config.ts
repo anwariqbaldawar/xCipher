@@ -157,10 +157,6 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: [
           {
-            key: "Cache-Control",
-            value: "s-maxage=60, stale-while-revalidate=86400",
-          },
-          {
             key: "Content-Security-Policy",
             value: `default-src 'self'; script-src 'self' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} 'unsafe-inline' https://www.tiktok.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; frame-src 'self' https://www.youtube-nocookie.com https://www.tiktok.com; frame-ancestors 'none'; connect-src 'self' https:;`,
           },

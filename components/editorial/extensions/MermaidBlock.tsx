@@ -59,10 +59,15 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
         // Commands that insert a new diagram provide a sample explicitly. An
         // empty default lets old JSON containing only graphDefinition win.
         default: '',
-        parseHTML: element =>
-          cleanMermaidCode(element.getAttribute('data-code')) ||
-          cleanMermaidCode(element.getAttribute('data-graph-definition')) ||
-          cleanMermaidCode(element.textContent),
+        parseHTML: element => {
+          const canonicalCode = cleanMermaidCode(element.getAttribute('data-code'));
+          if (canonicalCode) return canonicalCode;
+
+          const legacyCode = cleanMermaidCode(element.getAttribute('data-graph-definition'));
+          if (legacyCode) return legacyCode;
+
+          return cleanMermaidCode(element.textContent);
+        },
         // `data-code` is the single canonical HTML representation. Legacy
         // graphDefinition JSON is resolved here for lossless HTML output.
         renderHTML: attributes => ({

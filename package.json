@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "worker": "tsx lib/queue/worker.ts"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -36,6 +37,7 @@
     "@tiptap/suggestion": "^3.31.3",
     "aws4fetch": "^1.0.20",
     "bcrypt-ts": "^9.0.2",
+    "bullmq": "^6.3.11",
     "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
     "deepmerge-ts": "^8.0.2",
@@ -43,8 +45,10 @@
     "framer-motion": "^13.4.4",
     "highlight.js": "^11.12.0",
     "html-react-parser": "^6.1.8",
+    "ioredis": "^6.0.0",
     "isomorphic-dompurify": "^4.2.0",
     "lowlight": "^3.3.0",
+    "lru-cache": "^11.5.3",
     "lucide-react": "^1.46.0",
     "mermaid": "^12.0.0",
     "next": "16.3.5",

@@ -61,6 +61,30 @@ import EditorialPersonaSettings from "./EditorialPersonaSettings";
 import { getPersonaForCategory } from "@/lib/personas";
 import "./styles/studio.css";
 
+function hasEmptyMermaidSource(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  if (Array.isArray(value)) return value.some(hasEmptyMermaidSource);
+
+  const node = value as {
+    type?: unknown;
+    attrs?: { code?: unknown; graphDefinition?: unknown };
+    content?: unknown[];
+  };
+  if (
+    node.type === "mermaidBlock" &&
+    !String(node.attrs?.code || "").trim() &&
+    !String(node.attrs?.graphDefinition || "").trim()
+  ) {
+    return true;
+  }
+
+  return Array.isArray(node.content) && node.content.some(hasEmptyMermaidSource);
+}
+
+function htmlHasMermaidSource(html: string): boolean {
+  return /data-(?:code|graph-definition)\s*=\s*["'][^"']*\S[^"']*["']/i.test(html);
+}
+
 // Templates
 const ARTICLE_TEMPLATES: Record<string, { title: string, deck: string, html: string }> = {
   news: {
@@ -548,7 +572,9 @@ export default function ArticleEditor({
       // does not trigger flushSync inside React's passive effect lifecycle.
       queueMicrotask(() => {
         if (!editor.isDestroyed) {
-          if (initialData.contentJson) {
+          const jsonNeedsHtmlRecovery =
+            hasEmptyMermaidSource(initialData.contentJson) && htmlHasMermaidSource(htmlContent);
+          if (initialData.contentJson && !jsonNeedsHtmlRecovery) {
             editor.commands.setContent(initialData.contentJson);
           } else {
             editor.commands.setContent(htmlContent);

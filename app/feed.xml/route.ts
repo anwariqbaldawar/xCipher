@@ -4,7 +4,7 @@ import { getArticleAuthor } from "@/lib/personas";
 import { and, eq, lte } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export async function GET() {
   try {

@@ -11,6 +11,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasRequiredRole } from "@/lib/permissions";
 import { revalidatePath } from "@/lib/revalidate";
 import { Role } from "@/lib/types";
+import crypto from "crypto";
 
 // ─── Safe public shape returned to readers ──────────────────────────────────
 export interface PublicComment {
@@ -23,10 +24,7 @@ export interface PublicComment {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 async function sha256(input: string): Promise<string> {
-  const msgUint8 = new TextEncoder().encode(input.toLowerCase().trim());
-  const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  return crypto.createHash("sha256").update(input.toLowerCase().trim()).digest("hex");
 }
 
 const nameSchema = z.string().min(1).max(60).trim();

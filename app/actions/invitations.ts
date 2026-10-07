@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canAssignRole, canManageUser, hasRequiredRole } from "@/lib/permissions";
 import { randomHex } from "@/lib/utils";
-import { sendInvitationEmail } from "@/lib/email";
+import { notificationQueue } from "@/lib/queue";
 import { createNotification } from "./notifications";
 import { hashPassword } from "@/lib/crypto";
 import { eq, inArray, or, and, isNull } from "drizzle-orm";
@@ -76,15 +76,11 @@ export async function inviteUser(formData: FormData) {
     }
     const inviteUrl = `${baseUrl}/invite/${token}`;
 
-    const emailResult = await sendInvitationEmail({ to: email, role, inviteUrl });
+    await notificationQueue.add('sendInvitationEmail', { to: email, role, inviteUrl });
     
     await logAudit("INVITE_USER", "Invitation", invitation.id, { email, role });
 
-    if (!emailResult.success) {
-      return { success: true, inviteUrl, warning: "Failed to send email. " + emailResult.error };
-    }
-
-    return { success: true, inviteUrl };
+    return { success: true, inviteUrl, warning: undefined };
   } catch (error: any) {
     console.error("Invite error:", error);
     return { success: false, error: error.message || "An error occurred." };

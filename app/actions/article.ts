@@ -17,6 +17,7 @@ import { after } from "next/server";
 import { uploadToR2, deleteKeyFromR2 } from "@/lib/storage";
 import { notifyGoogleIndexing } from "@/lib/google-indexing";
 import { siteConfig } from "@/lib/seo";
+import { publishingQueue } from "@/lib/queue";
 
 import type { Role } from "@/lib/types";
 
@@ -339,7 +340,7 @@ export async function upsertArticle(data: any) {
       // Draft autosaves cannot affect a public page. Avoid discarding the
       // publication's caches or every route under its root layout for them.
       if (finalArticle.status === "PUBLISHED" || existingArticle?.status === "PUBLISHED") {
-        notifyGoogleIndexing(`${siteConfig.url}/article/${finalArticle.slug}`);
+        publishingQueue.add('pingGoogleIndexing', { url: `${siteConfig.url}/article/${finalArticle.slug}` }).catch(console.error);
         const slugs = new Set([finalArticle.slug, existingArticle?.slug].filter((slug): slug is string => !!slug));
         const tags = new Set([...slugs].flatMap(slug => articleMutationTags({ slug })));
         invalidations.push(

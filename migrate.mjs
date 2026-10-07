@@ -29,6 +29,7 @@ async function migrate() {
     console.log("Migration successful!");
   } catch (error) {
     console.error("Migration failed:", error);
+    process.exit(1);
   } finally {
     await sql.end();
   }
