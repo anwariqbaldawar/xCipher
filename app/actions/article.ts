@@ -360,6 +360,7 @@ export async function upsertArticle(data: any) {
 
     return { success: true, article: finalArticle };
   } catch (error: any) {
+    console.error("[ARTICLE_SAVE_ERROR]", error);
     return handleServerError(error, "Failed to save article");
   }
 }

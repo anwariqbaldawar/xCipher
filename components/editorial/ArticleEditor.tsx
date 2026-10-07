@@ -544,11 +544,17 @@ export default function ArticleEditor({
       }
       // Prefer JSON rehydration (lossless) over HTML (lossy due to sanitizer encoding).
       // contentJson preserves exact Tiptap node types and attributes without corruption.
-      if (initialData.contentJson) {
-        editor.commands.setContent(initialData.contentJson);
-      } else {
-        editor.commands.setContent(htmlContent);
-      }
+      // Defer setContent to a microtask so that Tiptap's synchronous ReactNodeView rendering
+      // does not trigger flushSync inside React's passive effect lifecycle.
+      queueMicrotask(() => {
+        if (!editor.isDestroyed) {
+          if (initialData.contentJson) {
+            editor.commands.setContent(initialData.contentJson);
+          } else {
+            editor.commands.setContent(htmlContent);
+          }
+        }
+      });
     }
   }, [initialData, editor, reset]);
 

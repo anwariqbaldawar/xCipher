@@ -1,7 +1,5 @@
 import { drizzle as drizzlePostgres } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import { neon } from "@neondatabase/serverless";
-import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd()); // Load Next.js .env files
 
@@ -20,8 +18,8 @@ async function migrateData() {
   const oldDb = drizzlePostgres(oldClient, { schema });
 
   console.log("Connecting to new Neon database...");
-  const newClient = neon(newUrl);
-  const newDb = drizzleNeon(newClient, { schema });
+  const newClient = postgres(newUrl, { prepare: false });
+  const newDb = drizzlePostgres(newClient, { schema });
 
   try {
     console.log("Starting data migration...");

@@ -12,6 +12,7 @@ import StoryCard from "@/components/article/StoryCard";
 import StoryRow from "@/components/article/StoryRow";
 import EditorialPersonaSettings from "@/components/editorial/EditorialPersonaSettings";
 
+vi.mock("@/components/common/SocialIcon", () => ({ SocialIcon: () => <svg data-social="true" /> }));
 vi.mock("@/components/author/AuthorProfileView", () => ({ SocialIcon: () => <svg data-social="true" /> }));
 // eslint-disable-next-line @next/next/no-img-element -- Test the rendered identity independently of Next image optimization.
 vi.mock("next/image", () => ({ default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} /> }));
@@ -78,7 +79,7 @@ describe("editorial personas", () => {
     const anonymous = renderToStaticMarkup(<AuthorBox article={article} />);
     expect(anonymous).toContain(EDITORIAL_PERSONAS.ai.bio);
     const named = renderToStaticMarkup(<AuthorBox article={{ ...article, isAnonymous: false }} />);
-    expect(named).toContain("Private biography");
+    expect(named).toContain("Private overview");
     expect(named).toContain('href="/author/private-author"');
     expect(named).toContain('src="/private-avatar.png"');
     for (const social of article.authorModel.socialLinks) expect(named).toContain(`href="${social.url}"`);

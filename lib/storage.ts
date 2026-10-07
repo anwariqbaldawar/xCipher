@@ -77,6 +77,7 @@ export async function uploadFileToR2(file: File | Blob, bucket: string, key: str
     body: buffer,
     headers: {
       "Content-Type": type,
+      "Content-Length": String(buffer.byteLength),
     },
   });
 
@@ -95,11 +96,14 @@ export async function uploadToR2(key: string, body: string, contentType: string 
   const aws = await getR2Client(config);
   const endpoint = new URL(`https://${config.accountId}.r2.cloudflarestorage.com/${config.bucket}/${key}`);
   
+  const payload = typeof body === "string" ? new TextEncoder().encode(body) : body;
+
   const res = await aws.fetch(endpoint.toString(), {
     method: "PUT",
-    body: body,
+    body: payload,
     headers: {
       "Content-Type": contentType,
+      "Content-Length": String(payload.byteLength),
     },
   });
 

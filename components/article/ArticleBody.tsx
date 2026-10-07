@@ -143,7 +143,7 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
 
         
         if (domNode.attribs['data-type'] === 'mermaid-block') {
-          const graphDef = domNode.attribs['data-graph-definition'];
+          const graphDef = domNode.attribs['data-graph-definition'] || domNode.attribs['data-code'];
           const containerWidth = domNode.attribs['data-container-width'] || '100%';
           if (graphDef) {
             return <FrontendMermaidViewer graphDefinition={graphDef} containerWidth={containerWidth} />;

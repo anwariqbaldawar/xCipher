@@ -2,7 +2,7 @@
 
 import { Link2 } from "lucide-react";
 import { showToast } from "@/lib/utils";
-import { SocialIcon } from "@/components/author/AuthorProfileView";
+import { SocialIcon } from "@/components/common/SocialIcon";
 
 export default function ShareRow({ title, slug, deck }: { title: string; slug: string; deck?: string }) {
   const url = typeof window !== 'undefined' ? `${window.location.origin}/article/${slug}` : `https://xsypher.com/article/${slug}`;

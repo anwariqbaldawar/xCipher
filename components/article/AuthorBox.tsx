@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ArticleByline from "./ArticleByline";
-import { SocialIcon } from "@/components/author/AuthorProfileView";
+import { SocialIcon } from "@/components/common/SocialIcon";
 import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 import { parseAuthorSocialLinks } from "@/lib/entity-schema";
 import { sanitizeBioHtml } from "@/lib/sanitize";

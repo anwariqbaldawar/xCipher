@@ -255,6 +255,17 @@ export const getSuggestionItems = ({ query }: { query: string }): SlashCommandIt
       },
     },
     {
+      title: 'Mermaid Diagram',
+      description: 'Insert a flowchart or architecture diagram',
+      icon: '🔀',
+      command: ({ editor, range }) => {
+        editor.chain().focus().deleteRange(range).setMermaidBlock({
+          code: 'graph TD\n  A-->B;',
+          graphDefinition: 'graph TD\n  A-->B;',
+        }).run()
+      },
+    },
+    {
       title: 'Image',
       description: 'Insert an image with caption',
       icon: '🖼️',
