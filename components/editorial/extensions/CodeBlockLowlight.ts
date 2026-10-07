@@ -156,6 +156,7 @@ declare module '@tiptap/core' {
     codeBlockLowlight: {
       setCodeBlock: (attributes?: { language: string }) => ReturnType
       toggleCodeBlock: (attributes?: { language: string }) => ReturnType
+      convertSelectionToCodeBlock: (attributes?: { language?: string }) => ReturnType
     }
   }
 }
@@ -245,6 +246,32 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
         attributes =>
         ({ commands }) => {
           return commands.toggleNode(this.name, 'paragraph', attributes)
+        },
+      convertSelectionToCodeBlock:
+        attributes =>
+        ({ state, dispatch, commands }) => {
+          const { selection, schema } = state
+          const selectedText = state.doc.textBetween(selection.from, selection.to, '\n')
+          if (!selectedText.trim()) {
+            return commands.toggleNode(this.name, 'paragraph', attributes)
+          }
+
+          const blockRange = selection.$from.blockRange(selection.$to)
+          if (!blockRange) {
+            return false
+          }
+
+          const from = selection.$from.before(blockRange.depth + 1)
+          const to = selection.$to.after(blockRange.depth + 1)
+          const codeBlock = this.type.create(
+            { language: attributes?.language || null },
+            schema.text(selectedText),
+          )
+
+          if (dispatch) {
+            dispatch(state.tr.replaceRangeWith(from, to, codeBlock).scrollIntoView())
+          }
+          return true
         },
     }
   },

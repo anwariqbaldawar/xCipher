@@ -33,6 +33,7 @@ export const MermaidNodeView = (props: any) => {
   const [editValue, setEditValue] = useState<string>(currentCode);
   const [isEditing, setIsEditing] = useState(false);
   const [renderResult, setRenderResult] = useState<MermaidRenderResult | null>(null);
+  const [isRendering, setIsRendering] = useState(false);
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   const hasCommittedEditRef = useRef(false);
@@ -50,7 +51,6 @@ export const MermaidNodeView = (props: any) => {
     renderResult !== null && renderResult.code === currentCode && renderResult.theme === theme;
   const svgContent = hasCurrentRender ? renderResult?.svg || '' : '';
   const error = hasCurrentRender ? renderResult?.error || null : null;
-  const isRendering = !isEditing && Boolean(currentCode.trim()) && !hasCurrentRender;
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -93,9 +93,28 @@ export const MermaidNodeView = (props: any) => {
     const codeToRender = currentCode.trim();
 
     const renderMermaid = async () => {
+      // Delay slightly to let React 18 Strict Mode cancel the first effect run
+      // before we fire off parallel mermaid.render calls which can hang the parser.
+      await new Promise(r => setTimeout(r, 50));
+      if (cancelled) return;
+
       if (!codeToRender) return;
 
-      const id = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
+      setIsRendering(true);
+      const id = `mermaid-svg-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+      // Mermaid 12 measures the generated SVG with getBBox(). Passing a
+      // real, off-screen DOM container keeps the SVG browser-measurable while
+      // preventing Mermaid's temporary markup from flashing in the editor.
+      const measurementContainer = document.createElement('div');
+      measurementContainer.style.position = 'fixed';
+      measurementContainer.style.left = '-10000px';
+      measurementContainer.style.top = '0';
+      measurementContainer.style.width = '800px';
+      measurementContainer.style.height = '600px';
+      measurementContainer.style.opacity = '0';
+      measurementContainer.style.pointerEvents = 'none';
+      document.body.appendChild(measurementContainer);
 
       try {
         const { default: mermaid } = await import('mermaid');
@@ -134,8 +153,7 @@ export const MermaidNodeView = (props: any) => {
           },
         });
 
-        // Mermaid returns an SVG string; React mounts it into the NodeView DOM.
-        const { svg } = await mermaid.render(id, codeToRender);
+        const { svg } = await mermaid.render(id, codeToRender, measurementContainer);
         if (!cancelled) {
           setRenderResult({ code: codeToRender, theme, svg });
         }
@@ -149,10 +167,10 @@ export const MermaidNodeView = (props: any) => {
           });
         }
       } finally {
-        if (typeof document !== 'undefined') {
-          const orphaned = document.getElementById(`d${id}`);
-          if (orphaned) orphaned.remove();
+        if (!cancelled) {
+          setIsRendering(false);
         }
+        measurementContainer.remove();
       }
     };
 
@@ -165,6 +183,7 @@ export const MermaidNodeView = (props: any) => {
 
     return () => {
       cancelled = true;
+      setIsRendering(false);
     };
   }, [currentCode, theme, isEditing]);
 

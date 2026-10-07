@@ -73,6 +73,18 @@ When creating or updating interactive TipTap NodeViews rendered via `ReactNodeVi
 - **External Sync via `useEffect`:** Keep an effect listening to `node.attrs` changes to sync external updates (undo/redo, paste, collaborative edits).
 - **Markdown Fence Normalization:** Always strip markdown fences (` ```mermaid ... ``` `) from user input, paste rules, and selection conversions before passing raw code to parsers.
 
+### J. TipTap NodeView Async Rendering & Loading States (CRITICAL)
+When implementing asynchronous operations (such as dynamic imports or heavy rendering like Mermaid/Recharts) inside TipTap React NodeViews:
+- **Explicit Loading State:** Never derive loading states from the absence of a result. Always use an explicit React state (e.g., `const [isRendering, setIsRendering] = useState(false)`).
+- **Strict Error Handling:** Wrap all async logic in a strict `try/catch/finally` block.
+- **Guaranteed Reset:** The `finally` block **MUST** explicitly reset the loading state to `false` (`setIsRendering(false)`), ensuring the UI never hangs indefinitely if the render fails or the DOM is not ready.
+- **Unique DOM IDs:** If generating DOM IDs for injected content (like SVGs), ensure they are globally unique per render attempt (e.g., using `crypto.randomUUID()` or timestamp + random string) to prevent collisions during rapid sequential renders.
+
+### K. Mermaid.js DOM Container Isolation (CRITICAL)
+When using `mermaid.render()` dynamically inside React or TipTap components:
+- **Strict Mode Concurrency**: Always include a small delay (`await new Promise(r => setTimeout(r, 50))`) before `import('mermaid')` to allow React 18 Strict Mode to cancel duplicate effects. Otherwise, parallel render queues will hang the browser silently.
+- **No Explicit Containers**: Do NOT pass an explicit hidden container to `mermaid.render(id, text, container)`. Doing so will cause `svg.node().getBBox is not a function` because the browser cannot calculate dimensions for `visibility: hidden` or `display: none` elements. Let Mermaid use its default behavior of appending to `document.body` for measurement.
+
 ## 3. Code Quality & TypeScript
 - **No Regex Replacements:** Never use Python scripts or blind Regex to refactor code. Use native AST transformations or manually edit code safely to prevent broken syntax and dangling imports.
 - **Strict Typing:** Resolve all TypeScript errors properly. Do not use implicit `any`. Define proper interfaces for Drizzle query results when passing them to components.

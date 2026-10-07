@@ -4,7 +4,7 @@ import { CODE_LANGUAGES } from './CodeBlockLowlight';
 
 export const CodeBlockComponent = ({ node, updateAttributes }: any) => {
   return (
-    <NodeViewWrapper className="relative group my-4 rounded-md overflow-hidden bg-[#282c34] dark:bg-[#1e1e1e]">
+    <NodeViewWrapper className="code-block-node relative group my-4 rounded-md overflow-hidden">
       <div className="absolute top-2 right-2 flex items-center gap-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity" contentEditable={false}>
         <select
           className="bg-[var(--surface)] text-[var(--ink)] text-xs px-2 py-1 rounded border border-[var(--line-2)] shadow-sm outline-none cursor-pointer"
@@ -21,7 +21,7 @@ export const CodeBlockComponent = ({ node, updateAttributes }: any) => {
             ))}
         </select>
       </div>
-      <pre className="!m-0 !p-4 !bg-transparent">
+      <pre className="code-block-pre !m-0 !p-4">
         <NodeViewContent as={"code" as any} className={node.attrs.language ? `language-${node.attrs.language}` : ''} />
       </pre>
     </NodeViewWrapper>

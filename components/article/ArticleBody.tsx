@@ -145,9 +145,11 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
         if (domNode.attribs['data-type'] === 'mermaid-block') {
           const graphDef = domNode.attribs['data-graph-definition'] || domNode.attribs['data-code'];
           const containerWidth = domNode.attribs['data-container-width'] || '100%';
-          if (graphDef) {
+          if (graphDef && graphDef.trim() !== '') {
             return <FrontendMermaidViewer graphDefinition={graphDef} containerWidth={containerWidth} />;
           }
+          // If the graph is empty, render nothing to prevent editor placeholder text from leaking
+          return <></>;
         }
         
         if (domNode.attribs['data-type'] === 'pros-cons-block') {

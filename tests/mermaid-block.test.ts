@@ -20,6 +20,9 @@ describe('MermaidBlock extension & cleaning', () => {
 
     const rawGenericFence = '```\ngraph TD\n  A-->B;\n```';
     expect(cleanMermaidCode(rawGenericFence)).toBe('graph TD\n  A-->B;');
+
+    const rawSpacedLanguage = '``` mermaid\n graph LR\n  X-->Y;\n```';
+    expect(cleanMermaidCode(rawSpacedLanguage)).toBe('graph LR\n  X-->Y;');
   });
 
   it('handles empty or whitespace strings gracefully', () => {

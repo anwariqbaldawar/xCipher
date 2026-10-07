@@ -28,13 +28,17 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
     const isDark = theme === 'dark';
 
     const renderMermaid = async () => {
+      // Delay slightly to let React 18 Strict Mode cancel the first effect run
+      await new Promise(r => setTimeout(r, 50));
+      if (cancelled) return;
+
       try {
         const { default: mermaid } = await import('mermaid');
         if (cancelled) return;
 
         mermaid.initialize({
           startOnLoad: false,
-          theme: 'dark',
+          theme: isDark ? 'dark' : 'base',
           themeVariables: {
             primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
             primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',
@@ -66,11 +70,16 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
         });
 
         const id = `mermaid-frontend-${Math.random().toString(36).substr(2, 9)}`;
-        const { svg } = await mermaid.render(id, decoded);
+        const measurementContainer = containerRef.current;
+        if (!measurementContainer) {
+          throw new Error('Mermaid container is not mounted');
+        }
+
+        const { svg } = await mermaid.render(id, decoded, measurementContainer);
         if (!cancelled) {
           setSvgContent(svg);
         }
-      } catch (err) {
+      } catch {
         if (!cancelled) {
           setSvgContent(`<div class="text-red-500 text-sm">Diagram rendering failed.</div>`);
         }

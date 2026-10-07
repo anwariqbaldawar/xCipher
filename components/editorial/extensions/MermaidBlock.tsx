@@ -14,8 +14,8 @@ export const DEFAULT_MERMAID_CODE = 'graph TD\n  A-->B;';
 export function cleanMermaidCode(raw: string | null | undefined): string {
   if (!raw) return '';
   let cleaned = raw.trim();
-  // Strip leading ```mermaid or ``` (with optional spaces/newlines)
-  cleaned = cleaned.replace(/^```(?:mermaid)?[ \t]*[\r\n]+/i, '');
+  // Strip a language fence with optional whitespace, including ``` mermaid.
+  cleaned = cleaned.replace(/^```[ \t]*(?:mermaid)?[ \t]*[\r\n]+/i, '');
   // Strip trailing ```
   cleaned = cleaned.replace(/[\r\n]+```$/i, '');
   return cleaned.trim();
@@ -123,7 +123,7 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
   addPasteRules() {
     return [
       nodePasteRule({
-        find: /```(?:mermaid)?[ \t]*[\r\n]+([\s\S]+?)```/gi,
+        find: /```[ \t]*(?:mermaid)?[ \t]*[\r\n]+([\s\S]+?)[\r\n]+```/gi,
         type: this.type,
         getAttributes: match => ({
           code: cleanMermaidCode(match[1]),

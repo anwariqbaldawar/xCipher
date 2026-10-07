@@ -38,7 +38,18 @@
 .studio-paper-kicker span { color: var(--accent); }
 .editor-studio #article-title { background: transparent; padding: 0; border: 0; border-radius: 0; font-size: clamp(27px, 2.7vw, 42px); line-height: 1.18; letter-spacing: -.04em; box-shadow: none; }
 .editor-studio #article-deck { background: transparent; padding: 0 0 22px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; font-size: 17px; line-height: 1.65; box-shadow: none; }
-.editor-studio .ed-body .ProseMirror { outline: none; font-size: 16px; line-height: 1.85; min-height: calc(100vh - 200px); padding: 6px 0 8rem; user-select: text; -webkit-user-select: text; caret-color: auto; }
+.editor-studio .ed-body { min-width: 0; max-width: 100%; }
+.editor-studio .ed-body .ProseMirror { outline: none; font-size: 16px; line-height: 1.85; min-width: 0; max-width: 100%; min-height: calc(100vh - 200px); padding: 6px 0 8rem; user-select: text; -webkit-user-select: text; caret-color: auto; }
+.editor-studio .code-block-node { min-width: 0; max-width: 100%; background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); }
+.editor-studio .code-block-pre { min-width: 0; max-width: 100%; overflow-x: auto; white-space: pre; overflow-wrap: normal; background: var(--surface-2) !important; border-color: var(--line) !important; color: var(--ink) !important; font: 13px/1.65 var(--f-mono, ui-monospace, SFMono-Regular, Menlo, monospace); tab-size: 2; }
+.editor-studio .code-block-pre code { display: block; min-width: max-content; color: inherit !important; background: transparent !important; white-space: inherit; overflow-wrap: inherit; }
+.editor-studio .code-block-pre .hljs-comment, .editor-studio .code-block-pre .hljs-quote { color: var(--muted); }
+.editor-studio .code-block-pre .hljs-keyword, .editor-studio .code-block-pre .hljs-selector-tag { color: var(--accent); }
+.editor-studio .code-block-pre .hljs-string, .editor-studio .code-block-pre .hljs-meta .hljs-string { color: #087f5b; }
+.editor-studio .code-block-pre .hljs-number, .editor-studio .code-block-pre .hljs-literal { color: #b45309; }
+:is(.dark, [data-theme="dark"]) .editor-studio .code-block-node { background: #1e1e1e; border-color: #333; color: #f1f5f9; }
+:is(.dark, [data-theme="dark"]) .editor-studio .code-block-pre .hljs-string, :is(.dark, [data-theme="dark"]) .editor-studio .code-block-pre .hljs-meta .hljs-string { color: #a5d6ff; }
+:is(.dark, [data-theme="dark"]) .editor-studio .code-block-pre .hljs-number, :is(.dark, [data-theme="dark"]) .editor-studio .code-block-pre .hljs-literal { color: #79c0ff; }
 .editor-studio .ProseMirror > p:only-child:has(> br.ProseMirror-trailingBreak)::before { content: 'Start your story, or type / to insert a block…'; float: left; color: var(--muted); height: 0; pointer-events: none; font-size: 15px; }
 .studio-inspector { scrollbar-width: thin; }
 .studio-status { position: sticky; bottom: 0; z-index: 35; background: var(--surface); border-top: 1px solid var(--line); padding: 8px 18px; display: flex; justify-content: space-between; gap: 10px; font-size: 10px; color: var(--muted); }
