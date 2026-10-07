@@ -23,6 +23,7 @@ import {
   Columns2,
 } from "lucide-react";
 import { InsertMediaDialog } from "./InsertMediaDialog";
+import { CODE_LANGUAGES } from "./extensions/CodeBlockLowlight";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Selection formatting menu
@@ -176,7 +177,7 @@ export function EditorBubbleMenu({ editor }: Props) {
       options={{ placement: "top", offset: 8 }}
       shouldShow={({ editor: ed, from, to }) => {
         if (ed.isActive("youtubeEmbed")) return false;
-        if (ed.isActive("codeBlock")) return false;
+        if (ed.isActive("codeBlock")) return true;
         if (ed.isActive("mermaidBlock")) return false;
         if (ed.isActive("figure")) return true;
         if (ed.isActive("table")) return true;
@@ -193,6 +194,21 @@ export function EditorBubbleMenu({ editor }: Props) {
             active={false}
             onClick={() => openMedia('image', editor.getAttributes('figure'))}
           />
+        </div>
+      ) : editor.isActive("codeBlock") ? (
+        <div className="eb-row px-2" role="toolbar" aria-label="Code options">
+          <select
+            className="text-xs bg-transparent text-[var(--ink)] cursor-pointer outline-none appearance-none"
+            value={editor.getAttributes("codeBlock").language || ''}
+            onChange={(e) => {
+              editor.chain().focus().setCodeBlock({ language: e.target.value }).run();
+            }}
+            aria-label="Code Language"
+          >
+            {Object.entries(CODE_LANGUAGES).map(([val, label]) => (
+              <option value={val} key={val}>{label}</option>
+            ))}
+          </select>
         </div>
       ) : linkMode ? (
         <div className="eb-link">

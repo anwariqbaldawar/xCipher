@@ -58,7 +58,7 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
               stroke: var(--ink, #333333) !important;
             }
           `,
-          fontFamily: 'inherit',
+          fontFamily: "var(--f-ui), sans-serif",
           flowchart: {
             htmlLabels: false,
             padding: 20

@@ -3,9 +3,37 @@ import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { common, createLowlight } from 'lowlight'
 
+import go from 'highlight.js/lib/languages/go'
+import bash from 'highlight.js/lib/languages/bash'
+import rust from 'highlight.js/lib/languages/rust'
+import python from 'highlight.js/lib/languages/python'
+import typescript from 'highlight.js/lib/languages/typescript'
+import json from 'highlight.js/lib/languages/json'
+import sql from 'highlight.js/lib/languages/sql'
+import yaml from 'highlight.js/lib/languages/yaml'
+import c from 'highlight.js/lib/languages/c'
+import cpp from 'highlight.js/lib/languages/cpp'
+import javascript from 'highlight.js/lib/languages/javascript'
+import html from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+
 // Create a shared lowlight instance with common languages
 // Includes: js, ts, python, java, c, cpp, csharp, go, rust, php, html, css, json, bash, sql, xml, yaml, markdown, and more
 const lowlight = createLowlight(common)
+
+lowlight.register('go', go)
+lowlight.register('bash', bash)
+lowlight.register('rust', rust)
+lowlight.register('python', python)
+lowlight.register('typescript', typescript)
+lowlight.register('json', json)
+lowlight.register('sql', sql)
+lowlight.register('yaml', yaml)
+lowlight.register('c', c)
+lowlight.register('cpp', cpp)
+lowlight.register('javascript', javascript)
+lowlight.register('html', html)
+lowlight.register('css', css)
 
 // Language display names for the selector
 export const CODE_LANGUAGES: Record<string, string> = {
@@ -182,15 +210,18 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
   },
 
   renderHTML({ node, HTMLAttributes }) {
+    const lang = node.attrs.language;
+    const label = lang ? (CODE_LANGUAGES[lang] || CODE_LANGUAGES[lang.toLowerCase()] || 'Code') : 'Code';
     return [
       'pre',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes),
       [
         'code',
         {
-          class: node.attrs.language
-            ? this.options.languageClassPrefix + node.attrs.language
+          class: lang
+            ? this.options.languageClassPrefix + lang
             : null,
+          'data-language-label': label,
         },
         0,
       ],
