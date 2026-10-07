@@ -16,6 +16,8 @@ import { headers } from "next/headers";
 import { after } from "next/server";
 import { uploadToR2, deleteKeyFromR2 } from "@/lib/storage";
 import { triggerGitHubDeployment } from "@/lib/github";
+import { notifyGoogleIndexing } from "@/lib/google-indexing";
+import { siteConfig } from "@/lib/seo";
 
 import type { Role } from "@/lib/types";
 
@@ -339,6 +341,7 @@ export async function upsertArticle(data: any) {
       // publication's caches or every route under its root layout for them.
       if (finalArticle.status === "PUBLISHED" || existingArticle?.status === "PUBLISHED") {
         triggerGitHubDeployment();
+        notifyGoogleIndexing(`${siteConfig.url}/article/${finalArticle.slug}`);
         const slugs = new Set([finalArticle.slug, existingArticle?.slug].filter((slug): slug is string => !!slug));
         const tags = new Set([...slugs].flatMap(slug => articleMutationTags({ slug })));
         invalidations.push(
