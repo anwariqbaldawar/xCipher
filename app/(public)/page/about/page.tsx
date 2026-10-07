@@ -21,7 +21,7 @@ import {
   Compass,
   FileCode2
 } from "lucide-react";
-import { SocialIcon } from "@/components/author/AuthorProfileView";
+import { SocialIcon } from "@/components/common/SocialIcon";
 import { siteConfig } from "@/lib/seo";
 
 export const dynamic = "force-static";

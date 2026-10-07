@@ -6,10 +6,23 @@ export interface MermaidBlockOptions {
   HTMLAttributes: Record<string, any>;
 }
 
+/**
+ * Strip markdown code fences (```mermaid ... ```) if present.
+ */
+export function cleanMermaidCode(raw: string | null | undefined): string {
+  if (!raw) return '';
+  let cleaned = raw.trim();
+  // Strip leading ```mermaid or ``` (with optional spaces/newlines)
+  cleaned = cleaned.replace(/^```(?:mermaid)?[ \t]*[\r\n]+/i, '');
+  // Strip trailing ```
+  cleaned = cleaned.replace(/[\r\n]+```$/i, '');
+  return cleaned.trim();
+}
+
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     mermaidBlock: {
-      setMermaidBlock: (attributes?: { graphDefinition: string }) => ReturnType;
+      setMermaidBlock: (attributes?: { code?: string; graphDefinition?: string; containerWidth?: string }) => ReturnType;
       convertSelectionToMermaid: () => ReturnType;
     };
   }
@@ -29,12 +42,31 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
 
   addAttributes() {
     return {
+      code: {
+        default: 'graph TD\n  A-->B;',
+        parseHTML: element => 
+          cleanMermaidCode(element.getAttribute('data-code')) || 
+          cleanMermaidCode(element.getAttribute('data-graph-definition')) || 
+          cleanMermaidCode(element.textContent),
+        renderHTML: attributes => {
+          const val = attributes.code ?? attributes.graphDefinition ?? 'graph TD\n  A-->B;';
+          return {
+            'data-code': val,
+            'data-graph-definition': val,
+          };
+        },
+      },
       graphDefinition: {
         default: 'graph TD\n  A-->B;',
-        parseHTML: element => element.getAttribute('data-graph-definition'),
+        parseHTML: element => 
+          cleanMermaidCode(element.getAttribute('data-graph-definition')) || 
+          cleanMermaidCode(element.getAttribute('data-code')) || 
+          cleanMermaidCode(element.textContent),
         renderHTML: attributes => {
+          const val = attributes.graphDefinition ?? attributes.code ?? 'graph TD\n  A-->B;';
           return {
-            'data-graph-definition': attributes.graphDefinition,
+            'data-graph-definition': val,
+            'data-code': val,
           };
         },
       },
@@ -55,6 +87,12 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
       {
         tag: 'div[data-type="mermaid-block"]',
       },
+      {
+        tag: 'pre.mermaid',
+      },
+      {
+        tag: 'div.mermaid',
+      },
     ];
   },
 
@@ -69,9 +107,10 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
   addInputRules() {
     return [
       textblockTypeInputRule({
-        find: /^```mermaid\n$/,
+        find: /^```mermaid[ \t]*[\r\n]?$/,
         type: this.type,
         getAttributes: () => ({
+          code: 'graph TD\n  A-->B;',
           graphDefinition: 'graph TD\n  A-->B;',
         }),
       }),
@@ -81,11 +120,13 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
   addPasteRules() {
     return [
       nodePasteRule({
-        find: /```mermaid\n([\s\S]+?)```/g,
+        find: /```(?:mermaid)?[ \t]*[\r\n]+([\s\S]+?)```/gi,
         type: this.type,
         getAttributes: (match) => {
+          const clean = match[1] ? cleanMermaidCode(match[1]) : 'graph TD\n  A-->B;';
           return {
-            graphDefinition: match[1] ? match[1].trim() : 'graph TD\n  A-->B;',
+            code: clean,
+            graphDefinition: clean,
           };
         },
       }),
@@ -97,26 +138,52 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
       setMermaidBlock:
         attributes =>
         ({ commands }) => {
+          const raw = attributes?.code ?? attributes?.graphDefinition ?? 'graph TD\n  A-->B;';
+          const clean = cleanMermaidCode(raw) || 'graph TD\n  A-->B;';
           return commands.insertContent({
             type: this.name,
-            attrs: attributes,
+            attrs: {
+              code: clean,
+              graphDefinition: clean,
+              ...attributes,
+            },
           });
         },
       convertSelectionToMermaid:
         () =>
         ({ state, chain }) => {
           const { selection } = state;
-          const text = state.doc.textBetween(selection.from, selection.to, '\n');
-          
-          if (!text) {
+          let rawText = '';
+          let deleteRange: { from: number; to: number } | null = null;
+
+          if (selection.empty) {
+            const { $from } = selection;
+            const parent = $from.parent;
+            if (parent.type.name === 'codeBlock') {
+              rawText = parent.textContent;
+              deleteRange = { from: $from.before(), to: $from.after() };
+            }
+          } else {
+            rawText = (selection as any).node?.textContent || state.doc.textBetween(selection.from, selection.to, '\n');
+            deleteRange = { from: selection.from, to: selection.to };
+          }
+
+          const cleanText = cleanMermaidCode(rawText);
+          if (!cleanText) {
             return false;
           }
 
-          return chain()
-            .deleteSelection()
+          const tr = deleteRange
+            ? chain().deleteRange(deleteRange)
+            : chain().deleteSelection();
+
+          return tr
             .insertContent({
               type: this.name,
-              attrs: { graphDefinition: text },
+              attrs: {
+                code: cleanText,
+                graphDefinition: cleanText,
+              },
             })
             .run();
         },

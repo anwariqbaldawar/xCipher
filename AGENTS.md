@@ -64,7 +64,14 @@ Do NOT manually compare role strings (e.g., `if (user.role === 'ADMIN')`) when e
 - **Static Assets:** Static informational pages and assets are pre-rendered and served directly from Cloudflare Assets (`.open-next/assets`), keeping worker invocation overhead minimal.
 
 ### G. TipTap Extension Data Persistence (CRITICAL)
-Whenever you create or modify a custom TipTap Node extension that stores its state in `data-*` attributes via `renderHTML` (e.g., `data-pros`, `data-categories`), you **MUST** immediately add those exact attribute names to the `COMMON_ALLOWED_ATTRIBUTES` whitelist in `lib/sanitize.ts`. Failure to do so will result in `DOMPurify` silently stripping the data during the save process, causing the public article page to render empty components.
+Whenever you create or modify a custom TipTap Node extension that stores its state in `data-*` attributes via `renderHTML` (e.g., `data-pros`, `data-categories`, `data-code`), you **MUST** immediately add those exact attribute names to the `COMMON_ALLOWED_ATTRIBUTES` whitelist in `lib/sanitize.ts`. Failure to do so will result in `DOMPurify` silently stripping the data during the save process, causing the public article page to render empty components.
+
+### I. TipTap NodeView Reactivity & Controlled State (CRITICAL)
+When creating or updating interactive TipTap NodeViews rendered via `ReactNodeViewRenderer`:
+- **Dual-Attribute Compatibility:** Support both standard naming conventions (e.g., `code` alongside legacy `graphDefinition`). Define both in `addAttributes()` with fallback resolvers so TipTap never discards either attribute.
+- **Local State Synchronization:** Maintain local React state inside the NodeView. On blur/commit, update local state synchronously *and* call `updateAttributes()`. Do not wait for the asynchronous ProseMirror transaction roundtrip before re-rendering display mode.
+- **External Sync via `useEffect`:** Keep an effect listening to `node.attrs` changes to sync external updates (undo/redo, paste, collaborative edits).
+- **Markdown Fence Normalization:** Always strip markdown fences (` ```mermaid ... ``` `) from user input, paste rules, and selection conversions before passing raw code to parsers.
 
 ## 3. Code Quality & TypeScript
 - **No Regex Replacements:** Never use Python scripts or blind Regex to refactor code. Use native AST transformations or manually edit code safely to prevent broken syntax and dangling imports.

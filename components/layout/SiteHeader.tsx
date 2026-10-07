@@ -6,7 +6,7 @@ import ThemeToggle from "./ThemeToggle";
 import MobileDrawer from "./MobileDrawer";
 import { usePathname } from "next/navigation";
 import { SearchProvider, SearchButton } from "../search/SearchOverlay";
-import { SocialIcon } from "@/components/author/AuthorProfileView";
+import { SocialIcon } from "@/components/common/SocialIcon";
 import { Home, Info, Mail } from "lucide-react";
 import Logo from "@/components/common/Logo";
 

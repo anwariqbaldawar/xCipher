@@ -1,12 +1,26 @@
+import 'server-only';
+import dns from 'node:dns';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './db/schema';
+
+// Prevent Node.js from stalling on unreachable IPv6 routes during concurrent queries
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  // Ignore in environments where setDefaultResultOrder is not supported
+}
 
 type Database = ReturnType<typeof createDatabase>;
 
 function createDatabase(connectionString: string) {
   // Establish a persistent connection pool using native Node.js TCP
-  const queryClient = postgres(connectionString, { max: 15, idle_timeout: 20 });
+  const queryClient = postgres(connectionString, {
+    max: 10,
+    idle_timeout: 20,
+    connect_timeout: 30,
+    ssl: 'require',
+  });
   return drizzle(queryClient, { schema });
 }
 

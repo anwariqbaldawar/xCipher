@@ -1,6 +1,7 @@
 import { NodeViewWrapper } from '@tiptap/react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
+import { cleanMermaidCode } from './MermaidBlock';
 
 /** Decode HTML entities that the sanitizer injects into attribute values. */
 function decodeHtmlEntities(str: string): string {
@@ -12,10 +13,20 @@ function decodeHtmlEntities(str: string): string {
 
 export const MermaidNodeView = (props: any) => {
   const { node, updateAttributes, selected } = props;
-  const graphDefinition = decodeHtmlEntities(node.attrs.graphDefinition || 'graph TD\n  A-->B;');
+
+  // Resolve initial diagram code (supporting both `code` and `graphDefinition` attributes)
+  const getInitialCode = (): string => {
+    const raw = node.attrs.code ?? node.attrs.graphDefinition;
+    if (raw === undefined) return 'graph TD\n  A-->B;';
+    return cleanMermaidCode(decodeHtmlEntities(raw));
+  };
+
+  const [localCode, setLocalCode] = useState<string>(getInitialCode);
+  const [editValue, setEditValue] = useState<string>(localCode);
   const [isEditing, setIsEditing] = useState(false);
   const [svgContent, setSvgContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isRendering, setIsRendering] = useState(false);
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -24,6 +35,18 @@ export const MermaidNodeView = (props: any) => {
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
   const resizableRef = useRef<HTMLDivElement>(null);
+
+  // Sync external node attr updates (from paste, conversion, undo/redo, etc.)
+  useEffect(() => {
+    const raw = node.attrs.code ?? node.attrs.graphDefinition;
+    if (raw !== undefined) {
+      const decoded = cleanMermaidCode(decodeHtmlEntities(raw));
+      if (decoded !== localCode) {
+        setLocalCode(decoded);
+        setEditValue(decoded);
+      }
+    }
+  }, [node.attrs.code, node.attrs.graphDefinition]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -65,11 +88,19 @@ export const MermaidNodeView = (props: any) => {
     const isDark = theme === 'dark';
 
     const renderMermaid = async () => {
-      if (!graphDefinition || graphDefinition.trim() === '') {
-        if (!cancelled) setSvgContent('');
+      const codeToRender = localCode?.trim();
+      if (!codeToRender) {
+        if (!cancelled) {
+          setSvgContent('');
+          setError(null);
+          setIsRendering(false);
+        }
         return;
       }
       
+      setIsRendering(true);
+      const id = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
+
       try {
         const { default: mermaid } = await import('mermaid');
         if (cancelled) return;
@@ -107,10 +138,8 @@ export const MermaidNodeView = (props: any) => {
           }
         });
 
-        const id = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
-        
         // Use a wrapper div for mermaid to render into
-        const { svg } = await mermaid.render(id, graphDefinition);
+        const { svg } = await mermaid.render(id, codeToRender);
         if (!cancelled) {
           setSvgContent(svg);
           setError(null);
@@ -118,7 +147,16 @@ export const MermaidNodeView = (props: any) => {
       } catch (err: any) {
         if (!cancelled) {
           console.error("Mermaid Render Error:", err);
-          setError(err?.message || "Invalid Mermaid syntax");
+          setError(err?.message || "Invalid diagram syntax");
+          setSvgContent('');
+        }
+      } finally {
+        if (typeof document !== 'undefined') {
+          const orphaned = document.getElementById(`d${id}`);
+          if (orphaned) orphaned.remove();
+        }
+        if (!cancelled) {
+          setIsRendering(false);
         }
       }
     };
@@ -129,7 +167,7 @@ export const MermaidNodeView = (props: any) => {
         rAF = requestAnimationFrame(() => {
           renderMermaid();
         });
-      }, 100);
+      }, 50);
       return () => {
         cancelled = true;
         clearTimeout(timeoutId);
@@ -140,27 +178,61 @@ export const MermaidNodeView = (props: any) => {
     return () => {
       cancelled = true;
     };
-  }, [graphDefinition, theme, isEditing]);
+  }, [localCode, theme, isEditing]);
 
-  const handleBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
-    updateAttributes({ graphDefinition: e.target.value });
+  const handleCommitEdit = () => {
+    const cleaned = cleanMermaidCode(editValue);
+    setLocalCode(cleaned);
+    setEditValue(cleaned);
+    updateAttributes({
+      code: cleaned,
+      graphDefinition: cleaned,
+    });
     setIsEditing(false);
+  };
+
+  const handleStartEdit = () => {
+    setEditValue(localCode);
+    setIsEditing(true);
   };
 
   return (
     <NodeViewWrapper className={`mermaid-node-wrapper relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
       {isEditing ? (
-        <textarea
-          className="w-full h-48 p-3 bg-background text-foreground border rounded font-mono text-sm"
-          defaultValue={graphDefinition}
-          onBlur={handleBlur}
-          autoFocus
-        />
+        <div className="w-full flex flex-col gap-2">
+          <textarea
+            className="w-full h-48 p-3 bg-background text-foreground border rounded font-mono text-sm resize-y focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+            value={editValue}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleCommitEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleCommitEdit();
+              }
+            }}
+            placeholder="graph TD&#10;  A-->B"
+            autoFocus
+          />
+          <div className="flex justify-between items-center text-xs text-[var(--muted)]">
+            <span>Supports standard Mermaid syntax or markdown fences (```mermaid ... ```)</span>
+            <button
+              type="button"
+              className="bg-[var(--accent)] text-white px-3 py-1 rounded text-xs hover:opacity-90 transition-opacity"
+              onClick={handleCommitEdit}
+            >
+              Done
+            </button>
+          </div>
+        </div>
       ) : (
-        <div className="flex flex-col items-center justify-center w-full my-8 not-prose cursor-pointer" onDoubleClick={() => setIsEditing(true)}>
-          {error ? (
+        <div className="flex flex-col items-center justify-center w-full my-8 not-prose cursor-pointer" onDoubleClick={handleStartEdit}>
+          {isRendering ? (
+            <div className="animate-pulse bg-[var(--surface)] h-32 w-full rounded flex items-center justify-center text-[var(--muted)]">
+              Rendering diagram...
+            </div>
+          ) : error ? (
             <div className="text-red-500 text-sm p-4 border border-red-500 rounded bg-red-50 dark:bg-red-950 w-full whitespace-pre-wrap font-mono">
-              <strong>Mermaid Syntax Error:</strong>
+              <strong>Invalid diagram syntax</strong>
               <br/>
               {error}
             </div>
@@ -185,16 +257,20 @@ export const MermaidNodeView = (props: any) => {
               )}
             </div>
           ) : (
-            <div className="animate-pulse bg-[var(--surface)] h-32 w-full rounded flex items-center justify-center text-[var(--muted)]">
-              Rendering diagram...
+            <div 
+              className="p-8 border border-dashed border-[var(--line)] rounded-lg text-sm text-[var(--muted)] w-full text-center hover:border-[var(--accent)] hover:text-[var(--ink)] transition-colors cursor-pointer"
+              onClick={handleStartEdit}
+            >
+              Empty diagram (click or double-click to edit)
             </div>
           )}
         </div>
       )}
       {!isEditing && (
         <button
-          className="absolute top-2 right-2 bg-secondary text-secondary-foreground px-2 py-1 text-xs rounded opacity-0 hover:opacity-100 transition-opacity"
-          onClick={() => setIsEditing(true)}
+          type="button"
+          className="absolute top-2 right-2 bg-secondary text-secondary-foreground px-2 py-1 text-xs rounded opacity-0 hover:opacity-100 transition-opacity z-10"
+          onClick={handleStartEdit}
         >
           Edit Graph
         </button>
