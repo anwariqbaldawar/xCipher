@@ -240,6 +240,95 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
             </th>
           );
         }
+        
+        if (domNode.attribs['data-type'] === 'pros-cons-block') {
+          const prosAttr = domNode.attribs['data-pros'];
+          const consAttr = domNode.attribs['data-cons'];
+          try {
+            const pros = prosAttr ? JSON.parse(prosAttr) : [];
+            const cons = consAttr ? JSON.parse(consAttr) : [];
+            return <ProsConsViewer pros={pros} cons={cons} />;
+          } catch (e) {
+            console.error("Failed to parse pros/cons", e);
+          }
+        }
+
+        if (domNode.attribs['data-type'] === 'spec-sheet-block') {
+          const itemsAttr = domNode.attribs['data-items'] || domNode.attribs['data-specs'];
+          try {
+            const rawItems = itemsAttr ? JSON.parse(itemsAttr) : [];
+            const items = rawItems.map((item: any) => ({
+              category: item.category || '',
+              key: item.key || item.label || '',
+              value: item.value || '',
+            }));
+            return <SpecSheetViewer items={items} />;
+          } catch (e) {
+            console.error("Failed to parse spec sheet", e);
+          }
+        }
+
+        if (domNode.attribs['data-type'] === 'score-breakdown-block') {
+          const itemsAttr = domNode.attribs['data-items'] || domNode.attribs['data-scores'] || domNode.attribs['data-categories'];
+          const overallScoreAttr = domNode.attribs['data-overall-score'] || domNode.attribs['data-total-score'];
+          try {
+            const raw = itemsAttr ? JSON.parse(itemsAttr) : [];
+            const items = Array.isArray(raw) ? raw : [];
+            const overallScore = overallScoreAttr ? Number(overallScoreAttr) : 0;
+            return <ScoreBreakdownViewer items={items} overallScore={overallScore} globalLeaderboard={globalLeaderboard} deviceName={deviceName} />;
+          } catch (e) {
+            console.error("Failed to parse score breakdown", e);
+          }
+        }
+
+        if (domNode.name === 'table') {
+          return (
+            <div className="tableWrapper relative mb-6">
+              <table className="w-full table-auto text-sm">
+                {domToReact(domNode.children as DOMNode[], options)}
+              </table>
+            </div>
+          );
+        }
+
+        if (domNode.name === 'figure') {
+          const image = domNode.children.find(
+            (child): child is Element => child instanceof Element && child.name === 'img' && Boolean(child.attribs.src),
+          );
+          const figcaption = domNode.children.find(
+            (child): child is Element => child instanceof Element && child.name === 'figcaption',
+          );
+          if (image) {
+            return (
+              <SingleImageViewer
+                src={image.attribs.src}
+                alt={image.attribs.alt}
+                caption={figcaption ? textContent(figcaption.children as DOMNode[]) : image.attribs.title}
+                credit={domNode.attribs['data-credit'] || image.attribs['data-credit']}
+              />
+            );
+          }
+        }
+
+        if (domNode.name === 'img' && domNode.attribs.src) {
+          return (
+            <SingleImageViewer
+              src={domNode.attribs.src}
+              alt={domNode.attribs.alt}
+              caption={domNode.attribs.title}
+              credit={domNode.attribs['data-credit']}
+            />
+          );
+        }
+
+        if (domNode.name === 'th') {
+          const { class: htmlClass, ...restAttribs } = domNode.attribs;
+          return (
+            <th {...restAttribs} className={`${htmlClass || ''} whitespace-nowrap`.trim()}>
+              {domToReact(domNode.children as DOMNode[], options)}
+            </th>
+          );
+        }
       }
     }
   };
