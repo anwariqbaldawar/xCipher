@@ -52,10 +52,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (article.publishedAt && article.publishedAt > new Date()) return {};
   
+  const authorName = getArticleAuthor(article).name;
+  const catName = article.category?.parent?.name || article.category?.name || "News";
+  const ogParams = new URLSearchParams();
+  ogParams.set("title", article.seoTitle || article.title);
+  ogParams.set("author", authorName);
+  ogParams.set("category", catName);
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
+  const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
+
   return constructMetadata({
     title: article.seoTitle || article.title,
     description: article.seoDesc || article.deck || "",
-    image: article.img ? getImgSrc(article.img, 1200, 630) : undefined,
+    image: ogUrl,
     canonical: `/article/${article.slug}`,
     type: "article",
     publishedTime: article.publishedAt ? article.publishedAt.toISOString() : article.createdAt.toISOString(),
