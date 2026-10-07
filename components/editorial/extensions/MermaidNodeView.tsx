@@ -115,7 +115,12 @@ export const MermaidNodeView = (props: any) => {
     };
 
     if (!isEditing) {
-      renderMermaid();
+      // Delay render slightly to ensure DOM container is ready
+      setTimeout(() => {
+        requestAnimationFrame(() => {
+          renderMermaid();
+        });
+      }, 50);
     }
 
     return () => {
@@ -147,6 +152,7 @@ export const MermaidNodeView = (props: any) => {
             <div
               ref={containerRef}
               className="mermaid-svg-container not-prose cursor-pointer overflow-x-auto w-full"
+              style={{ minHeight: '100px' }}
               onDoubleClick={() => setIsEditing(true)}
               dangerouslySetInnerHTML={{ __html: svgContent }}
               spellCheck={false}
