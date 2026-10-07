@@ -60,7 +60,7 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
           `,
           fontFamily: "var(--f-ui), sans-serif",
           flowchart: {
-            htmlLabels: false,
+            htmlLabels: true,
             padding: 20
           }
         });

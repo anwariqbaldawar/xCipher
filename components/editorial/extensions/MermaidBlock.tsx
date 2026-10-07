@@ -18,7 +18,7 @@ declare module '@tiptap/core' {
 export const MermaidBlock = Node.create<MermaidBlockOptions>({
   name: 'mermaidBlock',
   group: 'block',
-  content: 'inline*',
+  
   atom: true,
 
   addOptions() {

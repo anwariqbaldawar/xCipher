@@ -1,4 +1,4 @@
-name: Deploy to Cloudflare Workers
+name: Deploy Production
 
 on:
   push:
@@ -7,26 +7,26 @@ on:
 
 jobs:
   deploy:
+    name: Deploy to ARM64 Host
     runs-on: ubuntu-latest
-    name: Build & Deploy
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Trigger Remote SSH Deployment
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          node-version: '22'
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Build & Deploy to Cloudflare Workers
-        run: npm run deploy:worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          NEXTAUTH_URL: "https://admin.xsypher.com"
-          NEXT_PUBLIC_SITE_URL: "https://xsypher.com"
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ubuntu/apps/xsypher
+            git pull origin main
+            
+            # Run Drizzle ORM migrations
+            # If using migrate.mjs:
+            node migrate.mjs || true
+            
+            # Rebuild and restart the container zero-downtime
+            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml up -d
+            
+            # Prune dangling images to conserve disk space
+            docker image prune -f

@@ -8,9 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest",
-    "build:worker": "opennextjs-cloudflare build",
-    "deploy:worker": "opennextjs-cloudflare build && wrangler deploy"
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
@@ -19,7 +17,6 @@
     "@neon/config": "^1.8.2",
     "@neon/env": "^1.4.7",
     "@neondatabase/serverless": "^1.1.0",
-    "@opennextjs/cloudflare": "^1.20.7",
     "@tiptap/extension-character-count": "^3.31.3",
     "@tiptap/extension-code-block-lowlight": "^3.31.3",
     "@tiptap/extension-heading": "^3.31.3",
@@ -70,7 +67,6 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260927.1",
     "@tailwindcss/postcss": "^4",
     "@types/mermaid": "^9.1.0",
     "@types/node": "^20",
@@ -85,7 +81,6 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vercel": "^39.0.0",
-    "vitest": "^2.1.9",
-    "wrangler": "^4.143.1"
+    "vitest": "^2.1.9"
   }
 }
