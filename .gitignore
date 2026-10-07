@@ -47,3 +47,5 @@ test-db.js
 .neon
 .open-next
 .wrangler
+.dev.vars
+.dev.vars.*
