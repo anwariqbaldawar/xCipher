@@ -1,13 +1,13 @@
-import { neon } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-http';
+import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
 import * as schema from './lib/db/schema';
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
 
 async function run() {
-  const client = neon(process.env.DATABASE_URL!);
-  const db = drizzle(client, { schema });
+  const queryClient = postgres(process.env.DATABASE_URL!);
+  const db = drizzle(queryClient, { schema });
   try {
     const articles = await db.select({ id: schema.article.id }).from(schema.article).limit(1);
     console.log("Articles:", articles);

@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import { Check, Copy } from "lucide-react";
 import { createRoot } from "react-dom/client";
+import React from "react";
 
-// A small functional component for the button itself
-function CopyButton({ textToCopy }: { textToCopy: string }) {
+// A unified functional component for code block actions (Label + Copy Button)
+function CodeBlockActions({ textToCopy, languageLabel }: { textToCopy: string, languageLabel: string }) {
   const [copied, setCopied] = React.useState(false);
 
   const handleCopy = async () => {
@@ -14,7 +15,6 @@ function CopyButton({ textToCopy }: { textToCopy: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-      // Fallback for older browsers
       const textarea = document.createElement("textarea");
       textarea.value = textToCopy;
       textarea.style.position = "fixed";
@@ -29,24 +29,26 @@ function CopyButton({ textToCopy }: { textToCopy: string }) {
   };
 
   return (
-    <button
-      onClick={handleCopy}
-      type="button"
-      className="absolute top-2.5 right-2.5 px-2 py-1.5 rounded-md bg-[var(--surface)] border border-[var(--line-2)] text-[var(--ink)] hover:bg-[var(--surface-2)] hover:border-[var(--accent)] transition-all z-20 shadow-sm flex items-center justify-center opacity-100 lg:opacity-0 lg:group-hover:opacity-100 cursor-pointer"
-      aria-label="Copy code"
-      title="Copy code"
-    >
-      {copied ? (
-        <Check className="w-3.5 h-3.5 text-emerald-500"/>
-      ) : (
-        <Copy className="w-3.5 h-3.5 text-[var(--ink)]"/>
-      )}
-    </button>
+    <div className="absolute top-0 right-0 flex items-center bg-[var(--surface-2)] border-b border-l border-[var(--line-2)] rounded-bl-md z-20">
+      <div className="px-3 py-1.5 text-xs font-mono font-medium text-[var(--muted)] border-r border-[var(--line-2)]">
+        {languageLabel}
+      </div>
+      <button
+        onClick={handleCopy}
+        type="button"
+        className="px-3 py-1.5 text-[var(--ink)] hover:bg-[var(--surface-3)] hover:text-[var(--accent)] transition-colors cursor-pointer flex items-center justify-center"
+        aria-label="Copy code"
+        title="Copy code"
+      >
+        {copied ? (
+          <Check className="w-3.5 h-3.5 text-emerald-500"/>
+        ) : (
+          <Copy className="w-3.5 h-3.5"/>
+        )}
+      </button>
+    </div>
   );
 }
-
-// Ensure React is in scope for the client root rendering
-import React from "react";
 
 export default function CodeBlockEnhancer() {
   useEffect(() => {
@@ -60,49 +62,54 @@ export default function CodeBlockEnhancer() {
       if (pre.dataset.enhanced) return;
       pre.dataset.enhanced = "true";
 
-      // Wrap in a group for hover opacity control
-      pre.classList.add("group", "relative");
+      // Wrap in a group for styling
+      pre.classList.add("group", "relative", "overflow-hidden", "pt-8");
 
-      // Extract raw code for copying (without HTML tags)
+      // Extract raw code for copying
       const codeEl = pre.querySelector("code");
       const textToCopy = codeEl ? codeEl.textContent || "" : pre.textContent || "";
 
-      // Fallback label processing if rendered HTML didn't include it
-      if (codeEl && !codeEl.hasAttribute("data-language-label")) {
-        const classNames = codeEl.className.split(" ");
-        const langClass = classNames.find(c => c.startsWith("language-"));
-        let langLabel = "Code";
-        if (langClass) {
-          const rawLang = langClass.replace("language-", "").toLowerCase();
-          const CODE_LANGUAGES: Record<string, string> = {
-            'javascript': 'JavaScript', 'js': 'JavaScript',
-            'typescript': 'TypeScript', 'ts': 'TypeScript',
-            'python': 'Python', 'py': 'Python',
-            'java': 'Java', 'c': 'C', 'cpp': 'C++',
-            'csharp': 'C#', 'cs': 'C#', 'go': 'Go',
-            'rust': 'Rust', 'rs': 'Rust', 'php': 'PHP',
-            'ruby': 'Ruby', 'rb': 'Ruby', 'swift': 'Swift',
-            'kotlin': 'Kotlin', 'html': 'HTML', 'css': 'CSS',
-            'json': 'JSON', 'bash': 'Bash', 'sh': 'Shell',
-            'shell': 'Shell', 'sql': 'SQL', 'xml': 'XML',
-            'yaml': 'YAML', 'yml': 'YAML', 'markdown': 'Markdown',
-            'md': 'Markdown', 'graphql': 'GraphQL',
-            'dockerfile': 'Dockerfile', 'plaintext': 'Plain Text',
-          };
-          langLabel = CODE_LANGUAGES[rawLang] || "Code";
+      let langLabel = "Code";
+      if (codeEl) {
+        // Check if label was pre-rendered by Tiptap
+        const attrLabel = codeEl.getAttribute("data-language-label");
+        if (attrLabel && attrLabel !== "Code") {
+          langLabel = attrLabel;
+        } else {
+          // Fallback parsing from class names
+          const classNames = codeEl.className.split(" ");
+          const langClass = classNames.find(c => c.startsWith("language-"));
+          if (langClass) {
+            const rawLang = langClass.replace("language-", "").toLowerCase();
+            const CODE_LANGUAGES: Record<string, string> = {
+              'javascript': 'JavaScript', 'js': 'JavaScript',
+              'typescript': 'TypeScript', 'ts': 'TypeScript',
+              'python': 'Python', 'py': 'Python',
+              'java': 'Java', 'c': 'C', 'cpp': 'C++',
+              'csharp': 'C#', 'cs': 'C#', 'go': 'Go',
+              'rust': 'Rust', 'rs': 'Rust', 'php': 'PHP',
+              'ruby': 'Ruby', 'rb': 'Ruby', 'swift': 'Swift',
+              'kotlin': 'Kotlin', 'html': 'HTML', 'css': 'CSS',
+              'json': 'JSON', 'bash': 'Bash', 'sh': 'Shell',
+              'shell': 'Shell', 'sql': 'SQL', 'xml': 'XML',
+              'yaml': 'YAML', 'yml': 'YAML', 'markdown': 'Markdown',
+              'md': 'Markdown', 'graphql': 'GraphQL',
+              'dockerfile': 'Dockerfile', 'plaintext': 'Plain Text',
+            };
+            langLabel = CODE_LANGUAGES[rawLang] || "Code";
+          }
         }
-        codeEl.setAttribute("data-language-label", langLabel);
       }
 
-      // Create a mount point for the React component
+      // Create a mount point
       const mountPoint = document.createElement("div");
       pre.appendChild(mountPoint);
 
-      // Render the button
+      // Render the unified actions component
       const root = createRoot(mountPoint);
-      root.render(<CopyButton textToCopy={textToCopy} />);
+      root.render(<CodeBlockActions textToCopy={textToCopy} languageLabel={langLabel} />);
     });
   }, []);
 
-  return null; // Component does not render anything directly in the flow
+  return null;
 }

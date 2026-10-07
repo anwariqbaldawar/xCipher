@@ -1,7 +1,9 @@
 import { Node, mergeAttributes, textblockTypeInputRule, nodePasteRule } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
+import { ReactNodeViewRenderer } from '@tiptap/react'
 import { common, createLowlight } from 'lowlight'
+import { CodeBlockComponent } from './CodeBlockComponent'
 
 import go from 'highlight.js/lib/languages/go'
 import bash from 'highlight.js/lib/languages/bash'
@@ -226,6 +228,10 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
         0,
       ],
     ]
+  },
+
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockComponent)
   },
 
   addCommands() {
