@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cleanMermaidCode } from '@/components/editorial/extensions/MermaidBlock';
+import { cleanMermaidCode, resolveMermaidCode } from '@/components/editorial/extensions/MermaidBlock';
 import { sanitizeArticleHtml } from '@/lib/sanitize';
 
 describe('MermaidBlock extension & cleaning', () => {
@@ -27,6 +27,19 @@ describe('MermaidBlock extension & cleaning', () => {
     expect(cleanMermaidCode('   \n  ')).toBe('');
     expect(cleanMermaidCode(null as any)).toBe('');
     expect(cleanMermaidCode(undefined as any)).toBe('');
+  });
+
+  it('falls back from empty canonical code to the legacy graphDefinition', () => {
+    const legacyCode = 'graph LR\n  A-->B;';
+    expect(resolveMermaidCode('', legacyCode)).toBe(legacyCode);
+    expect(resolveMermaidCode('   ', legacyCode)).toBe(legacyCode);
+    expect(resolveMermaidCode('', null)).toBe('');
+  });
+
+  it('prefers canonical code when both Mermaid attributes are present', () => {
+    const canonicalCode = 'graph TD\n  X-->Y;';
+    const legacyCode = 'graph LR\n  A-->B;';
+    expect(resolveMermaidCode(canonicalCode, legacyCode)).toBe(canonicalCode);
   });
 
   it('preserves both data-code and data-graph-definition in sanitizeArticleHtml', () => {

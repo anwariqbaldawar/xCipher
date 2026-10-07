@@ -6,6 +6,8 @@ export interface MermaidBlockOptions {
   HTMLAttributes: Record<string, any>;
 }
 
+export const DEFAULT_MERMAID_CODE = 'graph TD\n  A-->B;';
+
 /**
  * Strip markdown code fences (```mermaid ... ```) if present.
  */
@@ -17,6 +19,17 @@ export function cleanMermaidCode(raw: string | null | undefined): string {
   // Strip trailing ```
   cleaned = cleaned.replace(/[\r\n]+```$/i, '');
   return cleaned.trim();
+}
+
+/**
+ * Read the canonical `code` attribute, falling back to the legacy
+ * `graphDefinition` attribute when older documents have no usable code value.
+ */
+export function resolveMermaidCode(
+  code: string | null | undefined,
+  graphDefinition: string | null | undefined,
+): string {
+  return cleanMermaidCode(code) || cleanMermaidCode(graphDefinition) || '';
 }
 
 declare module '@tiptap/core' {
@@ -31,7 +44,7 @@ declare module '@tiptap/core' {
 export const MermaidBlock = Node.create<MermaidBlockOptions>({
   name: 'mermaidBlock',
   group: 'block',
-  
+
   atom: true,
 
   addOptions() {
@@ -43,41 +56,32 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
   addAttributes() {
     return {
       code: {
-        default: 'graph TD\n  A-->B;',
-        parseHTML: element => 
-          cleanMermaidCode(element.getAttribute('data-code')) || 
-          cleanMermaidCode(element.getAttribute('data-graph-definition')) || 
+        // Commands that insert a new diagram provide a sample explicitly. An
+        // empty default lets old JSON containing only graphDefinition win.
+        default: '',
+        parseHTML: element =>
+          cleanMermaidCode(element.getAttribute('data-code')) ||
+          cleanMermaidCode(element.getAttribute('data-graph-definition')) ||
           cleanMermaidCode(element.textContent),
-        renderHTML: attributes => {
-          const val = attributes.code ?? attributes.graphDefinition ?? 'graph TD\n  A-->B;';
-          return {
-            'data-code': val,
-            'data-graph-definition': val,
-          };
-        },
+        // `data-code` is the single canonical HTML representation. Legacy
+        // graphDefinition JSON is resolved here for lossless HTML output.
+        renderHTML: attributes => ({
+          'data-code': resolveMermaidCode(attributes.code, attributes.graphDefinition),
+        }),
       },
       graphDefinition: {
-        default: 'graph TD\n  A-->B;',
-        parseHTML: element => 
-          cleanMermaidCode(element.getAttribute('data-graph-definition')) || 
-          cleanMermaidCode(element.getAttribute('data-code')) || 
-          cleanMermaidCode(element.textContent),
-        renderHTML: attributes => {
-          const val = attributes.graphDefinition ?? attributes.code ?? 'graph TD\n  A-->B;';
-          return {
-            'data-graph-definition': val,
-            'data-code': val,
-          };
-        },
+        // Retained in the schema so previously saved Tiptap JSON can still be
+        // read. It is no longer emitted as a second, competing HTML attribute.
+        default: null,
+        parseHTML: element => cleanMermaidCode(element.getAttribute('data-graph-definition')) || null,
+        renderHTML: () => ({}),
       },
       containerWidth: {
         default: '100%',
         parseHTML: element => element.getAttribute('data-container-width'),
-        renderHTML: attributes => {
-          return {
-            'data-container-width': attributes.containerWidth,
-          };
-        },
+        renderHTML: attributes => ({
+          'data-container-width': attributes.containerWidth,
+        }),
       },
     };
   },
@@ -110,8 +114,7 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
         find: /^```mermaid[ \t]*[\r\n]?$/,
         type: this.type,
         getAttributes: () => ({
-          code: 'graph TD\n  A-->B;',
-          graphDefinition: 'graph TD\n  A-->B;',
+          code: DEFAULT_MERMAID_CODE,
         }),
       }),
     ];
@@ -122,13 +125,9 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
       nodePasteRule({
         find: /```(?:mermaid)?[ \t]*[\r\n]+([\s\S]+?)```/gi,
         type: this.type,
-        getAttributes: (match) => {
-          const clean = match[1] ? cleanMermaidCode(match[1]) : 'graph TD\n  A-->B;';
-          return {
-            code: clean,
-            graphDefinition: clean,
-          };
-        },
+        getAttributes: match => ({
+          code: cleanMermaidCode(match[1]),
+        }),
       }),
     ];
   },
@@ -138,14 +137,13 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
       setMermaidBlock:
         attributes =>
         ({ commands }) => {
-          const raw = attributes?.code ?? attributes?.graphDefinition ?? 'graph TD\n  A-->B;';
-          const clean = cleanMermaidCode(raw) || 'graph TD\n  A-->B;';
+          const clean = resolveMermaidCode(attributes?.code, attributes?.graphDefinition) || DEFAULT_MERMAID_CODE;
           return commands.insertContent({
             type: this.name,
             attrs: {
               code: clean,
-              graphDefinition: clean,
-              ...attributes,
+              graphDefinition: null,
+              ...(attributes?.containerWidth ? { containerWidth: attributes.containerWidth } : {}),
             },
           });
         },
@@ -182,7 +180,7 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
               type: this.name,
               attrs: {
                 code: cleanText,
-                graphDefinition: cleanText,
+                graphDefinition: null,
               },
             })
             .run();
