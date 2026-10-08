@@ -11,7 +11,11 @@ export async function POST(req: NextRequest) {
       const result = await publishArticle(articleId);
       return NextResponse.json(result);
     } else if (action === "reject") {
-      const result = await rejectArticle(articleId, category, notes);
+      // rejectArticle(id, reason, reasonCode): the reviewer's notes are the
+      // reason, the category string ("EDITORIAL") is the reason code. Passing
+      // them the other way round made every rejection fail validation because
+      // "EDITORIAL" is shorter than the 20-character minimum reason.
+      const result = await rejectArticle(articleId, notes, category);
       return NextResponse.json(result);
     } else if (action === "requestChanges") {
       const result = await requestChanges(articleId, notes);

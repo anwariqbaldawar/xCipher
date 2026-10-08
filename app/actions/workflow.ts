@@ -11,6 +11,7 @@ const REVIEWER_ROLES = (Object.keys(ROLE_CAPABILITIES) as Role[]).filter(role =>
   authorize(role, "article.review")
 );
 import { validateTransition, TRANSITIONS, ArticleForTransition } from "@/lib/workflow";
+import { isOwnerAuthoredArticle } from "@/lib/article-ownership";
 import {
   notifySubmitted,
   notifyApproved,
@@ -520,6 +521,12 @@ export async function reopenArticle(id: string): Promise<ActionResponse> {
 
 export async function publishArticle(id: string): Promise<ActionResponse> {
   return executeTransition(id, "PUBLISHED", async (articleData, actor) => {
+    // The owner keeps exclusive publish control of their own bylines: other
+    // roles may review and approve, but the final publish is the owner's call.
+    if (actor.role !== "OWNER" && await isOwnerAuthoredArticle(articleData.authorId)) {
+      return { ok: false, code: "FORBIDDEN", message: "This article is by the owner. Only the owner can publish it." };
+    }
+
     const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(article).where(and(eq(article.id, id), eq(article.status, articleData.status)));
     if (count > 0) {
       await db.update(article).set({ 
@@ -628,7 +635,12 @@ export async function cancelSchedule(id: string): Promise<ActionResponse> {
 
 export async function archiveArticle(id: string): Promise<ActionResponse> {
   return executeTransition(id, "ARCHIVED", async (articleData, actor) => {
-    
+    // Archiving is the path to deletion, so it carries the same owner guard:
+    // otherwise a non-owner could archive an owner's article and then delete it.
+    if (actor.role !== "OWNER" && await isOwnerAuthoredArticle(articleData.authorId)) {
+      return { ok: false, code: "FORBIDDEN", message: "This article is by the owner. Only the owner can archive it." };
+    }
+
             await db.update(article).set({ 
               status: "ARCHIVED",
               archivedAt: new Date(),
@@ -680,7 +692,11 @@ export async function deleteArticlePermanently(id: string): Promise<ActionRespon
 
   const articleData = await getArticle(id);
   if (!articleData) return { ok: false, code: "NOT_FOUND", message: "Article not found." };
-  
+
+  if (actor.role !== "OWNER" && await isOwnerAuthoredArticle(articleData.authorId)) {
+    return { ok: false, code: "FORBIDDEN", message: "This article is by the owner. Only the owner can delete it." };
+  }
+
   if (articleData.status !== "ARCHIVED") {
     return { ok: false, code: "FORBIDDEN", message: "Only archived articles can be permanently deleted. Please archive the article first." };
   }
@@ -760,6 +776,10 @@ export async function deleteOwnDraft(id: string): Promise<ActionResponse> {
 
   const articleData = await getArticle(id);
   if (!articleData) return { ok: false, code: "NOT_FOUND", message: "Article not found." };
+
+  if (actor.role !== "OWNER" && await isOwnerAuthoredArticle(articleData.authorId)) {
+    return { ok: false, code: "FORBIDDEN", message: "This article is by the owner. Only the owner can delete it." };
+  }
 
   if (articleData.status !== "DRAFT") {
     return { ok: false, code: "FORBIDDEN", message: "Only drafts can be deleted this way." };

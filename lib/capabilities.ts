@@ -36,6 +36,8 @@ export type Capability =
   // Article deletion
   | "article.delete"
   | "article.delete.own.draft"
+  // Byline management (assigning or transferring authorship)
+  | "article.manage.byline"
   // Article featuring
   | "article.feature"
   // Taxonomy
@@ -84,6 +86,10 @@ const OWNER_CAPS: ReadonlySet<Capability> = new Set<Capability>([
   // database access in practice, so this deters and documents rather than
   // prevents.
   "article.delete",
+  // Only the owner assigns or transfers bylines. Everyone else proposes
+  // attribution changes by submitting them; the owner keeps the final say,
+  // the same way they keep control of live-state changes on their articles.
+  "article.manage.byline",
   "article.delete.own.draft", "article.feature",
   "taxonomy.create", "taxonomy.rename", "taxonomy.delete", "taxonomy.merge",
   "author.manage.all", "author.manage.own",

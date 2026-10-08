@@ -10,6 +10,7 @@ import Image from "next/image";
 import ArticleBody from "@/components/article/ArticleBody";
 import { Role } from "@/lib/types";
 import { fetchFromR2 } from "@/lib/storage";
+import { publishArticle, rejectArticle, requestChanges } from "@/app/actions/workflow";
 
 interface ReviewScreenProps {
   params: Promise<{ id: string }>;
@@ -139,33 +140,23 @@ export default async function ReviewScreen({ params }: ReviewScreenProps) {
               // come through here, because the notes are collected in the
               // client component and the actions are server-only.
               //
+              // The workflow actions are called directly rather than through
+              // the HTTP API: Node's fetch rejects the relative URL such a call
+              // needs from inside a server action, which is why every decision
+              // used to fail with "Failed to submit decision."
+              //
               // Each action revalidates the affected routes itself; the client
               // then calls router.refresh() so this page re-renders with the
               // new status rather than waiting for a manual reload.
               let res;
               if (status === "REJECTED") {
-                const fetchRes = await fetch("/api/article/workflow", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "reject", articleId: article.id, category: "EDITORIAL", notes }),
-                });
-                res = await fetchRes.json();
+                res = await rejectArticle(article.id, notes, "EDITORIAL");
               } else if (status === "REVISION_REQUESTED") {
-                const fetchRes = await fetch("/api/article/workflow", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "requestChanges", articleId: article.id, notes }),
-                });
-                res = await fetchRes.json();
+                res = await requestChanges(article.id, notes);
               } else if (status === "PUBLISHED") {
-                const fetchRes = await fetch("/api/article/workflow", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ action: "publish", articleId: article.id }),
-                });
-                res = await fetchRes.json();
+                res = await publishArticle(article.id);
               }
-              if (res && !res.ok) throw new Error(res.message || res.error || "An error occurred");
+              if (res && !res.ok) throw new Error(res.message || "An error occurred");
             }}
           />
 

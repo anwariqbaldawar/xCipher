@@ -59,6 +59,15 @@ describe("authorize", () => {
     expect(authorize("OWNER", "article.delete.own.draft")).toBe(true);
   });
 
+  it("restricts byline management to OWNER", () => {
+    // Assigning or transferring authorship is the owner's call: admins and
+    // editors propose attribution changes by submitting them.
+    expect(authorize("OWNER", "article.manage.byline")).toBe(true);
+    expect(authorize("ADMIN", "article.manage.byline")).toBe(false);
+    expect(authorize("EDITOR", "article.manage.byline")).toBe(false);
+    expect(authorize("AUTHOR", "article.manage.byline")).toBe(false);
+  });
+
   it("denies an unknown role rather than defaulting to permissive", () => {
     // A role string that is not in the map must fail closed. If this ever
     // returns true, a typo in a role column becomes a superuser.

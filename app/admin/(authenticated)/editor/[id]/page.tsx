@@ -79,7 +79,7 @@ export default async function EditDraftPage({ params }: EditDraftPageProps) {
         columns: { id: true, name: true, role: true },
       })
       : Promise.resolve(null),
-    db.query.author.findMany({ columns: { id: true, name: true, slug: true }, orderBy: (a, { asc }) => [asc(a.name)] }),
+    db.query.author.findMany({ columns: { id: true, name: true, slug: true, role: true }, orderBy: (a, { asc }) => [asc(a.name)] }),
   ]);
   const articleHtml = typeof r2Content === "object" ? r2Content?.html : r2Content || "";
   const articleJson = typeof r2Content === "object" ? r2Content?.json : null;
