@@ -17,11 +17,15 @@ const { auth: edgeAuth } = NextAuth(createAuthConfig());
 // because React style attributes cannot carry a nonce.
 // ─────────────────────────────────────────────────────────────────────────────
 
-function buildCsp(nonce: string): string {
+function buildCsp(nonce: string, isStaticPublic: boolean): string {
   const isDev = process.env.NODE_ENV === "development";
+  const scriptSrc = isStaticPublic
+    ? `script-src 'self' 'unsafe-inline' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`
+    : `script-src 'self' 'nonce-${nonce}' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`;
+    
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`,
+    scriptSrc,
     "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data: https:",
@@ -35,8 +39,8 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function applySecurityHeaders(response: NextResponse, nonce: string): NextResponse {
-  response.headers.set("Content-Security-Policy", buildCsp(nonce));
+function applySecurityHeaders(response: NextResponse, nonce: string, isStaticPublic: boolean): NextResponse {
+  response.headers.set("Content-Security-Policy", buildCsp(nonce, isStaticPublic));
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-XSS-Protection", "1; mode=block");
@@ -54,10 +58,25 @@ export default async function middleware(req: NextRequest) {
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-csp-nonce", nonce);
-  requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
+  
+  const url = req.nextUrl.clone();
+  const hostname = req.headers.get("host") || "";
+  const isLocalDev =
+    process.env.IS_LOCAL_DEV === "true" ||
+    process.env.NEXTAUTH_URL?.includes("localhost") ||
+    hostname.includes("localhost") ||
+    hostname.includes("127.0.0.1") ||
+    url.hostname.includes("localhost") ||
+    url.hostname.includes("127.0.0.1");
+
+  const effectiveHostname = isLocalDev ? url.hostname : hostname;
+  const isAdminSubdomain = !isLocalDev && (effectiveHostname === "admin.xsypher.com" || effectiveHostname.startsWith("admin.localhost"));
+  const isStaticPublic = !isAdminSubdomain && !url.pathname.startsWith("/api");
+
+  requestHeaders.set("Content-Security-Policy", buildCsp(nonce, isStaticPublic));
 
   const response = await route(req, requestHeaders);
-  return applySecurityHeaders(response, nonce);
+  return applySecurityHeaders(response, nonce, isStaticPublic);
 }
 
 async function route(req: NextRequest, requestHeaders: Headers): Promise<NextResponse> {
