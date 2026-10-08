@@ -162,7 +162,7 @@ interface ArticleEditorProps {
   authorId?: string | null;
   availableCategories?: any[];
   availableTags?: any[];
-  availableAuthors?: { id: string; name: string; slug: string }[];
+  availableAuthors?: { id: string; name: string; slug: string; role?: string | null }[];
   initialRevisions?: any[];
 }
 
@@ -1076,7 +1076,6 @@ export default function ArticleEditor({
     return null;
   }
 
-  const isEditorial = authorize(userRole as Role, 'article.review') || authorize(userRole as Role, 'article.publish');
   /**
    * Human-readable sync state for the top bar.
    *
@@ -1102,6 +1101,8 @@ export default function ArticleEditor({
 
   const canPublish = authorize(userRole as Role, 'article.publish');
   const canSubmit = authorize(userRole as Role, 'article.submit');
+// Only the owner assigns or transfers bylines (article.manage.byline).
+const canManageByline = authorize(userRole as Role, 'article.manage.byline');
   const currentFormStatus = watch("status") || "DRAFT";
 
 
@@ -1582,7 +1583,7 @@ export default function ArticleEditor({
                 {/* Author Override */}
                 <div>
                   <label className="ed-rail-label" htmlFor="edAuthorOverride">Author</label>
-                  {isEditorial && availableAuthors.length > 0 ? (
+                  {canManageByline && availableAuthors.length > 0 ? (
                     <select
                       id="edAuthorOverride"
                       className="ed-rail-input"
@@ -1590,8 +1591,12 @@ export default function ArticleEditor({
                       onChange={(e) => {
                         const selected = availableAuthors.find(a => a.id === e.target.value);
                         if (selected) {
+                          // Set the byline title too — the server derives all
+                          // three from the author profile, but keeping the form
+                          // in sync makes the preview honest.
                           setValue("authorId", selected.id, { shouldDirty: true });
                           setValue("author", selected.name, { shouldDirty: true });
+                          setValue("role", selected.role || "", { shouldDirty: true });
                         }
                       }}
                     >
@@ -1813,7 +1818,28 @@ export default function ArticleEditor({
                 currentStatus={currentFormStatus}
                 revisions={initialRevisions}
                 onDecision={async (status, notes) => {
-                  await handleSave(status, false, notes);
+                  // Decisions go through the workflow API — not a raw save —
+                  // so the transition is validated, a review record is
+                  // written and the author is notified. handleSave(status)
+                  // used to write the status field directly, which bypassed
+                  // all three and left the author without any notification.
+                  let action = "";
+                  if (status === "REJECTED") action = "reject";
+                  else if (status === "REVISION_REQUESTED") action = "requestChanges";
+                  else if (status === "PUBLISHED") action = "publish";
+                  else throw new Error("Unsupported decision.");
+
+                  const fetchRes = await fetch("/api/article/workflow", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(
+                      status === "REJECTED"
+                        ? { action, articleId: initialData.id, category: "EDITORIAL", notes }
+                        : { action, articleId: initialData.id, notes },
+                    ),
+                  });
+                  const res = await fetchRes.json();
+                  if (res && !res.ok) throw new Error(res.message || res.error || "An error occurred");
                 }}
               />
             </section>

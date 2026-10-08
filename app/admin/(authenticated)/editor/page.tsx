@@ -26,7 +26,7 @@ export default async function NewStoryPage() {
         columns: { id: true, name: true, role: true },
       })
       : Promise.resolve(null),
-    db.query.author.findMany({ columns: { id: true, name: true, slug: true }, orderBy: (a, { asc }) => [asc(a.name)] }),
+    db.query.author.findMany({ columns: { id: true, name: true, slug: true, role: true }, orderBy: (a, { asc }) => [asc(a.name)] }),
   ]);
 
   return (

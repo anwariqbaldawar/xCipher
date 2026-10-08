@@ -1,10 +1,11 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { article, auditLog, category, articleRevision, _articleToTag, tag, benchmarkLeaderboard, author as authorTable, user as userTable } from "@/lib/db/schema";
+import { article, auditLog, category, articleRevision, _articleToTag, tag, benchmarkLeaderboard, author as authorTable, user as userTable, notification } from "@/lib/db/schema";
 import { eq, inArray, or, and, not, sql } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
-import { articleMutationTags } from "@/lib/cache-tags";
+import { articleMutationTags, authorTag } from "@/lib/cache-tags";
+import { isOwnerAuthoredArticle } from "@/lib/article-ownership";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditArticle } from "@/lib/permissions";
 import { sanitizeArticleHtml, isValidSafeUrl } from "@/lib/sanitize";
@@ -122,7 +123,7 @@ export async function upsertArticle(data: any) {
     if (data.id) {
       existingArticle = await db.query.article.findFirst({
         where: eq(article.id, data.id),
-        columns: { id: true, authorId: true, isAnonymous: true, updatedAt: true, status: true, publishedAt: true, slug: true, previousSlugs: true, contentUrl: true }
+        columns: { id: true, authorId: true, author: true, role: true, isAnonymous: true, updatedAt: true, status: true, publishedAt: true, slug: true, previousSlugs: true, contentUrl: true }
       });
       if (!existingArticle) {
         return { success: false, error: "Article not found" };
@@ -183,6 +184,28 @@ export async function upsertArticle(data: any) {
       contentUrl = await uploadToR2(key, contentPayload, "application/json");
     }
 
+    // ── Byline resolution ─────────────────────────────────────────────────
+    // Only roles with article.manage.byline (the owner) may assign or
+    // transfer a byline. For everyone else the stored byline is pinned, so a
+    // crafted request cannot move attribution. When a byline manager assigns
+    // one, the name and title are derived from the author profile server-side
+    // — the form's strings are display-only. Deriving them here is what keeps
+    // article.author, article.role and article.authorId from drifting apart,
+    // which is how the homepage ended up showing one byline while the article
+    // page showed another.
+    const canManageByline = authorize(userWithAuth.role, "article.manage.byline");
+    let resolvedByline: { author: string; role: string | null; authorId: string } | null = null;
+    if (canManageByline && data.authorId) {
+      const [profile] = await db
+        .select({ id: authorTable.id, name: authorTable.name, role: authorTable.role })
+        .from(authorTable)
+        .where(eq(authorTable.id, data.authorId))
+        .limit(1);
+      if (profile) {
+        resolvedByline = { author: profile.name, role: profile.role || null, authorId: profile.id };
+      }
+    }
+
     const payload = {
       title: data.title.trim(),
       slug: uniqueSlug,
@@ -190,9 +213,9 @@ export async function upsertArticle(data: any) {
       deck: data.deck || null,
       contentUrl,
       textContent: typeof sanitizedBodyHtml === 'string' ? sanitizedBodyHtml.replace(/<[^>]+>/g, ' ') : null,
-      author: data.author?.trim() || userSession.name || "xSypher Staff",
+      author: resolvedByline?.author ?? existingArticle?.author ?? (data.author?.trim() || userSession.name || "xSypher Staff"),
       isAnonymous: data.isAnonymous ?? existingArticle?.isAnonymous ?? false,
-      role: data.role?.trim() || userSession.role || null,
+      role: resolvedByline?.role ?? existingArticle?.role ?? (data.role?.trim() || userSession.role || null),
       featured: typeof data.featured === "boolean" ? data.featured : deriveIsFeatured(data.homepagePlacement || null),
       img: data.img || null,
       seoTitle: data.seoTitle || null,
@@ -210,7 +233,7 @@ export async function upsertArticle(data: any) {
       scheduledFor,
       readingTime: calculateReadTime(sanitizedBodyHtml || data.bodyHtml),
       updatedAt: new Date(),
-      ...(data.authorId ? { authorId: data.authorId } : {}),
+      ...(resolvedByline ? { authorId: resolvedByline.authorId } : {}),
       ...(data.status === "PUBLISHED" && (!existingArticle || existingArticle.status !== "PUBLISHED") 
           ? { publishedAt: new Date() } 
           : {}),
@@ -248,7 +271,21 @@ export async function upsertArticle(data: any) {
       if (data.id) {
         existingArticleStatus = existingArticle?.status || "NEW";
         let finalStatusUpdate: "SUBMITTED" | undefined;
-        if (!authorize(userWithAuth.role, "article.publish") && ["PUBLISHED", "APPROVED", "SCHEDULED"].includes(existingArticleStatus)) {
+        // An owner-authored article keeps its owner in control of the live
+        // state: anyone else editing it (admins included) is demoted to
+        // SUBMITTED, so the change goes back to the owner for approval
+        // instead of going live directly. The ownership lookup only runs when
+        // it can change the outcome — a publisher editing a live article —
+        // so draft autosaves stay on the same query budget as before.
+        const isLiveStatus = ["PUBLISHED", "APPROVED", "SCHEDULED"].includes(existingArticleStatus);
+        const canPublishLive = authorize(userWithAuth.role, "article.publish");
+        const ownerAuthored =
+          isLiveStatus && canPublishLive && userWithAuth.role !== "OWNER"
+            ? await isOwnerAuthoredArticle(existingArticle?.authorId)
+            : false;
+        const mustRouteThroughReview =
+          isLiveStatus && (!canPublishLive || (ownerAuthored && userWithAuth.role !== "OWNER"));
+        if (mustRouteThroughReview) {
           finalStatusUpdate = "SUBMITTED";
         }
 
@@ -262,6 +299,25 @@ export async function upsertArticle(data: any) {
           ...(finalStatusUpdate ? { status: finalStatusUpdate } : {}),
           previousSlugs: updatedPreviousSlugs,
         }).where(eq(article.id, data.id)).returning(savedArticleColumns);
+
+        // When a non-owner's edit was routed back to the owner, tell the owner:
+        // their article changed and is waiting on them. Fail-soft — a missing
+        // notification must never fail the save.
+        if (finalStatusUpdate === "SUBMITTED" && ownerAuthored && existingArticle?.authorId) {
+          const [ownerUser] = await db
+            .select({ id: userTable.id })
+            .from(userTable)
+            .where(eq(userTable.authorId, existingArticle.authorId))
+            .limit(1);
+          if (ownerUser && ownerUser.id !== userSession.id) {
+            await db.insert(notification).values({
+              id: crypto.randomUUID(),
+              userId: ownerUser.id,
+              message: `"${updated.title || "Untitled"}" was edited by ${userSession.name || "a reviewer"} and awaits your review.`,
+              link: `/admin/review/${updated.id}`,
+            }).catch((error) => console.error("[article] owner notification failed:", error));
+          }
+        }
 
         await db.delete(_articleToTag).where(eq(_articleToTag.A, updated.id));
         if (tagRecs.length > 0) {
@@ -382,6 +438,30 @@ export async function upsertArticle(data: any) {
         const tags = new Set([
           ...[...slugs].flatMap(slug => articleMutationTags({ slug, tagSlugs })),
         ]);
+
+        // A byline change moves the article between author profiles. Stats
+        // (views, article count, words) are derived from authorId, so they
+        // follow automatically — both author pages just need re-rendering,
+        // plus the tags their cached listings subscribe to.
+        const previousAuthorId = existingArticle?.authorId || null;
+        const nextAuthorId = finalArticle.authorId || null;
+        if (nextAuthorId) {
+          const authorIds = previousAuthorId && previousAuthorId !== nextAuthorId
+            ? [previousAuthorId, nextAuthorId]
+            : [nextAuthorId];
+          const authorRows = await db
+            .select({ id: authorTable.id, slug: authorTable.slug })
+            .from(authorTable)
+            .where(inArray(authorTable.id, authorIds))
+            .limit(authorIds.length);
+          invalidations.push(
+            ...authorRows.flatMap((row) => [
+              revalidateTag(authorTag(row.slug), "max"),
+              revalidatePath(`/author/${row.slug}`, "page"),
+            ]),
+          );
+        }
+
         invalidations.push(
           ...[...tags].map(tag => revalidateTag(
             tag,

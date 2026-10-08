@@ -111,7 +111,12 @@ export default async function AdminDashboard() {
     for (const group of statusCounts) {
       if (group.status === 'PUBLISHED') publishedCount = group._count;
       else if (group.status === 'DRAFT') draftsCount = group._count;
-      totalArticles += group._count;
+      // Rejected and archived pieces are no longer part of the publication.
+      // Counting them inflated the total — a rejected story showed up as a
+      // phantom extra article on the dashboard.
+      if (group.status !== 'REJECTED' && group.status !== 'ARCHIVED') {
+        totalArticles += group._count;
+      }
     }
 
     // The status breakdown above is already scoped, so the attention counts can
