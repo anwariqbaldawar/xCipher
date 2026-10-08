@@ -8,6 +8,7 @@ import { BLOCK_LABELS, type BlockKind } from '@/lib/editorial-blocks';
 import type { CalloutType } from './extensions/Callout';
 import FindReplace from './FindReplace';
 import { getEditorFormattingState } from '@/lib/editor/document-state';
+import { convertMermaidSelection } from './extensions/MermaidBlock';
 
 interface EditorToolbarProps {
   editor: Editor;
@@ -43,6 +44,8 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
   const [mediaSession, setMediaSession] = useState(0);
   const [linkUrl, setLinkUrl] = useState('');
   const [linkError, setLinkError] = useState('');
+  const [diagramError, setDiagramError] = useState('');
+  const [isConvertingDiagram, setIsConvertingDiagram] = useState(false);
   const linkDialog = useRef<HTMLDialogElement>(null);
   const linkSelection = useRef<{ from: number; to: number } | null>(null);
   const openLink = () => {
@@ -95,6 +98,18 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const callout = (type: CalloutType) => editor.chain().focus().toggleCallout({ type }).run();
+  const convertDiagram = async () => {
+    if (isConvertingDiagram) return;
+    setDiagramError('');
+    setIsConvertingDiagram(true);
+    try {
+      setDiagramError(await convertMermaidSelection(editor) || '');
+    } catch {
+      setDiagramError('Could not convert this diagram. Your source is still available; please try again.');
+    } finally {
+      setIsConvertingDiagram(false);
+    }
+  };
   return <div className="studio-toolbar">
     <div className="studio-menu-row">
       <div className="studio-tabs" role="group" aria-label="Toolbar sections"><button type="button" aria-pressed={tab === 'write'} onClick={() => setTab('write')}>Write</button><button type="button" aria-pressed={tab === 'insert'} onClick={() => setTab('insert')}>Insert</button></div>
@@ -111,13 +126,15 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
         <div className="studio-tool-group"><Tool icon={Link2} title="Insert or edit link (Ctrl+K)" active={editor.isActive('link')} onClick={openLink} /><Tool icon={ImagePlus} title="Insert image" onClick={() => openMedia('image')} /><Tool icon={Search} title="Find and replace (Ctrl+F)" active={findOpen} onClick={() => setFindOpen(!findOpen)} /></div>
       </> : <>
         <div className="studio-tool-group"><Tool icon={ImagePlus} title="Insert image" onClick={() => openMedia('image')} /><Tool icon={MonitorPlay} title="YouTube video" onClick={() => openMedia('video')} /><Menu title="Review blocks">{(Object.keys(BLOCK_LABELS) as BlockKind[]).map(kind => <Item key={kind} onClick={() => editor.chain().focus().insertEditorialBlock(kind).run()}>{BLOCK_LABELS[kind]}</Item>)}<Item onClick={() => editor.chain().focus().insertProsCons().run()}><ListChecks size={15} /> Pros and cons</Item><Item onClick={() => editor.chain().focus().insertSpecSheet().run()}><ClipboardList size={15} /> Specification sheet</Item><Item onClick={() => editor.chain().focus().insertScoreBreakdown().run()}><Star size={15} /> Score breakdown</Item></Menu></div>
-        <div className="studio-tool-group"><Menu title="Callout">{(['info', 'takeaway', 'quote', 'warning', 'editor-note', 'update', 'pro-tip'] as const).map(type => <Item key={type} onClick={() => callout(type)}>{({ info: 'Information', takeaway: 'Key takeaway', quote: 'Pull quote', warning: 'Warning', 'editor-note': 'Editor’s note', update: 'Update', 'pro-tip': 'Pro tip' })[type]}</Item>)}</Menu><Menu title="Chart">{(['bar', 'horizontal-bar', 'line', 'pie', 'scatter'] as const).map(type => <Item key={type} onClick={() => editor.chain().focus().convertSelectionToChart(type).run()}><BarChart3 size={15} /> {type}</Item>)}</Menu><Tool icon={Workflow} title="Diagram from selection" onClick={() => editor.chain().focus().convertSelectionToMermaid().run()} /><Tool icon={FileCode} title="Code block" onClick={() => editor.chain().focus().convertSelectionToCodeBlock().run()} /><Tool icon={Minus} title="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()} /></div>
+        <div className="studio-tool-group"><Menu title="Callout">{(['info', 'takeaway', 'quote', 'warning', 'editor-note', 'update', 'pro-tip'] as const).map(type => <Item key={type} onClick={() => callout(type)}>{({ info: 'Information', takeaway: 'Key takeaway', quote: 'Pull quote', warning: 'Warning', 'editor-note': 'Editor’s note', update: 'Update', 'pro-tip': 'Pro tip' })[type]}</Item>)}</Menu><Menu title="Chart">{(['bar', 'horizontal-bar', 'line', 'pie', 'scatter'] as const).map(type => <Item key={type} onClick={() => editor.chain().focus().convertSelectionToChart(type).run()}><BarChart3 size={15} /> {type}</Item>)}</Menu><Tool icon={Workflow} title="Diagram from selection" disabled={isConvertingDiagram} onClick={convertDiagram} /><Tool icon={FileCode} title="Code block" onClick={() => editor.chain().focus().convertSelectionToCodeBlock().run()} /><Tool icon={Minus} title="Divider" onClick={() => editor.chain().focus().setHorizontalRule().run()} /></div>
       </>}
       <Menu title="Table"><Item onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}><TableIcon size={15} /> Insert 3 × 3 table</Item>{editor.isActive('table') && <>
         <Item onClick={() => editor.chain().focus().addRowBefore().run()}>Add row above</Item><Item onClick={() => editor.chain().focus().addRowAfter().run()}>Add row below</Item><Item onClick={() => editor.chain().focus().addColumnBefore().run()}>Add column before</Item><Item onClick={() => editor.chain().focus().addColumnAfter().run()}>Add column after</Item><Item onClick={() => editor.chain().focus().toggleHeaderRow().run()}>Toggle header row</Item><Item disabled={!editor.can().mergeCells()} onClick={() => editor.chain().focus().mergeCells().run()}>Merge selected cells</Item><Item disabled={!editor.can().splitCell()} onClick={() => editor.chain().focus().splitCell().run()}>Split cell</Item><Item onClick={() => editor.chain().focus().deleteRow().run()}>Delete row</Item><Item onClick={() => editor.chain().focus().deleteColumn().run()}>Delete column</Item><Item onClick={() => editor.chain().focus().deleteTable().run()}>Delete table</Item><Item onClick={() => editor.chain().focus().convertTableToSpecSheet().run()}>Convert to specification sheet</Item><Item onClick={() => editor.chain().focus().convertTableToProsCons().run()}>Convert to pros and cons</Item><Item onClick={() => editor.chain().focus().convertTableToScoreBreakdown().run()}>Convert to score breakdown</Item>
       </>}</Menu>
       {toggleFullscreen && <Tool icon={isFullscreen ? Minimize2 : Maximize2} title={isFullscreen ? 'Exit focus mode' : 'Focus mode'} active={isFullscreen} onClick={toggleFullscreen} />}
     </div>
+    {isConvertingDiagram && <p role="status" className="px-3 py-2 text-xs text-[var(--muted)]">Checking Mermaid syntax…</p>}
+    {diagramError && <p role="alert" className="max-h-32 overflow-auto whitespace-pre-wrap px-3 py-2 text-xs text-red-600 dark:text-red-400">{diagramError}</p>}
     {findOpen && <FindReplace editor={editor} close={() => setFindOpen(false)} />}
     <dialog ref={linkDialog} className="studio-dialog" aria-label="Insert or edit link"><h2>Insert link</h2><p>Link the selected text to a source.</p><label>URL<input autoFocus type="url" value={linkUrl} onChange={event => setLinkUrl(event.target.value)} placeholder="https://" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applyLink(); } }} /></label>{linkError && <p role="alert">{linkError}</p>}<div><button type="button" onClick={() => linkDialog.current?.close()}>Cancel</button><button type="button" onClick={removeLink}>Remove link</button><button type="button" className="studio-primary" onClick={applyLink}>Apply</button></div></dialog>
     <InsertMediaDialog key={mediaSession} kind={mediaKind || 'image'} open={mediaKind !== null} onClose={() => setMediaKind(null)} onInsertImage={value => {

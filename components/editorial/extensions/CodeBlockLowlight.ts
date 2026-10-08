@@ -1,4 +1,5 @@
-import { Node, mergeAttributes, textblockTypeInputRule, nodePasteRule } from '@tiptap/core'
+import { Node, mergeAttributes, textblockTypeInputRule } from '@tiptap/core'
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { ReactNodeViewRenderer } from '@tiptap/react'
@@ -90,15 +91,17 @@ function getDecorations({
   name,
   lowlight: lw,
   defaultLanguage,
+  cache,
 }: {
-  doc: any
+  doc: ProseMirrorNode
   name: string
-  lowlight: any
+  lowlight: typeof lowlight
   defaultLanguage: string | null
+  cache: WeakMap<ProseMirrorNode, { text: string; classes: string[] }[]>
 }) {
   const decorations: Decoration[] = []
 
-  doc.descendants((node: any, pos: number) => {
+  doc.descendants((node, pos) => {
     if (node.type.name !== name) {
       return
     }
@@ -109,21 +112,24 @@ function getDecorations({
 
     if (!nodeText) return
 
-    let result
-    try {
-      result = language
-        ? lw.highlight(language, nodeText)
-        : lw.highlightAuto(nodeText)
-    } catch {
-      // Language not registered, try auto-detect
+    let parsed = cache.get(node)
+    if (!parsed) {
+      let result
       try {
-        result = lw.highlightAuto(nodeText)
+        result = language
+          ? lw.highlight(language, nodeText)
+          : lw.highlightAuto(nodeText)
       } catch {
-        return
+        // Language not registered, try auto-detect
+        try {
+          result = lw.highlightAuto(nodeText)
+        } catch {
+          return
+        }
       }
+      parsed = parseNodes(result.children)
+      cache.set(node, parsed)
     }
-
-    const parsed = parseNodes(result.children)
 
     for (const { text, classes } of parsed) {
       const to = from + text.length
@@ -384,6 +390,9 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
   },
 
   addProseMirrorPlugins() {
+    // ProseMirror shares unchanged nodes across transactions. Cache relative
+    // tokens, not absolute decorations: edits before a block move its position.
+    const cache = new WeakMap<ProseMirrorNode, { text: string; classes: string[] }[]>()
     return [
       new Plugin({
         key: new PluginKey('lowlightPlugin'),
@@ -394,6 +403,7 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
               name: this.name,
               lowlight,
               defaultLanguage: this.options.defaultLanguage,
+              cache,
             }),
           apply: (transaction, decorationSet, oldState, newState) => {
             const oldNodeName = oldState.selection.$head.parent.type.name
@@ -411,6 +421,7 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
                 name: this.name,
                 lowlight,
                 defaultLanguage: this.options.defaultLanguage,
+                cache,
               })
             }
 

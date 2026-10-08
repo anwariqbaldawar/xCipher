@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // Draft cache — crash resilience for the article editor
 // ──────────────────────────────────────────────────────────────────────────────
 //
-// The editor autosaves to the server every 5 seconds, which leaves a window
+// The editor autosaves to the server after a typing pause, which leaves a window
 // where a browser crash, an accidental tab close, or a dropped connection
 // loses whatever was typed since the last successful save. On a new story
 // that could be the entire piece, because nothing exists server-side yet.
@@ -43,6 +43,8 @@ export interface CachedDraft {
   bodyHtml: string;
   bodyJson?: Record<string, any> | null;
 }
+
+type DraftSnapshot = Pick<CachedDraft, 'values' | 'bodyHtml' | 'bodyJson'>;
 
 /**
  * Cache key. New stories share one key (`new`) because they have no id yet;
@@ -133,9 +135,10 @@ export function useDraftCache({ articleId, enabled = true }: UseDraftCacheOption
 
   const lastWriteRef = useRef(0);
   const pendingRef = useRef<number | null>(null);
+  const snapshotRef = useRef<(() => DraftSnapshot) | null>(null);
 
   const write = useCallback(
-    (values: Record<string, unknown>, bodyHtml: string, bodyJson?: Record<string, any> | null) => {
+    ({ values, bodyHtml, bodyJson }: DraftSnapshot) => {
       if (typeof window === "undefined") return;
 
       const payload: CachedDraft = {
@@ -157,43 +160,59 @@ export function useDraftCache({ articleId, enabled = true }: UseDraftCacheOption
     [articleId]
   );
 
+  const flush = useCallback(() => {
+    if (pendingRef.current !== null) window.clearTimeout(pendingRef.current);
+    pendingRef.current = null;
+    const snapshot = snapshotRef.current;
+    snapshotRef.current = null;
+    if (snapshot) {
+      lastWriteRef.current = Date.now();
+      write(snapshot());
+    }
+  }, [write]);
+
   /**
-   * Throttled cache write. Called on every keystroke, so it writes at most
-   * once a second -- serialising a long article on each character would be
-   * enough main-thread work to be felt while typing.
+   * Throttle snapshot creation as well as storage. Passing already serialized
+   * HTML/JSON here would still do that expensive work on every keystroke.
    */
   const cache = useCallback(
-    (values: Record<string, unknown>, bodyHtml: string, bodyJson?: Record<string, any> | null) => {
+    (snapshot: () => DraftSnapshot) => {
+      snapshotRef.current = snapshot;
       const now = Date.now();
       const elapsed = now - lastWriteRef.current;
 
       if (elapsed >= 1000) {
-        lastWriteRef.current = now;
-        write(values, bodyHtml, bodyJson);
+        flush();
         return;
       }
 
-      // Trailing write, so the final keystroke before a crash is not the one
-      // that gets dropped.
-      if (pendingRef.current !== null) window.clearTimeout(pendingRef.current);
-      pendingRef.current = window.setTimeout(() => {
-        lastWriteRef.current = Date.now();
-        pendingRef.current = null;
-        write(values, bodyHtml, bodyJson);
-      }, 1000 - elapsed);
+      // Keep one trailing write, always reading the latest document.
+      if (pendingRef.current === null) {
+        pendingRef.current = window.setTimeout(flush, 1000 - elapsed);
+      }
     },
-    [write]
+    [flush]
   );
 
   useEffect(() => {
+    const onHidden = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', onHidden);
     return () => {
-      if (pendingRef.current !== null) window.clearTimeout(pendingRef.current);
+      window.removeEventListener('pagehide', flush);
+      window.removeEventListener('beforeunload', flush);
+      document.removeEventListener('visibilitychange', onHidden);
+      flush();
     };
-  }, []);
+  }, [flush]);
 
   const dismissRecovery = useCallback(() => setRecovered(null), []);
 
   const discard = useCallback(() => {
+    if (pendingRef.current !== null) window.clearTimeout(pendingRef.current);
+    pendingRef.current = null;
+    snapshotRef.current = null;
     clearDraftCache(articleId);
     setRecovered(null);
   }, [articleId]);

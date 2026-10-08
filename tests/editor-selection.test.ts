@@ -14,6 +14,23 @@ function makeEditor(content = '<h2>Section</h2><p>First paragraph with enough te
 }
 
 describe('selection work', () => {
+  it('shares formatting calculations between menus without reusing stale selection or stored marks', () => {
+    const editor = makeEditor('<p>Plain <strong>bold</strong></p>');
+    try {
+      editor.commands.setTextSelection(2);
+      const active = vi.spyOn(editor, 'isActive');
+      const initial = getEditorFormattingState(editor);
+      active.mockClear();
+      expect(getEditorFormattingState(editor)).toBe(initial);
+      expect(active).not.toHaveBeenCalled();
+      editor.commands.setTextSelection(8);
+      const bold = getEditorFormattingState(editor);
+      expect(bold).not.toEqual(initial);
+      editor.commands.toggleBold();
+      expect(getEditorFormattingState(editor)).not.toEqual(bold);
+    } finally { editor.destroy(); }
+  });
+
   it('reuses document counts across selection changes and refreshes after editing', () => {
     const editor = makeEditor();
     try {

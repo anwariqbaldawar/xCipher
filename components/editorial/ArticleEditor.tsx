@@ -620,7 +620,12 @@ export default function ArticleEditor({
       // Cache locally on every change, even while a save is in flight or a
       // conflict is unresolved. This is the copy that survives a crash, so it
       // must keep pace with the keystrokes rather than with the server.
-      cacheDraft(getValues() as Record<string, unknown>, editor?.getHTML() || "", editor?.getJSON() ? JSON.parse(JSON.stringify(editor.getJSON())) : null);
+      cacheDraft(() => ({
+        values: getValues(),
+        // onUpdate already serialized the current HTML into the form.
+        bodyHtml: getValues("bodyHtml") || "",
+        bodyJson: editor && !editor.isDestroyed ? editor.getJSON() : null,
+      }));
 
       // Don't autosave if the change is programmatic or if we are actively submitting a transition
       if (isPending || autosaveStatus === "conflict") return;
@@ -769,7 +774,7 @@ export default function ArticleEditor({
 
     clearDraftCache(articleIdRef.current);
     clearDraftCache(null);
-    dismissRecovery();
+    discardRecovery();
 
     if (isExisting) {
       // Server copy is the source of truth for a saved story.
@@ -874,7 +879,7 @@ export default function ArticleEditor({
         featuredImageCaption: watch("featuredImageCaption") || getValues("featuredImageCaption") || null,
         featuredImageCredit: watch("featuredImageCredit") || getValues("featuredImageCredit") || null,
         bodyHtml: editor?.getHTML() || "",
-        bodyJson: editor?.getJSON() ? JSON.parse(JSON.stringify(editor.getJSON())) : null,
+        bodyJson: editor?.getJSON() ?? null,
         lastUpdatedAt: lastSavedRef.current ? lastSavedRef.current.toISOString() : undefined,
         isAutosave: Boolean(isAutosave),
         notes: notesOverride || null,

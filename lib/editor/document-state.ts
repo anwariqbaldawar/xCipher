@@ -1,9 +1,11 @@
 import type { Editor } from '@tiptap/core';
 import type { Node } from '@tiptap/pm/model';
+import type { EditorState } from '@tiptap/pm/state';
 
 type Heading = { text: string; level: number; pos: number };
 const outlines = new WeakMap<Node, Heading[]>();
 const counts = new WeakMap<Editor, { doc: Node; words: number; characters: number }>();
+const formatting = new WeakMap<Editor, { state: EditorState; value: ReturnType<typeof readEditorFormattingState> }>();
 
 /** Selection transactions reuse the immutable document and its derived data. */
 export function getDocumentOutline(editor: Editor): Heading[] {
@@ -33,8 +35,7 @@ export function getDocumentCounts(editor: Editor) {
   return result;
 }
 
-/** React menus only update when their displayed formatting state changes. */
-export function getEditorFormattingState(editor: Editor) {
+function readEditorFormattingState(editor: Editor) {
   const table = editor.isActive('table');
   return {
     active: ['bold', 'italic', 'underline', 'highlight', 'strike', 'subscript', 'superscript', 'code', 'link',
@@ -46,4 +47,14 @@ export function getEditorFormattingState(editor: Editor) {
     canMergeCells: table && editor.can().mergeCells(),
     canSplitCell: table && editor.can().splitCell(),
   };
+}
+
+/** Toolbar and bubble menu share one calculation per immutable editor state. */
+export function getEditorFormattingState(editor: Editor) {
+  const state = editor.state;
+  const cached = formatting.get(editor);
+  if (cached?.state === state) return cached.value;
+  const value = readEditorFormattingState(editor);
+  formatting.set(editor, { state, value });
+  return value;
 }

@@ -2,6 +2,7 @@ import { NodeViewWrapper } from '@tiptap/react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { cleanMermaidCode, resolveMermaidCode } from './MermaidBlock';
+import { waitForMermaidFonts } from '@/lib/mermaid-fonts';
 
 /** Decode HTML entities that the sanitizer injects into attribute values. */
 function decodeHtmlEntities(str: string): string {
@@ -110,6 +111,9 @@ export const MermaidNodeView = (props: any) => {
         const { default: mermaid } = await import('mermaid');
         if (cancelled) return;
 
+        await waitForMermaidFonts(codeToRender);
+        if (cancelled) return;
+
         mermaid.initialize({
           startOnLoad: false,
           theme: isDark ? 'dark' : 'base',
@@ -125,11 +129,18 @@ export const MermaidNodeView = (props: any) => {
               filter: none !important;
               box-shadow: none !important;
             }
-            .nodeLabel, .edgeLabel {
+            /* Custom prose rules also target paragraphs inside not-prose. */
+            .nodeLabel, .edgeLabel, .nodeLabel p, .edgeLabel p {
+              font-family: var(--f-ui), sans-serif !important;
               line-height: normal !important;
+              letter-spacing: normal !important;
+              word-break: normal !important;
+              overflow-wrap: normal !important;
             }
             .nodeLabel p, .edgeLabel p {
               margin: 0 !important;
+              /* Inherit Mermaid's nowrap/break-spaces measurement policy. */
+              white-space: inherit !important;
             }
             .edgeLabel rect {
               fill: transparent !important;
