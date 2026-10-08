@@ -1,17 +1,16 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
 import * as schema from './db/schema';
 
 type Database = ReturnType<typeof createDatabase>;
 
 function createDatabase(connectionString: string) {
-  // Neon's HTTP driver: every query is one fetch to the /sql endpoint. No
-  // persistent socket, no connection pool to exhaust, works identically on
-  // Node and edge runtimes. The trade-off — one round trip per query, no
-  // interactive transactions — is why the write paths in app/actions keep
-  // their statements ordered and independent.
-  const client = neon(connectionString, { fetchOptions: { cache: "no-store" } });
-  return drizzle(client, { schema });
+  // Switched to Neon's WebSocket driver (Pool) from the HTTP driver.
+  // Next.js 15's fetch monkey-patching causes severe deadlocks and timeouts
+  // with unstable_cache and the HTTP driver's fetch calls, resulting in
+  // infinite skeleton loading states. The WebSocket driver bypasses fetch.
+  const pool = new Pool({ connectionString });
+  return drizzle(pool, { schema });
 }
 
 let cached: { connectionString: string; database: Database } | undefined;
