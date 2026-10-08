@@ -23,6 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
       credentials: {
         email: { label: "Email", type: "email", placeholder: "jsmith@example.com" },
         password: { label: "Password", type: "password" },
+        otp: { label: "One-time code", type: "text" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -82,6 +83,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
         if (!isPasswordValid) {
           console.warn(`[auth] Password mismatch for user: ${credentials.email}`);
           throw new Error("Invalid email or password");
+        }
+
+        // Two-factor authentication: when enabled, a valid TOTP code (or a
+        // single-use backup code) is required in addition to the password.
+        // The client learns to ask for it from this error message.
+        if (user.totpEnabled) {
+          const otp = typeof credentials.otp === "string" ? credentials.otp.trim() : "";
+          if (!otp) {
+            throw new Error("Two-factor authentication required.");
+          }
+          const otpRl = await checkRateLimit("login:2fa", user.id, { limit: 5, windowMs: 15 * 60 * 1000 });
+          if (!otpRl.allowed) {
+            throw new Error("Too many attempts. Please try again later.");
+          }
+          const { verifyLoginCode } = await import("@/lib/two-factor");
+          const verification = await verifyLoginCode(user.id, otp);
+          if (!verification.ok) {
+            throw new Error(verification.error || "Invalid authentication code.");
+          }
         }
 
         return {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { db } from "@/lib/db";
 import { eq, sum } from "drizzle-orm";
 import { author as authorTable, article as articleTable } from "@/lib/db/schema";
@@ -78,10 +79,13 @@ export default async function AuthorProfile({ params }: Props) {
 
   const totalViews = Number(viewsAggregate?.[0]?.totalViews) || 0;
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <>
     <script
       type="application/ld+json"
+      nonce={nonce}
       dangerouslySetInnerHTML={{ __html: serializeJsonLd(generatePersonJsonLd(author)) }}
     />
     <AuthorProfileView 

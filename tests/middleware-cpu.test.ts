@@ -14,19 +14,46 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-describe("middleware CPU exclusions", () => {
+describe("middleware coverage", () => {
+  // Static assets stay excluded — they are not HTML and never need a CSP nonce.
   it.each([
-    "/", "/article/story", "/category/ai", "/latest",
-    "/api/article/upsert", "/api/taxonomy", "/api",
     "/_next/static/chunk.js", "/_next/image?url=photo.png&w=640&q=75",
     "/_next/webpack-hmr", "/favicon.ico", "/logo.png", "/fonts/editorial.woff2",
-    "/apiary", "/apiculture",
-  ])("does not invoke middleware for %s", url => {
+  ])("does not invoke middleware for static asset %s", url => {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false);
+  });
+
+  // Every other path matches: each HTML response needs the per-request CSP
+  // nonce and the security headers the middleware applies.
+  it.each([
+    "/", "/article/story", "/category/ai", "/latest",
+    "/api", "/api/article/upsert", "/api/taxonomy",
+    "/apiary", "/apiculture",
+  ])("matches %s so responses carry a CSP nonce", url => {
+    expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
   });
 
   it.each(["/admin", "/admin/editor/story", "/admin/login", "/api/auth/session", "/api/auth/callback"])("continues matching page %s", url => {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
+  });
+
+  it.each([
+    ["xsypher.com", "/"],
+    ["xsypher.com", "/article/story"],
+  ])("attaches a nonce-based CSP to public %s%s without decoding a session", async (host, path) => {
+    const response = await middleware(new NextRequest(`https://${host}${path}`, { headers: { host } }));
+    expect(response.status).toBe(200);
+    expect(auth).not.toHaveBeenCalled();
+    const csp = response.headers.get("content-security-policy") || "";
+    const scriptSrc = csp
+      .split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith("script-src")) || "";
+    expect(scriptSrc).toContain("'nonce-");
+    // 'unsafe-inline' must be gone from script-src (style-src keeps it for
+    // React style attributes, which cannot carry a nonce).
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(response.headers.get("permissions-policy")).toContain("camera=()");
   });
 
   it.each([

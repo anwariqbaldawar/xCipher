@@ -11,7 +11,7 @@ const kremlin = localFont({
 });
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
-import Script from "next/script";
+import { headers } from "next/headers";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type system — three roles, one family each.
@@ -94,32 +94,37 @@ const websiteJsonLd = JSON.stringify({
   }
 }).replace(/</g, '\\u003c');
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Per-request CSP nonce from the middleware, forwarded to every inline
+  // script below so the CSP can drop 'unsafe-inline' for script-src.
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
 
   return (
     <html lang="en" suppressHydrationWarning className={`scroll-pt-28 lg:scroll-pt-32 ${spaceGrotesk.variable} ${plusJakarta.variable} ${jetbrainsMono.variable} ${kremlin.variable}`}>
       <head>
         <script
           type="application/ld+json"
+          nonce={nonce}
           dangerouslySetInnerHTML={{ __html: websiteJsonLd }}
         />
         {/* Carry a theme chosen under a previous brand over to the current storage key.
-            In Next.js 15+ / React 19, inline scripts should be placed inside <head> 
-            as native <script> tags to avoid "Encountered a script tag" errors on the client. */}
-        <Script
+            In Next.js 15+ / React 19, inline scripts should be placed inside <head>
+            as native <script> tags to avoid "Encountered a script tag" errors on the client.
+            A native tag (rather than next/script) also lets the CSP nonce through. */}
+        <script
           id="theme-migration"
-          strategy="beforeInteractive"
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k="xsypher-theme";if(localStorage.getItem(k))return;var old=["xcipher-theme","gridx-theme"];for(var i=0;i<old.length;i++){var v=localStorage.getItem(old[i]);if(v){localStorage.setItem(k,v);return;}}}catch(e){}})();`,
           }}
         />
       </head>
       <body suppressHydrationWarning>
-        <ThemeProvider attribute="data-theme" defaultTheme="system" storageKey="xsypher-theme" disableTransitionOnChange enableSystem>
+        <ThemeProvider attribute="data-theme" defaultTheme="system" storageKey="xsypher-theme" disableTransitionOnChange enableSystem nonce={nonce}>
           {children}
           <div id="toast-root" className="pointer-events-none fixed inset-0 z-[9999]" aria-live="assertive"></div>
         </ThemeProvider>

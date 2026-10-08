@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
-import { db } from "./db";
-import { CACHE_TAGS, categoryTag, authorTag } from "./cache-tags";
+// Read-only cached listings — served from the read replica when configured.
+import { dbRead as db } from "./db";
+import { CACHE_TAGS, categoryTag, authorTag, tagTag } from "./cache-tags";
 import { publicFeedWhere, queryPublicFeed } from "./feed";
 import { maskPublicArticle } from "./personas";
 import { eq, and, or, ne, lte, isNull, inArray, notInArray, sql } from "drizzle-orm";
@@ -164,6 +165,22 @@ export function getCategoryArticles(slug: string, subSlug?: string) {
     },
     ["category-articles-v2", slug, subSlug || "all"],
     { tags: [CACHE_TAGS.articles, categoryTag(slug), ...(subSlug ? [categoryTag(subSlug)] : [])], revalidate: 300 }
+  )();
+}
+
+/** Published articles carrying one tag. */
+export function getTagArticles(slug: string) {
+  return unstable_cache(
+    async () => {
+      try {
+        return await queryPublicFeed(0, LISTING_ARTICLE_LIMIT, { tagSlug: slug });
+      } catch (error) {
+        console.warn(`[cached-queries] Failed to fetch tag articles for ${slug}:`, error);
+        return [];
+      }
+    },
+    ["tag-articles-v2", slug],
+    { tags: [CACHE_TAGS.articles, tagTag(slug)], revalidate: 300 }
   )();
 }
 

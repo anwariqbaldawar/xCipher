@@ -378,7 +378,10 @@ export async function upsertArticle(data: any) {
       if (finalArticle.status === "PUBLISHED" || existingArticle?.status === "PUBLISHED") {
         publishingQueue.add('pingGoogleIndexing', { url: `${siteConfig.url}/article/${finalArticle.slug}` }).catch(console.error);
         const slugs = new Set([finalArticle.slug, existingArticle?.slug].filter((slug): slug is string => !!slug));
-        const tags = new Set([...slugs].flatMap(slug => articleMutationTags({ slug })));
+        const tagSlugs = Array.from(new Set(tagsData.map((t) => t.slug)));
+        const tags = new Set([
+          ...[...slugs].flatMap(slug => articleMutationTags({ slug, tagSlugs })),
+        ]);
         invalidations.push(
           ...[...tags].map(tag => revalidateTag(
             tag,
@@ -480,6 +483,15 @@ export async function incrementArticleView(id: string) {
     
     if (!rl.allowed) {
       return { success: false };
+    }
+
+    // Count the view in Redis and let the worker flush it to Postgres once a
+    // minute — one INCR instead of one UPDATE round trip per view over the
+    // Neon HTTP driver. Falls back to a direct update when Redis is down.
+    const { bufferArticleView } = await import("@/lib/article-views");
+    const buffered = await bufferArticleView(id);
+    if (buffered) {
+      return { success: true };
     }
 
     // In Drizzle we can increment with sql`...`

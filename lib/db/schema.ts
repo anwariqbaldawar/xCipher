@@ -55,6 +55,11 @@ export const user = pgTable('User', {
   notificationPrefs: json('notificationPrefs'),
   isActive: boolean('isActive').default(true).notNull(),
   sessionVersion: integer('sessionVersion').default(1).notNull(),
+  // Two-factor authentication (TOTP). The secret is only set while a setup is
+  // pending or 2FA is enabled; backupCodes are single-use recovery codes.
+  totpSecret: text('totpSecret'),
+  totpEnabled: boolean('totpEnabled').default(false).notNull(),
+  backupCodes: text('backupCodes').array().default(sql`ARRAY[]::text[]`).notNull(),
 });
 
 export const verificationToken = pgTable('VerificationToken', {
@@ -236,6 +241,21 @@ export const subscriber = pgTable('Subscriber', {
   unsubscribeToken: text('unsubscribeToken').notNull().unique(),
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
   updatedAt: timestamp('updatedAt', { mode: 'date', precision: 3 }).notNull(),
+});
+
+// Messages submitted through the public contact form. Stored so nothing is
+// lost even when the notification email cannot be delivered, and so the desk
+// has a record with sender IP + user agent for abuse handling.
+export const contactMessage = pgTable('ContactMessage', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  department: text('department').notNull(),
+  message: text('message').notNull(),
+  ip: text('ip'),
+  userAgent: text('userAgent'),
+  status: text('status').default('NEW').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
 });
 
 export const comment = pgTable('Comment', {
