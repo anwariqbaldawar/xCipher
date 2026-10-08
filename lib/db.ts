@@ -10,7 +10,7 @@ function createDatabase(connectionString: string) {
   // Node and edge runtimes. The trade-off — one round trip per query, no
   // interactive transactions — is why the write paths in app/actions keep
   // their statements ordered and independent.
-  const client = neon(connectionString);
+  const client = neon(connectionString, { fetchOptions: { cache: "no-store" } });
   return drizzle(client, { schema });
 }
 
