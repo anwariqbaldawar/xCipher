@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-
+import Script from "next/script";
 import { siteConfig } from "@/lib/seo";
 import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
@@ -113,10 +113,10 @@ export default async function RootLayout({
         />
         {/* Carry a theme chosen under a previous brand over to the current storage key.
             In Next.js 15+ / React 19, inline scripts should be placed inside <head>
-            as native <script> tags to avoid "Encountered a script tag" errors on the client.
-            A native tag (rather than next/script) also lets the CSP nonce through. */}
-        <script
+            using next/script to avoid "Encountered a script tag" errors on the client. */}
+        <Script
           id="theme-migration"
+          strategy="beforeInteractive"
           nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k="xsypher-theme";if(localStorage.getItem(k))return;var old=["xcipher-theme","gridx-theme"];for(var i=0;i<old.length;i++){var v=localStorage.getItem(old[i]);if(v){localStorage.setItem(k,v);return;}}}catch(e){}})();`,

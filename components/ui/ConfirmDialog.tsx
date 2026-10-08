@@ -77,7 +77,7 @@ export default function ConfirmDialog({
         {requireTypedConfirmation && (
           <div style={{ marginBottom: "24px" }}>
             <label style={{ display: "block", fontSize: "13px", marginBottom: "8px" }}>
-              Please type <strong>{requireTypedConfirmation}</strong> to confirm.
+              Please type <strong style={{ userSelect: "all", cursor: "copy", background: "var(--surface-hover)", padding: "2px 6px", borderRadius: "4px", border: "1px dashed var(--line)" }} title="Click to select">{requireTypedConfirmation}</strong> to confirm.
             </label>
             <input 
               type="text" 
