@@ -21,7 +21,8 @@ function buildCsp(nonce: string): string {
   const isDev = process.env.NODE_ENV === "development";
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tiktok.com${isDev ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`,
+    "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data: https:",
     "font-src 'self' data:",
@@ -100,7 +101,14 @@ async function route(req: NextRequest, requestHeaders: Headers): Promise<NextRes
 
     let effectivePath = pathname;
 
-    // 1. Subdomain rewriting
+    // 1. Redirect public paths to apex domain if visited on admin subdomain (e.g. from relative links in dashboard)
+    const publicPaths = ["/article", "/author", "/category", "/latest", "/page", "/search", "/series", "/tag"];
+    if (isAdminSubdomain && publicPaths.some(p => pathname === p || pathname.startsWith(`${p}/`))) {
+      url.hostname = "xsypher.com";
+      return NextResponse.redirect(url);
+    }
+
+    // 2. Subdomain rewriting
     if (isAdminSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/invite") && !pathname.startsWith("/api")) {
       effectivePath = `/admin${pathname === '/' ? '' : pathname}`;
     }
