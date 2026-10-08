@@ -1,14 +1,14 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { article, auditLog, category, articleRevision, _articleToTag, tag, benchmarkLeaderboard } from "@/lib/db/schema";
+import { article, auditLog, category, articleRevision, _articleToTag, tag, benchmarkLeaderboard, author as authorTable, user as userTable } from "@/lib/db/schema";
 import { eq, inArray, or, and, not, sql } from "drizzle-orm";
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
 import { articleMutationTags } from "@/lib/cache-tags";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditArticle } from "@/lib/permissions";
 import { sanitizeArticleHtml, isValidSafeUrl } from "@/lib/sanitize";
-import { calculateReadTime, deriveIsFeatured } from "@/lib/utils";
+import { calculateReadTime, deriveIsFeatured, slugify } from "@/lib/utils";
 import { authorize } from "@/lib/capabilities";
 import { handleServerError } from "@/lib/errors";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
@@ -68,6 +68,39 @@ async function getUniqueSlug(baseSlug: string, currentId?: string): Promise<stri
   }
 }
 
+// Every article must carry a real authorId. The console scopes article
+// queries by authorId (buildArticleScope), so a story saved with a null
+// byline becomes unreachable to its own writer — the editor page 404s the
+// moment the autosave adopts the new id and re-renders. A writer with no
+// linked profile gets a minimal one created and linked on first save.
+async function resolveArticleAuthorId(
+  user: { id: string; name?: string | null; email?: string | null; role: Role; authorId?: string | null },
+  requestedAuthorId?: string | null,
+): Promise<string | null> {
+  // An explicit byline (editorial roles assigning an author) wins.
+  if (requestedAuthorId) return requestedAuthorId;
+  if (user.authorId) return user.authorId;
+
+  const baseSlug = slugify(user.name || (user.email ? user.email.split("@")[0] : "") || "writer") || "writer";
+  let slug = baseSlug;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const [existing] = await db.select({ id: authorTable.id }).from(authorTable).where(eq(authorTable.slug, slug)).limit(1);
+    if (!existing) break;
+    slug = `${baseSlug}-${crypto.randomUUID().slice(0, 6)}`;
+  }
+
+  const [created] = await db.insert(authorTable).values({
+    id: crypto.randomUUID(),
+    slug,
+    name: user.name || user.email || "xSypher Staff",
+    role: user.role,
+    email: user.email || null,
+  }).returning({ id: authorTable.id });
+
+  await db.update(userTable).set({ authorId: created.id }).where(eq(userTable.id, user.id));
+  return created.id;
+}
+
 export async function upsertArticle(data: any) {
   try {
     const userSession = await getCurrentUser();
@@ -81,6 +114,8 @@ export async function upsertArticle(data: any) {
       id: userSession.id,
       role: userSession.role as Role,
       authorId: userSession.authorId,
+      name: userSession.name,
+      email: userSession.email,
     };
 
     let existingArticle = null;
@@ -236,9 +271,10 @@ export async function upsertArticle(data: any) {
         finalArticle = updated;
         actionType = finalStatusUpdate ? `DEMOTED_TO_${finalStatusUpdate}` : `UPDATE_ARTICLE_${updated.status}`;
       } else {
-        const resolvedAuthorId = authorize(userWithAuth.role, "article.publish")
-          ? (data.authorId || userWithAuth.authorId || null)
-          : userWithAuth.authorId;
+        const resolvedAuthorId = await resolveArticleAuthorId(
+          userWithAuth,
+          authorize(userWithAuth.role, "article.publish") ? data.authorId : null,
+        );
 
         const [created] = await db.insert(article).values({
           id: articleId,

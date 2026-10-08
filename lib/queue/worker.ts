@@ -62,3 +62,10 @@ notificationWorker.on('completed', (job) => {
 notificationWorker.on('failed', (job, err) => {
   console.error(`[Queue] Job ${job?.id} failed for notificationQueue:`, err);
 });
+
+// Startup banner: makes "is the worker even running?" answerable from
+// `docker compose logs xsypher-worker` alone, instead of silent nothing.
+console.log("[worker] started — listening on queues: publishing, notification");
+if (!process.env.RESEND_API_KEY) {
+  console.warn("[worker] RESEND_API_KEY is not set — email jobs will fail until it is configured");
+}
