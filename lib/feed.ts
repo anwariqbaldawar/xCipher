@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
-import { db } from "@/lib/db";
+// Read-only feed queries — served from the read replica when configured.
+import { dbRead as db } from "@/lib/db";
 import { article } from "@/lib/db/schema";
 import { ARTICLE_CARD_COLUMNS, ARTICLE_CARD_WITH } from "@/lib/queries";
 import { maskPublicArticle } from "@/lib/personas";

@@ -3,7 +3,11 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 import type { SQL } from 'drizzle-orm';
 
 const mocks = vi.hoisted(() => ({ findMany: vi.fn(), cache: vi.fn() }));
-vi.mock('@/lib/db', () => ({ db: { query: { article: { findMany: mocks.findMany } } } }));
+vi.mock('@/lib/db', () => {
+  const dbMock = { query: { article: { findMany: mocks.findMany } } };
+  // Public read paths import dbRead (read replica); it shares this mock.
+  return { db: dbMock, dbRead: dbMock };
+});
 vi.mock('next/cache', () => ({ unstable_cache: mocks.cache }));
 
 beforeEach(() => {

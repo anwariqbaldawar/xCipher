@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { submitContactMessage } from "@/app/actions/contact";
 import {
   Mail,
   Send,
@@ -25,17 +26,31 @@ export default function ContactPageClient() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !email.trim() || !message.trim()) return;
 
     setIsSubmitting(true);
-    // Simulate immediate client submission handling
-    setTimeout(() => {
+    setError("");
+    try {
+      const res = await submitContactMessage({
+        name: fullName,
+        email,
+        department,
+        message,
+      });
+      if (res.success) {
+        setIsSubmitted(true);
+      } else {
+        setError(res.error || "Something went wrong. Please try again.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
       setIsSubmitting(false);
-      setIsSubmitted(true);
-    }, 600);
+    }
   };
 
   const handleReset = () => {
@@ -44,6 +59,7 @@ export default function ContactPageClient() {
     setDepartment("editorial");
     setMessage("");
     setIsSubmitted(false);
+    setError("");
   };
 
   return (
@@ -321,6 +337,15 @@ export default function ContactPageClient() {
                         className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30 transition-colors font-[family:var(--f-body)] text-sm sm:text-base placeholder:text-[var(--faint)] resize-y"
                       />
                     </div>
+
+                    {error && (
+                      <div
+                        role="alert"
+                        className="text-sm rounded-lg px-4 py-3 border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                      >
+                        {error}
+                      </div>
+                    )}
 
                     {/* Submit Button */}
                     <button

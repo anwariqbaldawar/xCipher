@@ -46,6 +46,11 @@ export function categoryTag(slug: string): string {
   return `category:${slug}`;
 }
 
+/** Tag for one tag's listing. */
+export function tagTag(slug: string): string {
+  return `tag:${slug}`;
+}
+
 /** Tag for one author's profile page. */
 export function authorTag(slug: string): string {
   return `author:${slug}`;
@@ -63,10 +68,14 @@ export function articleMutationTags(article: {
   slug?: string | null;
   category?: { slug?: string | null } | null;
   authorModel?: { slug?: string | null } | null;
+  tagSlugs?: string[];
 }): string[] {
   const tags: string[] = [CACHE_TAGS.articles];
   if (article.slug) tags.push(articleTag(article.slug));
   if (article.category?.slug) tags.push(categoryTag(article.category.slug));
   if (article.authorModel?.slug) tags.push(authorTag(article.authorModel.slug));
+  for (const tagSlug of article.tagSlugs || []) {
+    tags.push(tagTag(tagSlug));
+  }
   return tags;
 }

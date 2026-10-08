@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { LISTING_ARTICLE_LIMIT } from "@/lib/queries";
 import ProfileForm from "./ProfileForm";
 import AccountForm from "./AccountForm";
+import TwoFactorForm from "./TwoFactorForm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import AuthorProfileView from "@/components/author/AuthorProfileView";
@@ -207,6 +208,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ tab?
         <>
           <h2 style={{ fontSize: "16px", marginBottom: "16px" }}>Account Security</h2>
           <AccountForm user={dbUser || user} />
+          <TwoFactorForm user={dbUser || user} />
         </>
       )}
 

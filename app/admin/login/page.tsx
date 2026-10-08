@@ -10,6 +10,8 @@ import Logo from "@/components/common/Logo";
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [needsOtp, setNeedsOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -36,10 +38,17 @@ function LoginForm() {
       redirect: false,
       email,
       password,
+      otp: otp || undefined,
     });
 
     if (res?.error) {
-      setError("Invalid email or password");
+      if (res.error.toLowerCase().includes("two-factor")) {
+        // Password was correct; the account has 2FA enabled. Ask for the code.
+        setNeedsOtp(true);
+        setError("Enter the 6-digit code from your authenticator app.");
+      } else {
+        setError("Invalid email or password");
+      }
       setLoading(false);
     } else {
       router.push(callbackUrl);
@@ -129,6 +138,34 @@ function LoginForm() {
           </button>
         </div>
       </div>
+
+      {/* Two-Factor Authentication Code (shown after a correct password) */}
+      {needsOtp && (
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="otp"
+            className="block text-xs font-semibold uppercase tracking-wider text-neutral-300"
+          >
+            Authenticator Code
+          </label>
+          <input
+            id="otp"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="123456"
+            required
+            autoFocus
+            className="block w-full h-11 px-3.5 py-2.5 bg-neutral-900/90 border border-neutral-700/80 rounded-lg text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-accent/70 focus:ring-1 focus:ring-accent/40 transition-all tracking-[0.5em] text-center"
+          />
+          <p className="text-[11px] text-neutral-500">
+            Open your authenticator app and enter the 6-digit code. A backup code also works.
+          </p>
+        </div>
+      )}
 
       {/* Primary CTA Action */}
       <div className="pt-1">

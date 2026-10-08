@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
@@ -173,15 +174,19 @@ export default async function ArticlePage({ params }: Props) {
     ]
   };
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <>
       <ActiveCategorySetter slug={catSlug} />
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(withEditorialSchema(generateNewsArticleJsonLd(article), articleHtml)) }}
       />
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(breadcrumbJsonLd) }}
       />
       <ProgressBar />

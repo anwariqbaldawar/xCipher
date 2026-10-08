@@ -215,35 +215,10 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Allow-Headers", value: "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version" },
         ]
       },
-      {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "Content-Security-Policy",
-            value: `default-src 'self'; script-src 'self' ${process.env.NODE_ENV === "development" ? "'unsafe-eval'" : ""} 'unsafe-inline' https://www.tiktok.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self' data:; frame-src 'self' https://www.youtube-nocookie.com https://www.tiktok.com; frame-ancestors 'none'; connect-src 'self' https:;`,
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "X-XSS-Protection",
-            value: "1; mode=block",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains; preload",
-          },
-        ],
-      },
+      // Security headers (Content-Security-Policy with a per-request nonce,
+      // X-Frame-Options, X-Content-Type-Options, Referrer-Policy, HSTS,
+      // Permissions-Policy) are applied in middleware.ts — a static headers()
+      // config cannot generate a per-request nonce.
     ];
   },
   images: {

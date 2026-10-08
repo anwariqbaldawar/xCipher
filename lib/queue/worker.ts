@@ -1,15 +1,38 @@
-import { Worker, Job } from 'bullmq';
+import { Worker, Job, Queue } from 'bullmq';
 import redis from '../redis';
 import { notifyGoogleIndexing } from '../google-indexing';
 import { sendEmail, sendPasswordResetEmail, sendInvitationEmail } from '../email';
+import { flushArticleViews } from '../article-views';
 
-// Worker for Publishing related jobs (e.g. Google Indexing ping)
+// Job concurrency per worker process. Scale horizontally with
+// `docker compose up -d --scale xsypher-worker=N` rather than only raising
+// this number — BullMQ distributes jobs across every connected worker.
+const concurrency = Number(process.env.WORKER_CONCURRENCY || 5);
+
+// Register the periodic view-counter flush. Job schedulers are deduplicated
+// by BullMQ, so registering from every worker replica is safe; if all workers
+// are down the schedule simply re-registers on the next start.
+const schedulerQueue = new Queue('publishing', { connection: redis });
+void schedulerQueue
+  .upsertJobScheduler(
+    'flush-article-views',
+    { every: 60_000 },
+    { name: 'flushArticleViews', data: {} },
+  )
+  .catch((error) => console.error('[worker] Failed to register view flush schedule:', error));
+
+// Worker for Publishing related jobs (e.g. Google Indexing ping, view flush)
 export const publishingWorker = new Worker('publishing', async (job: Job) => {
   if (job.name === 'pingGoogleIndexing') {
     const { url } = job.data;
     await notifyGoogleIndexing(url);
+  } else if (job.name === 'flushArticleViews') {
+    const flushed = await flushArticleViews();
+    if (flushed > 0) {
+      console.log(`[worker] Flushed ${flushed} buffered article view(s) to Postgres`);
+    }
   }
-}, { connection: redis });
+}, { connection: redis, concurrency });
 
 publishingWorker.on('completed', (job) => {
   console.log(`[Queue] Job ${job.id} completed for publishingQueue`);
@@ -53,7 +76,7 @@ export const notificationWorker = new Worker('notification', async (job: Job) =>
       throw new Error(`Brevo broadcast error: ${errData}`);
     }
   }
-}, { connection: redis });
+}, { connection: redis, concurrency });
 
 notificationWorker.on('completed', (job) => {
   console.log(`[Queue] Job ${job.id} completed for notificationQueue`);

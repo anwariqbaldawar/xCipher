@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { tag as tagTable, article as articleTable } from "@/lib/db/schema";
-import { publicFeedWhere, queryPublicFeed } from "@/lib/feed";
+import { publicFeedWhere } from "@/lib/feed";
+import { getTagArticles } from "@/lib/cached-queries";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import Sidebar from "@/components/layout/Sidebar";
 import Link from "next/link";
@@ -40,7 +41,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export const dynamic = "force-dynamic";
+// Same ISR setup as the homepage and category listings: the page is prerendered
+// and revalidated every 5 minutes, and the feed query behind it is cached and
+// tag-invalidated (getTagArticles). With static rendering a ?page=N deep link
+// serves the first page — live pagination is the load-more control, which is
+// unaffected.
+export const dynamic = "force-static";
+export const revalidate = 300; // tag listing
 
 export default async function TagPage({ params, searchParams }: Props) {
   const { slug } = await params;
@@ -58,11 +65,12 @@ export default async function TagPage({ params, searchParams }: Props) {
   const filter = { tagSlug: slug };
   const whereClause = publicFeedWhere(filter);
 
-  const [articles, countResult] = await Promise.all([
-    queryPublicFeed(skip, limit, filter),
+  const [tagArticles, countResult] = await Promise.all([
+    getTagArticles(slug),
     db.select({ count: sql`count(*)`.mapWith(Number) }).from(articleTable).where(whereClause)
   ]);
   const totalCount = countResult[0]?.count || 0;
+  const articles = tagArticles.slice(0, limit);
 
   const hasNextPage = skip + limit < totalCount;
   const hasPrevPage = page > 1;

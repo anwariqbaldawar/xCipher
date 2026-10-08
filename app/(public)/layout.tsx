@@ -7,17 +7,21 @@ import CookieConsent from "@/components/common/CookieConsent";
 import { AdSenseScript } from "@/components/common/AdUnit";
 import { generateOrganizationJsonLd } from "@/lib/entity-schema";
 import { serializeJsonLd } from "@/lib/article-schema";
+import { headers } from "next/headers";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <>
       <link rel="preconnect" href="https://res.cloudinary.com" />
       <script
         type="application/ld+json"
+        nonce={nonce}
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(generateOrganizationJsonLd()) }}
       />
       {/*

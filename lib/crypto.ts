@@ -4,7 +4,9 @@ import { hash, compare } from "bcrypt-ts";
  * Hashes a password using bcrypt-ts, which is Edge-compatible.
  */
 export async function hashPassword(password: string): Promise<string> {
-  return hash(password, 10);
+  // 12 rounds — the current OWASP recommendation for bcrypt. Existing hashes
+  // (10 rounds) still verify: the cost factor is embedded in the hash itself.
+  return hash(password, 12);
 }
 
 /**

@@ -4,7 +4,11 @@ import { getMoreArticles } from "@/app/actions/feed-actions";
 import { publicFeedWhere } from "@/lib/feed";
 
 const mocks = vi.hoisted(() => ({ findMany: vi.fn() }));
-vi.mock("@/lib/db", () => ({ db: { query: { article: { findMany: mocks.findMany } } } }));
+vi.mock("@/lib/db", () => {
+  const dbMock = { query: { article: { findMany: mocks.findMany } } };
+  // Public read paths import dbRead (read replica); it shares this mock.
+  return { db: dbMock, dbRead: dbMock };
+});
 
 beforeEach(() => mocks.findMany.mockReset().mockResolvedValue([]));
 const dialect = new PgDialect();

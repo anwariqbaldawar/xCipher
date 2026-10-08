@@ -31,6 +31,9 @@ services:
   # Indexing pings and view-count flushes. Without this container the queues
   # fill up and none of those jobs are ever processed.
   xsypher-worker:
+    # Scale horizontally with: docker compose -f docker-compose.prod.yml up -d --scale xsypher-worker=2
+    # BullMQ distributes jobs across every connected worker; WORKER_CONCURRENCY
+    # (default 5) sets per-process job parallelism.
     container_name: xsypher-worker
     build:
       context: .
@@ -41,6 +44,7 @@ services:
       - .env.production
     environment:
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+      - WORKER_CONCURRENCY=${WORKER_CONCURRENCY:-5}
     depends_on:
       - redis
     deploy:
