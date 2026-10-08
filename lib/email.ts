@@ -50,18 +50,18 @@ export async function sendInvitationEmail({ to, role, inviteUrl }: SendInvitatio
           <div style="text-align: center; margin-bottom: 32px; border-bottom: 1px solid #1f2127; padding-bottom: 24px;">
             <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.05em; margin: 0;">x<span style="color: #f04552;">Sypher</span></h1>
           </div>
-          <h2 style="font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #ffffff;">You have been granted clearance.</h2>
+          <h2 style="font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #ffffff;">Welcome to xSypher</h2>
           <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 24px;">
-            You've been invited to join the xSypher editorial desk as a <strong>${role}</strong>.
+            You have been invited to join the xSypher team as a <strong>${role}</strong>.
           </p>
           <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 32px;">
-            Click the secure link below to authenticate and set up your account. This link will automatically expire in 48 hours for security purposes.
+            Please click the button below to accept your invitation and join the workspace. This link expires in 48 hours.
           </p>
           <div style="margin: 32px 0; text-align: center;">
             <a href="${inviteUrl}" style="background-color: #f04552; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Accept Invitation</a>
           </div>
           <p style="font-size: 13px; color: #52525b; border-top: 1px solid #1f2127; padding-top: 24px; margin-bottom: 0; text-align: center;">
-            If you did not expect this invitation, you can safely ignore this dispatch.
+            If you did not expect this invitation, you can safely ignore this email.
           </p>
         </div>
       `,

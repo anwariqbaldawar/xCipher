@@ -99,7 +99,7 @@ export default function TopStoriesList({ initialStories }: { initialStories: Top
                     </Link>
                     {story.slug && (
                       <Link
-                        href={`/article/${story.slug}`}
+                        href={`${process.env.NEXT_PUBLIC_SITE_URL}/article/${story.slug}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1 text-muted hover:text-ink rounded hover:bg-surface-3 transition-colors"

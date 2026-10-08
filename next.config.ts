@@ -168,7 +168,7 @@ const nextConfig: NextConfig = {
         // API routes and dynamic routes are matched only after afterFiles,
         // so a plain catch-all would swallow them into 404s.
         ...forHosts(
-          { source: "/:path((?!api|invite|_next).*)", destination: "/admin/:path" },
+          { source: "/:path((?!api|invite|_next|admin).*)", destination: "/admin/:path" },
           consoleHosts,
         ),
         // preview.xsypher.com — bare paths map onto the preview tree.

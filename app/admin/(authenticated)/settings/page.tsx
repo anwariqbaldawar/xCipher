@@ -179,7 +179,7 @@ export default async function SettingsPage(props: { searchParams: Promise<{ tab?
                       View Live (Save Profile First)
                     </span>
                   ) : (
-                    <a href={`/author/${author.slug}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ padding: "6px 12px", borderRadius: "6px" }}>
+                    <a href={`${process.env.NEXT_PUBLIC_SITE_URL}/author/${author.slug}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ padding: "6px 12px", borderRadius: "6px" }}>
                       View Live
                     </a>
                   )}

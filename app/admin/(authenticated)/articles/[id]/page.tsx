@@ -247,7 +247,7 @@ export default async function ArticleDetailPage({ params }: PageProps) {
           )}
           {article.status === "PUBLISHED" && (
             <Link
-              href={`/article/${article.slug}`}
+              href={`${process.env.NEXT_PUBLIC_SITE_URL}/article/${article.slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-line text-ink rounded-md hover:bg-surface-2 transition-colors"
