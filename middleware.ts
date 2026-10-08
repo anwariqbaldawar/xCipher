@@ -26,6 +26,7 @@ export default async function middleware(req: NextRequest) {
       url.hostname.includes("127.0.0.1");
 
     if (!isLocalDev) {
+      if (hostname) url.hostname = hostname;
       // Strip internal container port behind proxy to prevent :3000 from leaking into redirects/rewrites
       url.port = '';
       // Enforce HTTPS for production redirects to avoid mixed-content issues
@@ -80,7 +81,7 @@ export default async function middleware(req: NextRequest) {
       const token = session?.user;
       if (!token) {
         url.pathname = isAdminSubdomain ? "/login" : "/admin/login";
-        url.searchParams.set("callbackUrl", isLocalDev ? `${url.origin}${effectivePath}` : req.url);
+        url.searchParams.set("callbackUrl", `${url.origin}${effectivePath}${req.nextUrl.search}`);
         return NextResponse.redirect(url);
       }
       
