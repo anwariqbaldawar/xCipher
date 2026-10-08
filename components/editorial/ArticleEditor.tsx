@@ -417,7 +417,7 @@ export default function ArticleEditor({
         underline: false,
       }),
       Heading.extend({
-        renderHTML({ node, HTMLAttributes }) {
+        renderHTML({ node, HTMLAttributes }: any) {
           const hasLevel = this.options.levels.includes(node.attrs.level);
           const level = hasLevel ? node.attrs.level : this.options.levels[0];
           const id = slugify(node.textContent);
@@ -462,7 +462,7 @@ export default function ArticleEditor({
       TableHeader,
       CharacterCount.configure({
         limit: 50000,
-        wordCounter: (text) => Array.from(text.matchAll(/\w+/g)).length,
+        wordCounter: (text: string) => Array.from(text.matchAll(/\w+/g)).length,
       }),
       SlashMenu.configure({
         suggestion: {
@@ -527,7 +527,7 @@ export default function ArticleEditor({
       },
     },
     content: defaultValues.bodyHtml,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor }: any) => {
       setValue("bodyHtml", editor.getHTML(), { shouldDirty: true });
     },
   });
@@ -795,7 +795,7 @@ export default function ArticleEditor({
   const handleSave = async (targetStatus: string, isAutosave = false, notesOverride?: string) => {
     if (['SUBMITTED', 'PUBLISHED', 'SCHEDULED'].includes(targetStatus)) {
       let incomplete = false;
-      editor?.state.doc.descendants(node => {
+      editor?.state.doc.descendants((node: any) => {
         if (node.type.name === 'editorialBlock' && !parseEditorialBlock(node.attrs.data)) incomplete = true;
       });
       if (incomplete) {
