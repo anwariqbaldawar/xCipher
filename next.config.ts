@@ -133,6 +133,52 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async rewrites() {
+    // Subdomain routing lives here, in the router, so it costs no middleware
+    // execution. The middleware matcher only covers /admin/* and /api/auth/*;
+    // these host-based rewrites map the console and preview subdomains onto
+    // their route trees.
+    //
+    // They run in afterFiles: pages, public files and API routes are matched
+    // against the filesystem FIRST, so paths that already resolve (/admin/*,
+    // /invite/*, /api/*, /_next/*, static assets) pass through untouched and
+    // only genuinely bare console paths are rewritten. Identity rewrites are
+    // avoided entirely — a rewrite whose destination equals its source 404s.
+    //
+    // `has` entries are AND-ed, so each host value gets its own rule; the
+    // rules themselves are OR-ed (first match wins). The request host is
+    // matched with the port stripped, so bare hostnames only.
+    const consoleHosts = ["admin.xsypher.com", "admin.localhost"];
+    const previewHosts = ["preview.xsypher.com", "preview.localhost"];
+    const forHosts = (
+      rule: { source: string; destination: string },
+      hosts: string[],
+    ) => hosts.map((value) => ({ ...rule, has: [{ type: "host" as const, value }] }));
+
+    return {
+      beforeFiles: [
+        // The console root: / on the console subdomain is the dashboard, not
+        // the public homepage the filesystem would otherwise match first.
+        ...forHosts({ source: "/", destination: "/admin" }, consoleHosts),
+      ],
+      afterFiles: [
+        // admin.xsypher.com — bare console paths map onto /admin/*. The
+        // lookahead keeps /api, /invite and /_next resolving as themselves:
+        // API routes and dynamic routes are matched only after afterFiles,
+        // so a plain catch-all would swallow them into 404s.
+        ...forHosts(
+          { source: "/:path((?!api|invite|_next).*)", destination: "/admin/:path" },
+          consoleHosts,
+        ),
+        // preview.xsypher.com — bare paths map onto the preview tree.
+        ...forHosts(
+          { source: "/:path((?!_next).*)", destination: "/preview/:path" },
+          previewHosts,
+        ),
+      ],
+      fallback: [],
+    };
+  },
   async headers() {
     return [
       {
@@ -143,6 +189,21 @@ const nextConfig: NextConfig = {
             value: "public, max-age=31536000, immutable",
           },
         ],
+      },
+      {
+        // The console and preview subdomains are working surfaces, not public
+        // content. A few public routes still resolve there (the homepage, static
+        // pages) because routing lets real pages win over the catch-all
+        // rewrite — noindex the whole host so they never compete with the
+        // canonical site in search results.
+        source: "/:path*",
+        has: [{ type: "host", value: "admin.xsypher.com" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "preview.xsypher.com" }],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
         source: "/api/:path*",

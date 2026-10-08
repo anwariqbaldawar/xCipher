@@ -1,10 +1,10 @@
 import NextAuth from "next-auth";
-import authConfig from "@/lib/auth.config";
+import { createAuthConfig } from "@/lib/auth.config";
 import type { Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const { auth: edgeAuth } = NextAuth(authConfig);
+const { auth: edgeAuth } = NextAuth(createAuthConfig());
 
 export default async function middleware(req: NextRequest) {
     const url = req.nextUrl.clone();
@@ -112,13 +112,17 @@ export default async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all paths except:
-     * 1. /_next/static (static files)
-     * 2. /_next/image (image optimization files)
-     * 3. /favicon.ico (favicon)
-     * 4. Static assets with extensions (svg, png, jpg, etc.)
+     * Only the console and its auth endpoints need the middleware. Public
+     * pages, other API routes and static assets skip it entirely, so a normal
+     * page view never pays for middleware execution.
+     *
+     * Subdomain routing (admin.xsypher.com, preview.xsypher.com) is handled by
+     * host-based rewrites in next.config.ts, which run in the router and cost
+     * no middleware CPU. The rewrite logic in this file stays for the paths
+     * that do match.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/admin/:path*",
+    "/api/auth/:path*",
   ],
 };
 

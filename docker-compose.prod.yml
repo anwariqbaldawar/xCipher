@@ -10,16 +10,56 @@ services:
       - "127.0.0.1:3000:3000"
     env_file:
       - .env.production
+    environment:
+      # Internal Docker network only — Redis is never exposed publicly.
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - redis
     deploy:
       resources:
         limits:
           cpus: '4.0'
           memory: '8G'
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/cron/publish-scheduled').then(r=>process.exit(r.status===401?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # BullMQ worker: emails (welcome, password reset, invitations), Google
+  # Indexing pings and view-count flushes. Without this container the queues
+  # fill up and none of those jobs are ever processed.
+  xsypher-worker:
+    container_name: xsypher-worker
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    image: xsypher-worker:latest
+    restart: always
+    env_file:
+      - .env.production
+    environment:
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '512M'
 
   redis:
     image: redis:alpine
     container_name: xsypher-redis
     restart: always
-    ports:
-      - "6379:6379"
-    mem_limit: 256m
+    # Password required; LRU eviction so a runaway queue can never OOM the box.
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    # No published port: reachable only from the internal Docker network.
+    expose:
+      - "6379"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: '512M'

@@ -1,0 +1,26 @@
+# BullMQ worker image — processes the publishing and notification queues.
+#
+# Separate from the Next.js standalone image on purpose: the standalone build
+# only traces files the app imports, and nothing imports lib/queue/worker.ts,
+# so the worker source is not in the web image. The worker needs the full lib/
+# tree (redis, email, google-indexing, queue) and tsx to run TypeScript.
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+# tsx is a devDependency; the worker runs it, so dev deps are required here.
+RUN npm ci --no-audit --no-fund
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 worker
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --chown=worker:nodejs package.json tsconfig.json ./
+COPY --chown=worker:nodejs lib ./lib
+
+USER worker
+
+CMD ["npx", "tsx", "lib/queue/worker.ts"]

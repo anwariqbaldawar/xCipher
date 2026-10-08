@@ -7,13 +7,14 @@ import { eq } from "drizzle-orm";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { headers } from "next/headers";
 import { cache } from "react";
-import authConfig from "@/lib/auth.config";
+import { createAuthConfig } from "@/lib/auth.config";
 
 // Resolve secrets, cookies and the database adapter after request bindings exist.
 export const { handlers, auth, signIn, signOut } = NextAuth(() => {
   return {
-  // Spread the shared edge config (callbacks, cookies, session, pages, secret, trustHost).
-  ...authConfig,
+  // Build the shared edge config (callbacks, cookies, session, pages, secret,
+  // trustHost) at request time so env bindings are read lazily.
+  ...createAuthConfig(),
   // Layer on the server-only adapter and the real Credentials provider.
   adapter: DrizzleAdapter(db, { usersTable: userTable, accountsTable: account, sessionsTable: session, verificationTokensTable: verificationToken } as any) as any,
   providers: [

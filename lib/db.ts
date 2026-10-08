@@ -1,27 +1,18 @@
 import 'server-only';
-import dns from 'node:dns';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
 import * as schema from './db/schema';
-
-// Prevent Node.js from stalling on unreachable IPv6 routes during concurrent queries
-try {
-  dns.setDefaultResultOrder('ipv4first');
-} catch {
-  // Ignore in environments where setDefaultResultOrder is not supported
-}
 
 type Database = ReturnType<typeof createDatabase>;
 
 function createDatabase(connectionString: string) {
-  // Establish a persistent connection pool using native Node.js TCP
-  const queryClient = postgres(connectionString, {
-    max: 10,
-    idle_timeout: 20,
-    connect_timeout: 30,
-    ssl: 'require',
-  });
-  return drizzle(queryClient, { schema });
+  // Neon's HTTP driver: every query is one fetch to the /sql endpoint. No
+  // persistent socket, no connection pool to exhaust, works identically on
+  // Node and edge runtimes. The trade-off — one round trip per query, no
+  // interactive transactions — is why the write paths in app/actions keep
+  // their statements ordered and independent.
+  const client = neon(connectionString);
+  return drizzle(client, { schema });
 }
 
 let cached: { connectionString: string; database: Database } | undefined;
@@ -46,8 +37,8 @@ export const db = new Proxy({} as Database, {
   get(_target, property) {
     const database = getDatabase();
     const value = Reflect.get(database, property, database);
-    // Preserve callable own properties such as Neon's $client (and its query
-    // helpers); only prototype methods need the database as their receiver.
+    // Preserve callable own properties such as the driver's $client (and its
+    // query helpers); only prototype methods need the database as receiver.
     return typeof value === "function" && !Object.prototype.hasOwnProperty.call(database, property)
       ? value.bind(database)
       : value;

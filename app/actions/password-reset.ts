@@ -11,43 +11,49 @@ import { eq, and, sql } from "drizzle-orm";
 
 export async function requestPasswordReset(email: string): Promise<{ success?: string, error?: string }> {
   try {
+    // Always answer with the same generic message. Saying "no account found"
+    // here would let an attacker enumerate which emails are registered.
+    const successMessage = "A password reset link has been sent to your email.";
+
+    const rl = await checkRateLimit("password-reset:email", email, { limit: 3, windowMs: 30 * 60 * 1000 });
+    if (!rl.allowed) {
+      return { success: successMessage };
+    }
+
     const [u] = await db.select().from(user).where(eq(user.email, email)).limit(1);
 
     if (!u || !u.password) {
-      return { error: "No account found with this email address." };
+      return { success: successMessage };
     }
 
-    const rl = await checkRateLimit("password-reset:email", email, { limit: 3, windowMs: 30 * 60 * 1000 });
-    if (rl.allowed) {
-      await db.update(passwordResetTokenTable)
-        .set({ used: true })
-        .where(and(eq(passwordResetTokenTable.userId, u.id), eq(passwordResetTokenTable.used, false)));
+    await db.update(passwordResetTokenTable)
+      .set({ used: true })
+      .where(and(eq(passwordResetTokenTable.userId, u.id), eq(passwordResetTokenTable.used, false)));
 
-      const token = randomHex(32);
-      const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    const token = randomHex(32);
+    const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      await db.insert(passwordResetTokenTable).values({
-        id: crypto.randomUUID(),
-        userId: u.id,
-        email: email,
-        token,
-        expires,
-      });
+    await db.insert(passwordResetTokenTable).values({
+      id: crypto.randomUUID(),
+      userId: u.id,
+      email: email,
+      token,
+      expires,
+    });
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
-      const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
 
-      await notificationQueue.add('sendPasswordResetEmail', { to: email, resetUrl });
+    await notificationQueue.add('sendPasswordResetEmail', { to: email, resetUrl });
 
-      await db.insert(auditLog).values({
-        id: crypto.randomUUID(),
-        action: "REQUEST_PASSWORD_RESET",
-        entityType: "User",
-        entityId: u.id,
-      });
-    }
+    await db.insert(auditLog).values({
+      id: crypto.randomUUID(),
+      action: "REQUEST_PASSWORD_RESET",
+      entityType: "User",
+      entityId: u.id,
+    });
 
-    return { success: "A password reset link has been sent to your email." };
+    return { success: successMessage };
   } catch (e) {
     console.error("Password reset request error:", e);
     return { error: "An unexpected error occurred." };

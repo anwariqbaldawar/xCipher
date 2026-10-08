@@ -47,7 +47,7 @@ export const getHomeArticles = unstable_cache(
   async () => {
     try {
       const articles = await db.query.article.findMany({
-        where: and(sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`, or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date()))),
+        where: and(eq(articleTable.status, "PUBLISHED"), or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date()))),
         orderBy: (a, { desc }) => [desc(a.publishedAt)],
         limit: HOME_ARTICLE_LIMIT,
         columns: ARTICLE_CARD_COLUMNS,
@@ -71,7 +71,7 @@ export const getHomeHeroArticle = unstable_cache(
   async () => {
     const [hero] = await db.query.article.findMany({
       where: and(
-        sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        eq(articleTable.status, "PUBLISHED"),
         or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
         or(eq(articleTable.featured, true), eq(articleTable.homepagePlacement, "featured")),
       ),
@@ -91,7 +91,7 @@ export const getHomeBriefing = unstable_cache(
   async (heroId: string) => {
     const articles = await db.query.article.findMany({
       where: and(
-        sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        eq(articleTable.status, "PUBLISHED"),
         or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
         ne(articleTable.id, heroId),
       ),
@@ -112,7 +112,7 @@ export const getHomePicks = unstable_cache(
     try {
       const articles = await db.query.article.findMany({
         where: and(
-          sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+          eq(articleTable.status, "PUBLISHED"),
           or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
           eq(articleTable.homepagePlacement, "picks")
         ),
@@ -195,7 +195,7 @@ export const getRecentArticleSlugs = unstable_cache(
   async (limit: number = 50) => {
     try {
       return await db.query.article.findMany({
-        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        where: eq(articleTable.status, "PUBLISHED"),
         orderBy: (a, { desc }) => [desc(a.publishedAt)],
         limit: limit,
         columns: { slug: true },

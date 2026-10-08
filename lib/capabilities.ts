@@ -1,4 +1,4 @@
-import { inArray, eq, or, and, SQL, sql } from "drizzle-orm";
+import { inArray, eq, or, and, SQL } from "drizzle-orm";
 import { article } from "@/lib/db/schema";
 import { Role } from "@/lib/types";
 
@@ -230,8 +230,8 @@ export function buildArticleScope(actor: Actor): SQL<unknown> | undefined {
     // REVIEWER: see everything in review + published + own
     if (role === "REVIEWER") {
       return or(
-        sql`${article.status} IN ('SUBMITTED'::"ArticleStatus", 'REVISION_REQUESTED'::"ArticleStatus", 'APPROVED'::"ArticleStatus")`,
-        sql`${article.status} = 'PUBLISHED'::"ArticleStatus"`,
+        inArray(article.status, ["SUBMITTED", "REVISION_REQUESTED", "APPROVED"]),
+        eq(article.status, "PUBLISHED"),
         eq(article.authorId, actor.authorId || "__none__")
       );
     }
@@ -242,7 +242,7 @@ export function buildArticleScope(actor: Actor): SQL<unknown> | undefined {
   // MODERATOR: published + own
   if (role === "MODERATOR") {
     return or(
-      sql`${article.status} = 'PUBLISHED'::"ArticleStatus"`,
+      eq(article.status, "PUBLISHED"),
       eq(article.authorId, actor.authorId || "__none__")
     );
   }

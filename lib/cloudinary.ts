@@ -1,5 +1,3 @@
-import crypto from "crypto";
-
 function getCloudinaryEnv() {
   const env = process.env;
   return {
@@ -22,8 +20,16 @@ export function checkCloudinaryEnv() {
   }
 }
 
+/**
+ * SHA-1 via Web Crypto so this module stays runtime-agnostic: it must bundle
+ * for the browser (media utilities are shared with client code) and run on
+ * edge runtimes where the Node `crypto` builtin is unavailable.
+ */
 async function sha1(message: string): Promise<string> {
-  return crypto.createHash("sha1").update(message).digest("hex");
+  const digest = await globalThis.crypto.subtle.digest("SHA-1", new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export async function uploadImageToCloudinary(file: File | Blob, folder: string): Promise<string> {

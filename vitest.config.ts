@@ -21,6 +21,14 @@ export default defineConfig({
       // removing this: the point is that the permission matrix stays testable
       // without a database.
       "@prisma/client": path.resolve(__dirname, "tests/stubs/prisma-client.ts"),
+
+      // `server-only` throws outside a React Server Component bundler context.
+      // Tests run in plain Node, so the guard becomes a no-op — see the stub.
+      "server-only": path.resolve(__dirname, "tests/stubs/server-only.ts"),
+
+      // react-tweet ships ESM with .module.css imports that Node cannot load.
+      // Tests assert HTML persistence, never tweet rendering — see the stub.
+      "react-tweet": path.resolve(__dirname, "tests/stubs/react-tweet.tsx"),
     },
   },
   test: {
