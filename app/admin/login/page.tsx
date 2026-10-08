@@ -223,6 +223,15 @@ export default function LoginPage() {
             background: "radial-gradient(ellipse at center, transparent 35%, #0c0d10 90%)",
           }}
         />
+        
+        {/* Layer 4: Giant 4-Squares Logo Watermark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02] mix-blend-screen">
+          <img 
+            src="/logo-4-squares.png" 
+            alt="" 
+            className="w-[90vw] max-w-[900px] h-auto object-contain"
+          />
+        </div>
       </div>
 
       {/* Editorial Auth Card */}
