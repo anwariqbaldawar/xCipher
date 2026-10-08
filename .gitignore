@@ -48,3 +48,6 @@ test-db.js
 .neon
 .open-next
 .wrangler
+
+# Sentry Config File
+.env.sentry-build-plugin
