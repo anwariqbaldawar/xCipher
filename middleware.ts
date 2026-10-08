@@ -54,6 +54,7 @@ export default async function middleware(req: NextRequest) {
   const nonce = crypto.randomUUID().replace(/-/g, "");
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-csp-nonce", nonce);
+  requestHeaders.set("Content-Security-Policy", buildCsp(nonce));
 
   const response = await route(req, requestHeaders);
   return applySecurityHeaders(response, nonce);
