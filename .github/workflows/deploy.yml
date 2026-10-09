@@ -49,7 +49,8 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/apps/xsypher
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             
             # Run idempotent schema migrations
             node migrate.mjs
