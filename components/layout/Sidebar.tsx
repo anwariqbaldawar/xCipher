@@ -1,30 +1,12 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { eq } from "drizzle-orm";
-import { article as articleTable } from "@/lib/db/schema";
+import { getMostReadArticles } from "@/lib/cached-queries";
 import AdUnit from "@/components/common/AdUnit";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 
 export default async function Sidebar() {
   let mostRead: any[] = [];
   try {
-    const dbMostRead = await db.query.article.findMany({
-      where: eq(articleTable.status, "PUBLISHED"),
-      orderBy: (a, { desc }) => [desc(a.views)],
-      limit: 5,
-      columns: {
-        id: true,
-        slug: true,
-        title: true,
-        contentUrl: true,
-        readingTime: true,
-      },
-      with: {
-        category: {
-          columns: { name: true }
-        }
-      }
-    });
+    const dbMostRead = await getMostReadArticles(5);
 
     if (dbMostRead && dbMostRead.length > 0) {
       mostRead = dbMostRead.map((a: any, idx: number) => {

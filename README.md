@@ -28,10 +28,10 @@
 
 - **🎨 Premium UI/UX:** Dynamic animations, customized CSS variables (`--ink`, `--surface`, `--accent`), and smooth page transitions.
 - **📝 Advanced Editor:** Integrated TipTap rich-text editor with custom nodes (code blocks, categories, metadata) and DOM sanitization.
-- **🔐 Secure Authentication:** Powered by **NextAuth.js (v5)** with Role-Based Access Control and a robust Capability Layer (`authorize()`).
-- **🚀 Edge-Optimized:** Next.js App Router configured for maximum caching and stale-while-revalidate capabilities via Cloudflare CDN.
-- **⚡ Hybrid Storage Architecture:** Blazing fast Postgres (Drizzle ORM) for relational metadata + Cloudflare R2 for heavy JSON/HTML article content.
-- **🐳 Zero-Downtime Deployments:** Fully automated CI/CD pipeline building multi-stage, ARM64-optimized Docker containers via GitHub Actions.
+- **🔐 Secure Authentication:** Powered by **NextAuth.js (v5)** with Role-Based Access Control, TOTP 2FA (encrypted at rest), and a capability layer (`authorize()`).
+- **🚀 ISR & Tagged Caching:** Next.js App Router running on Node.js 22 with `unstable_cache` tag invalidation and Cloudflare CDN caching.
+- **⚡ Hybrid Storage Architecture:** PostgreSQL (Drizzle ORM via Neon WebSocket Pool) for relational metadata + Cloudflare R2 for JSON/HTML article bodies and media.
+- **🐳 Containerized CI/CD Pipeline:** Automated GitHub Actions workflow with TypeScript, unit test, and security audit gates before deploying multi-stage, non-root ARM64 Docker containers (`xsypher-web`, `xsypher-worker`, and AOF-persisted `redis`).
 
 ---
 
@@ -107,11 +107,16 @@ xSypher is configured for self-hosted containerized deployment on an **Oracle Cl
 ### CI/CD Automation
 Deployments are handled automatically via **GitHub Actions** (`.github/workflows/deploy.yml`). 
 Upon pushing to the `main` branch, the workflow:
-1. Connects to the host server via SSH.
-2. Pulls the latest code.
-3. Runs database migrations (`migrate.mjs`).
-4. Rebuilds the Docker image using a highly optimized, non-root, multi-stage `Dockerfile`.
-5. Restarts the container with zero-downtime using Docker Compose.
+1. Runs the CI verification gate (`npm ci`, `npx tsc --noEmit`, `npm test`, and `npm audit --omit=dev`).
+2. Connects to the host server via SSH.
+3. Pulls the latest code.
+4. Runs transactional, idempotent database migrations (`migrate.mjs`).
+5. Rebuilds the web and worker Docker images using multi-stage, non-root `Dockerfile` and `Dockerfile.worker`.
+6. Restarts containers (`xsypher-web`, `xsypher-worker`, and persistent `redis`) and verifies readiness via `/api/health`.
+
+### Reverse Proxy & Backups
+- **Caddy Configuration:** See [`docs/Caddyfile.example`](docs/Caddyfile.example) for the production reverse-proxy configuration preserving `Host` headers and enforcing `X-Robots-Tag` on `admin.xsypher.com` and `preview.xsypher.com`.
+- **Database Backups:** See [`scripts/backup-db.sh`](scripts/backup-db.sh) for automated daily `pg_dump` backups with configurable retention.
 
 ### Manual Docker Build
 If you wish to test the production build locally:

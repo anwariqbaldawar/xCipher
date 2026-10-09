@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { createAuthConfig } from "@/lib/auth.config";
+import { createAuthConfig, isLocalHostname } from "@/lib/auth.config";
 import type { Role } from "@/lib/types";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
@@ -13,15 +13,33 @@ const { auth: edgeAuth } = NextAuth(createAuthConfig());
 // which lets any injected inline script run. Now the middleware generates a
 // nonce per request, sends it to the app as the x-csp-nonce request header
 // (server components read it via headers()), and returns a CSP that only
-// allows inline scripts carrying that nonce. style-src keeps 'unsafe-inline'
-// because React style attributes cannot carry a nonce.
+// allows inline scripts carrying that nonce on dynamic/admin routes, while
+// static/ISR public pages retain 'unsafe-inline' so Next.js SSG hydration
+// scripts are not blocked. style-src keeps 'unsafe-inline' because React
+// style attributes cannot carry a nonce.
 // ─────────────────────────────────────────────────────────────────────────────
+
+const ALLOWED_SCRIPT_HOSTS = [
+  "https://www.tiktok.com",
+  "https://static.cloudflareinsights.com",
+  "https://pagead2.googlesyndication.com",
+  "https://adservice.google.com",
+  "https://tpc.googlesyndication.com",
+].join(" ");
+
+const ALLOWED_FRAME_HOSTS = [
+  "https://www.youtube-nocookie.com",
+  "https://www.tiktok.com",
+  "https://googleads.g.doubleclick.net",
+  "https://tpc.googlesyndication.com",
+  "https://www.google.com",
+].join(" ");
 
 function buildCsp(nonce: string, isStaticPublic: boolean): string {
   const isDev = process.env.NODE_ENV === "development";
   const scriptSrc = isStaticPublic
-    ? `script-src 'self' 'unsafe-inline' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`
-    : `script-src 'self' 'nonce-${nonce}' https://www.tiktok.com https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`;
+    ? `script-src 'self' 'unsafe-inline' ${ALLOWED_SCRIPT_HOSTS}${isDev ? " 'unsafe-eval'" : ""}`
+    : `script-src 'self' 'nonce-${nonce}' ${ALLOWED_SCRIPT_HOSTS}${isDev ? " 'unsafe-eval'" : ""}`;
     
   return [
     "default-src 'self'",
@@ -30,7 +48,7 @@ function buildCsp(nonce: string, isStaticPublic: boolean): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' blob: data: https:",
     "font-src 'self' data:",
-    "frame-src 'self' https://www.youtube-nocookie.com https://www.tiktok.com",
+    `frame-src 'self' ${ALLOWED_FRAME_HOSTS}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -43,7 +61,6 @@ function applySecurityHeaders(response: NextResponse, nonce: string, isStaticPub
   response.headers.set("Content-Security-Policy", buildCsp(nonce, isStaticPublic));
   response.headers.set("X-Frame-Options", "DENY");
   response.headers.set("X-Content-Type-Options", "nosniff");
-  response.headers.set("X-XSS-Protection", "1; mode=block");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
   response.headers.set(
@@ -51,6 +68,18 @@ function applySecurityHeaders(response: NextResponse, nonce: string, isStaticPub
     "camera=(), microphone=(), geolocation=(), interest-cohort=(), browsing-topics=()",
   );
   return response;
+}
+
+function checkIsLocalDev(hostname: string, urlHostname: string): boolean {
+  if (process.env.IS_LOCAL_DEV === "true") return true;
+  if (process.env.NEXTAUTH_URL) {
+    try {
+      if (isLocalHostname(new URL(process.env.NEXTAUTH_URL).hostname)) return true;
+    } catch {
+      if (isLocalHostname(process.env.NEXTAUTH_URL)) return true;
+    }
+  }
+  return isLocalHostname(hostname) || isLocalHostname(urlHostname);
 }
 
 export default async function middleware(req: NextRequest) {
@@ -61,17 +90,11 @@ export default async function middleware(req: NextRequest) {
   
   const url = req.nextUrl.clone();
   const hostname = req.headers.get("host") || "";
-  const isLocalDev =
-    process.env.IS_LOCAL_DEV === "true" ||
-    process.env.NEXTAUTH_URL?.includes("localhost") ||
-    hostname.includes("localhost") ||
-    hostname.includes("127.0.0.1") ||
-    url.hostname.includes("localhost") ||
-    url.hostname.includes("127.0.0.1");
+  const isLocalDev = checkIsLocalDev(hostname, url.hostname);
 
   const effectiveHostname = isLocalDev ? url.hostname : hostname;
   const isAdminSubdomain = !isLocalDev && (effectiveHostname === "admin.xsypher.com" || effectiveHostname.startsWith("admin.localhost"));
-  const isStaticPublic = !isAdminSubdomain && !url.pathname.startsWith("/api");
+  const isStaticPublic = !isAdminSubdomain && !url.pathname.startsWith("/admin") && !url.pathname.startsWith("/api");
 
   requestHeaders.set("Content-Security-Policy", buildCsp(nonce, isStaticPublic));
 
@@ -90,13 +113,7 @@ async function route(req: NextRequest, requestHeaders: Headers): Promise<NextRes
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
 
-    const isLocalDev =
-      process.env.IS_LOCAL_DEV === "true" ||
-      process.env.NEXTAUTH_URL?.includes("localhost") ||
-      hostname.includes("localhost") ||
-      hostname.includes("127.0.0.1") ||
-      url.hostname.includes("localhost") ||
-      url.hostname.includes("127.0.0.1");
+    const isLocalDev = checkIsLocalDev(hostname, url.hostname);
 
     if (!isLocalDev) {
       if (hostname) url.hostname = hostname;

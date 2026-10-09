@@ -41,7 +41,9 @@ export async function bufferArticleView(id: string): Promise<boolean> {
 }
 
 /** Flushes buffered view counts to Postgres. Safe to call concurrently and
- *  repeatedly; uses GETDEL so a view counted mid-flush is never lost. */
+ *  repeatedly: removes the pending marker BEFORE reading/deleting the counter
+ *  so a view arriving while Postgres is updating re-adds the article ID to the
+ *  pending set, and restores the delta to Redis if the database write fails. */
 export async function flushArticleViews(): Promise<number> {
   if (redis.status !== "ready") return 0;
 
@@ -52,12 +54,14 @@ export async function flushArticleViews(): Promise<number> {
   for (let i = 0; i < ids.length; i += FLUSH_BATCH) {
     const batch = ids.slice(i, i + FLUSH_BATCH);
     for (const id of batch) {
+      const key = `views:article:${id}`;
+      let delta = 0;
       try {
-        // GETDEL atomically reads and removes the counter, so a view counted
-        // between the read and the removal simply starts a fresh counter that
-        // the next flush picks up.
-        const raw = await redis.getdel(`views:article:${id}`);
-        const delta = Number(raw || 0);
+        // Remove from PENDING_KEY *before* GETDEL so any concurrent bufferArticleView()
+        // that runs during the Postgres UPDATE re-inserts `id` into PENDING_KEY.
+        await redis.srem(PENDING_KEY, id);
+        const raw = await redis.getdel(key);
+        delta = Number(raw || 0);
         if (delta > 0) {
           await db
             .update(article)
@@ -67,8 +71,16 @@ export async function flushArticleViews(): Promise<number> {
         }
       } catch (error) {
         console.error(`[views] Failed to flush views for article ${id}:`, error);
-      } finally {
-        await redis.srem(PENDING_KEY, id).catch(() => undefined);
+        if (delta > 0) {
+          // Restore un-flushed delta so a transient database blip never loses views.
+          await redis
+            .pipeline()
+            .incrby(key, delta)
+            .sadd(PENDING_KEY, id)
+            .expire(key, 7 * 24 * 3600)
+            .exec()
+            .catch(() => undefined);
+        }
       }
     }
   }

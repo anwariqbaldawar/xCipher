@@ -83,25 +83,30 @@ export async function resetPassword(token: string, newPassword: string): Promise
 
     const hashedPassword = await hashPassword(newPassword);
 
-    
-            await db.update(user)
-              .set({
-                password: hashedPassword,
-                sessionVersion: sql`${user.sessionVersion} + 1`,
-              })
-              .where(eq(user.id, resetToken.userId));
+    await db.transaction(async (tx) => {
+      await tx.update(passwordResetTokenTable)
+        .set({ used: true })
+        .where(
+          and(
+            eq(passwordResetTokenTable.id, resetToken.id),
+            eq(passwordResetTokenTable.used, false),
+          ),
+        );
 
-            await db.update(passwordResetTokenTable)
-              .set({ used: true })
-              .where(eq(passwordResetTokenTable.id, resetToken.id));
+      await tx.update(user)
+        .set({
+          password: hashedPassword,
+          sessionVersion: sql`${user.sessionVersion} + 1`,
+        })
+        .where(eq(user.id, resetToken.userId));
 
-            await db.insert(auditLog).values({
-              id: crypto.randomUUID(),
-              action: "RESET_PASSWORD",
-              entityType: "User",
-              entityId: resetToken.userId,
-            });
-          
+      await tx.insert(auditLog).values({
+        id: crypto.randomUUID(),
+        action: "RESET_PASSWORD",
+        entityType: "User",
+        entityId: resetToken.userId,
+      });
+    });
 
     return { success: true };
   } catch (e) {

@@ -5,9 +5,39 @@ on:
     branches:
       - main
 
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
 jobs:
+  verify:
+    name: Quality & Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Production dependency security audit
+        run: npm audit --omit=dev --package-lock-only --audit-level=high
+
   deploy:
     name: Deploy to ARM64 Host
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - name: Trigger Remote SSH Deployment
@@ -17,14 +47,14 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             cd /home/ubuntu/apps/xsypher
             git pull origin main
             
-            # Run Drizzle ORM migrations
-            # If using migrate.mjs:
+            # Run idempotent schema migrations
             node migrate.mjs
             
-            # Rebuild and restart the container zero-downtime
+            # Rebuild and restart containers
             docker compose -f docker-compose.prod.yml build --no-cache
             docker compose -f docker-compose.prod.yml up -d
             

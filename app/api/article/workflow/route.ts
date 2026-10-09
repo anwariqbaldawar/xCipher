@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { submitArticle, publishArticle, rejectArticle, requestChanges, claimReview, releaseReview, takeOverReview } from "@/app/actions/workflow";
 
 export async function POST(req: NextRequest) {
+  let body: any;
   try {
-    const { action, articleId, category, notes } = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ success: false, error: "Invalid JSON payload." }, { status: 400 });
+  }
+
+  try {
+    const { action, articleId, category, notes } = body || {};
     if (action === "submit") {
       const result = await submitArticle(articleId);
       return NextResponse.json(result);

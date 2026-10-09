@@ -183,7 +183,7 @@ export default function AuthorProfileView({ author, articles, socials, totalView
                   <article className="ap-article-featured">
                     {articles[0].img && (
                       <Link href={`/article/${articles[0].slug}`} className="ap-featured-img-wrap" tabIndex={-1} aria-hidden="true">
-                        <img src={articles[0].img} alt={articles[0].title} className="ap-featured-img" />
+                        <img src={articles[0].img} alt={articles[0].title} loading="lazy" decoding="async" className="ap-featured-img" />
                         <div className="ap-featured-img-overlay" />
                       </Link>
                     )}

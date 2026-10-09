@@ -9,9 +9,10 @@ import { flushArticleViews } from '../article-views';
 // this number — BullMQ distributes jobs across every connected worker.
 const concurrency = Number(process.env.WORKER_CONCURRENCY || 5);
 
-// Register the periodic view-counter flush. Job schedulers are deduplicated
-// by BullMQ, so registering from every worker replica is safe; if all workers
-// are down the schedule simply re-registers on the next start.
+// Register the periodic view-counter flush and scheduled-article publisher.
+// Job schedulers are deduplicated by BullMQ, so registering from every worker
+// replica is safe; if all workers are down the schedule simply re-registers on
+// the next start.
 const schedulerQueue = new Queue('publishing', { connection: redis });
 void schedulerQueue
   .upsertJobScheduler(
@@ -21,7 +22,35 @@ void schedulerQueue
   )
   .catch((error) => console.error('[worker] Failed to register view flush schedule:', error));
 
-// Worker for Publishing related jobs (e.g. Google Indexing ping, view flush)
+void schedulerQueue
+  .upsertJobScheduler(
+    'publish-scheduled-articles',
+    { every: 60_000 },
+    { name: 'publishScheduledArticles', data: {} },
+  )
+  .catch((error) => console.error('[worker] Failed to register scheduled publishing job:', error));
+
+async function triggerScheduledPublishing(): Promise<void> {
+  const cronSecret = process.env.CRON_SECRET;
+  const webUrl = (process.env.WEB_INTERNAL_URL || 'http://xsypher-web:3000').replace(/\/+$/, '');
+
+  if (cronSecret) {
+    try {
+      const res = await fetch(`${webUrl}/api/cron/publish-scheduled`, {
+        method: 'POST',
+        headers: { 'x-cron-secret': cronSecret },
+      });
+      if (res.ok) return;
+    } catch {
+      // Fall back to direct execution when running outside Docker internal network.
+    }
+  }
+
+  const { runScheduledPublications } = await import('../scheduler');
+  await runScheduledPublications();
+}
+
+// Worker for Publishing related jobs (e.g. Google Indexing ping, view flush, scheduled publish)
 export const publishingWorker = new Worker('publishing', async (job: Job) => {
   if (job.name === 'pingGoogleIndexing') {
     const { url } = job.data;
@@ -31,6 +60,8 @@ export const publishingWorker = new Worker('publishing', async (job: Job) => {
     if (flushed > 0) {
       console.log(`[worker] Flushed ${flushed} buffered article view(s) to Postgres`);
     }
+  } else if (job.name === 'publishScheduledArticles') {
+    await triggerScheduledPublishing();
   }
 }, { connection: redis, concurrency });
 

@@ -93,7 +93,8 @@ describe("Password Reset Logic", () => {
 
       const result = await resetPassword("sometoken", "validpassword123");
       expect(result.success).toBe(true);
-      expect(db.update).toHaveBeenCalled();
+      expect(db.transaction).toHaveBeenCalled();
+      expect(mockTx.update).toHaveBeenCalledTimes(2);
     });
   });
 });

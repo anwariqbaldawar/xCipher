@@ -6,8 +6,10 @@ import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { verifyPassword } from "@/lib/crypto";
 import {
+  encryptTotpSecret,
   generateBackupCodes,
   generateTotpSecret,
+  hashBackupCode,
   otpauthUri,
   verifyTotp,
 } from "@/lib/totp";
@@ -44,7 +46,7 @@ export async function startTwoFactorSetup() {
     const secret = generateTotpSecret();
     await db
       .update(userTable)
-      .set({ totpSecret: secret })
+      .set({ totpSecret: encryptTotpSecret(secret) })
       .where(eq(userTable.id, user.id));
 
     const uri = otpauthUri(secret, user.email || "");
@@ -86,13 +88,18 @@ export async function verifyTwoFactorSetup(code: string) {
     }
 
     const backupCodes = generateBackupCodes(8);
+    const hashedBackupCodes = backupCodes.map(hashBackupCode);
     await db
       .update(userTable)
-      .set({ totpEnabled: true, backupCodes })
+      .set({
+        totpEnabled: true,
+        totpSecret: encryptTotpSecret(row.totpSecret),
+        backupCodes: hashedBackupCodes,
+      })
       .where(eq(userTable.id, user.id));
 
-    // Backup codes are shown exactly once, here. They are stored (not hashed)
-    // because they are high-entropy random values consumed on use.
+    // Backup codes are shown in plaintext exactly once here, while only their
+    // SHA-256 hashes are persisted in the database.
     return { success: true, backupCodes };
   } catch (error) {
     console.error("[2fa] verifyTwoFactorSetup failed:", error);

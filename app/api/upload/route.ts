@@ -1,17 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { authorize } from "@/lib/capabilities";
+import { checkRateLimit } from "@/lib/rateLimit";
 import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { user as userTable } from "@/lib/db/schema";
 import { uploadFileToR2, buildObjectKey, getR2Config } from "@/lib/storage";
-import { MAX_UPLOAD_BYTES, formatBytes, sniffImageMime } from "@/lib/upload-constraints";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_IMAGE_WIDTH,
+  WEBP_QUALITY,
+  formatBytes,
+  sniffImageMime,
+  type AllowedUploadMime,
+} from "@/lib/upload-constraints";
+
+const MAX_INPUT_PIXELS = 64_000_000;
+
+async function normalizeUploadBytes(
+  input: Uint8Array,
+  sniffed: AllowedUploadMime,
+): Promise<{ bytes: Uint8Array; mime: AllowedUploadMime }> {
+  const sharp = (await import("sharp")).default;
+  const meta = await sharp(input, {
+    limitInputPixels: MAX_INPUT_PIXELS,
+    animated: sniffed === "image/gif",
+  }).metadata();
+
+  if (!meta.width || !meta.height || meta.width * meta.height > MAX_INPUT_PIXELS) {
+    throw new Error("Invalid or oversized image dimensions.");
+  }
+
+  if (sniffed === "image/gif") {
+    return { bytes: input, mime: sniffed };
+  }
+
+  const out = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
+    .rotate()
+    .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer();
+
+  return { bytes: new Uint8Array(out), mime: "image/webp" };
+}
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ ok: false, error: "Sign in to upload images." }, { status: 401 });
+    }
+
+    const rl = await checkRateLimit("upload:user", user.id, { limit: 60, windowMs: 15 * 60 * 1000 });
+    if (!rl.allowed) {
+      return NextResponse.json({ ok: false, error: "Too many uploads. Please wait a few minutes and try again." }, { status: 429 });
     }
 
     const [dbUser] = await db.select({ role: userTable.role, isActive: userTable.isActive })
@@ -77,8 +119,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: config.error }, { status: 500 });
     }
 
-    const key = buildObjectKey("xsypher/articles", sniffed.split("/")[1]);
-    const blobToUpload = new Blob([input], { type: sniffed });
+    const normalized = await normalizeUploadBytes(input, sniffed);
+    const key = buildObjectKey("xsypher/articles", normalized.mime.split("/")[1]);
+    const blobToUpload = new Blob([normalized.bytes as Uint8Array<ArrayBuffer>], { type: normalized.mime });
     const url = await uploadFileToR2(blobToUpload, config.bucket, key);
     
     return NextResponse.json({

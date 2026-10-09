@@ -6,8 +6,55 @@ import { db } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { user as userTable } from "@/lib/db/schema";
 import { uploadFileToR2, buildObjectKey, getR2Config } from "@/lib/storage";
-import { MAX_UPLOAD_BYTES, formatBytes, sniffImageMime } from "@/lib/upload-constraints";
+import {
+  MAX_UPLOAD_BYTES,
+  MAX_IMAGE_WIDTH,
+  WEBP_QUALITY,
+  formatBytes,
+  sniffImageMime,
+  type AllowedUploadMime,
+} from "@/lib/upload-constraints";
 import { lookup } from "node:dns/promises";
+
+const MAX_INPUT_PIXELS = 64_000_000; // 8000x8000 decompression-bomb guard
+
+async function normalizeServerImage(
+  input: Uint8Array,
+  sniffed: AllowedUploadMime,
+): Promise<{ bytes: Uint8Array; mime: AllowedUploadMime; width?: number; height?: number }> {
+  // Keep GIFs untouched so multi-frame animations are preserved, but still
+  // verify header dimensions via sharp metadata to block decompression bombs.
+  const sharp = (await import("sharp")).default;
+  const pipeline = sharp(input, {
+    limitInputPixels: MAX_INPUT_PIXELS,
+    animated: sniffed === "image/gif",
+  });
+  const meta = await pipeline.metadata();
+
+  if (!meta.width || !meta.height) {
+    throw new Error("Invalid or corrupted image dimensions.");
+  }
+  if (meta.width * meta.height > MAX_INPUT_PIXELS) {
+    throw new Error("Image dimensions are too large.");
+  }
+
+  if (sniffed === "image/gif") {
+    return { bytes: input, mime: sniffed, width: meta.width, height: meta.height };
+  }
+
+  const processed = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS })
+    .rotate()
+    .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true })
+    .webp({ quality: WEBP_QUALITY })
+    .toBuffer({ resolveWithObject: true });
+
+  return {
+    bytes: new Uint8Array(processed.data),
+    mime: "image/webp",
+    width: processed.info.width,
+    height: processed.info.height,
+  };
+}
 
 export interface UploadResult {
   ok: boolean;
@@ -188,17 +235,17 @@ export async function uploadArticleImage(formData: FormData): Promise<UploadResu
       return { ok: false, error: config.error };
     }
 
-    const sniffedType = sniffed;
+    const normalized = await normalizeServerImage(input, sniffed);
 
-    const key = buildObjectKey("xsypher/articles", sniffedType.split("/")[1]);
-    const blobToUpload = new Blob([input], { type: sniffedType });
+    const key = buildObjectKey("xsypher/articles", normalized.mime.split("/")[1]);
+    const blobToUpload = new Blob([normalized.bytes as Uint8Array<ArrayBuffer>], { type: normalized.mime });
     const url = await uploadFileToR2(blobToUpload, config.bucket, key);
 
     return {
       ok: true,
       url,
-      width: undefined,
-      height: undefined,
+      width: normalized.width,
+      height: normalized.height,
     };
   } catch (e) {
     console.error("[upload-article-image] R2 upload failed:", e);
@@ -285,15 +332,17 @@ export async function processExternalImage(url: string): Promise<UploadResult> {
       return { ok: false, error: config.error };
     }
 
-    const sniffedType = sniffed;
+    const normalized = await normalizeServerImage(input, sniffed);
 
-    const key = buildObjectKey("xsypher/articles/external", sniffedType.split("/")[1]);
-    const blobToUpload = new Blob([input], { type: sniffedType });
+    const key = buildObjectKey("xsypher/articles/external", normalized.mime.split("/")[1]);
+    const blobToUpload = new Blob([normalized.bytes as Uint8Array<ArrayBuffer>], { type: normalized.mime });
     const finalUrl = await uploadFileToR2(blobToUpload, config.bucket, key);
 
     return {
       ok: true,
-      url: finalUrl
+      url: finalUrl,
+      width: normalized.width,
+      height: normalized.height,
     };
   } catch (e) {
     console.error("[processExternalImage] R2 upload failed:", e);

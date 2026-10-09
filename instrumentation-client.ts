@@ -4,31 +4,35 @@
 
 import * as Sentry from "@sentry/nextjs";
 
-Sentry.init({
-  dsn: "https://067023f72a5da2a14bab2616a85aaa41@o4512125796876288.ingest.us.sentry.io/4512220592603136",
+function hasTelemetryConsent(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem("xsypher-cookie-consent") === "accepted";
+  } catch {
+    return false;
+  }
+}
 
-  // Add optional integrations for additional features
+const consentGranted = hasTelemetryConsent();
+const isProd = process.env.NODE_ENV === "production";
+
+Sentry.init({
+  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN || "https://067023f72a5da2a14bab2616a85aaa41@o4512125796876288.ingest.us.sentry.io/4512220592603136",
+
   integrations: [
-    Sentry.replayIntegration(),
-    Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
+    ...(consentGranted
+      ? [Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true })]
+      : []),
+    Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] }),
   ],
 
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
-
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 0.1,
-
-  // Define how likely Replay events are sampled when an error occurs.
-  replaysOnErrorSampleRate: 1.0,
+  tracesSampleRate: isProd ? 0.1 : 1.0,
+  replaysSessionSampleRate: consentGranted ? 0.05 : 0,
+  replaysOnErrorSampleRate: consentGranted ? 0.5 : 0,
 
   dataCollection: {
-    // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
-    // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#dataCollection
-    // userInfo: false,
-    // httpBodies: [],
+    userInfo: false,
+    httpBodies: [],
   },
 });
 

@@ -1,4 +1,11 @@
-import { createHmac, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TOTP (RFC 6238) helpers for two-factor authentication.
@@ -74,10 +81,82 @@ export function totpCode(
   return String(binary % 10 ** digits).padStart(digits, "0");
 }
 
+function getTotpEncryptionKey(): Buffer | null {
+  const rawKey =
+    process.env.TOTP_ENCRYPTION_KEY ||
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET;
+  if (!rawKey) return null;
+  return createHash("sha256").update(rawKey).digest();
+}
+
+/**
+ * Encrypts a TOTP secret before storing it at rest using AES-256-GCM.
+ * Falls back to plaintext only when no application secret is configured.
+ */
+export function encryptTotpSecret(secret: string): string {
+  if (secret.startsWith("enc:v1:")) return secret;
+  const key = getTotpEncryptionKey();
+  if (!key) return secret;
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return `enc:v1:${iv.toString("hex")}:${tag.toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+/**
+ * Decrypts an encrypted TOTP secret (`enc:v1:...`), or returns legacy
+ * plaintext secrets unchanged so existing accounts never break.
+ */
+export function decryptTotpSecret(stored: string): string {
+  if (!stored.startsWith("enc:v1:")) return stored;
+  const key = getTotpEncryptionKey();
+  if (!key) {
+    throw new Error("TOTP encryption key is required to decrypt stored 2FA secret.");
+  }
+  const parts = stored.split(":");
+  if (parts.length !== 5) {
+    throw new Error("Malformed encrypted TOTP secret.");
+  }
+  const iv = Buffer.from(parts[2], "hex");
+  const tag = Buffer.from(parts[3], "hex");
+  const ciphertext = Buffer.from(parts[4], "hex");
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");
+}
+
+/** One-way SHA-256 hash for single-use backup codes stored in the database. */
+export function hashBackupCode(code: string): string {
+  const normalized = code.replace(/\s+/g, "").toUpperCase();
+  if (normalized.startsWith("SHA256:")) return code;
+  const digest = createHash("sha256").update(normalized).digest("hex");
+  return `sha256:${digest}`;
+}
+
+/**
+ * Verifies a backup code against either a hashed (`sha256:...`) entry or a
+ * legacy plaintext entry (backward-compatible dual-read).
+ */
+export function matchesBackupCode(stored: string, candidate: string): boolean {
+  const normalized = candidate.replace(/\s+/g, "").toUpperCase();
+  if (!normalized) return false;
+  if (stored.startsWith("sha256:")) {
+    const expected = Buffer.from(stored, "utf8");
+    const actual = Buffer.from(hashBackupCode(normalized), "utf8");
+    return expected.length === actual.length && timingSafeEqual(expected, actual);
+  }
+  const expectedPlain = Buffer.from(stored.replace(/\s+/g, "").toUpperCase(), "utf8");
+  const actualPlain = Buffer.from(normalized, "utf8");
+  return expectedPlain.length === actualPlain.length && timingSafeEqual(expectedPlain, actualPlain);
+}
+
 /**
  * Verifies a user-supplied code, accepting codes from `window` steps before
  * and after the current one (±30s by default) to absorb clock drift between
- * the phone and the server.
+ * the phone and the server. Transparently handles both encrypted and legacy
+ * plaintext secrets.
  */
 export function verifyTotp(
   secret: string,
@@ -87,8 +166,9 @@ export function verifyTotp(
 ): boolean {
   const clean = code.replace(/\s+/g, "");
   if (!new RegExp(`^\\d{${TOTP_DIGITS}}$`).test(clean)) return false;
+  const rawSecret = decryptTotpSecret(secret);
   for (let i = -window; i <= window; i++) {
-    const candidate = totpCode(secret, timestampMs + i * TOTP_STEP_SECONDS * 1000);
+    const candidate = totpCode(rawSecret, timestampMs + i * TOTP_STEP_SECONDS * 1000);
     if (candidate === clean) return true;
   }
   return false;

@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSubcategories, createSubcategory } from "@/app/actions/taxonomy";
 
 export async function POST(req: NextRequest) {
+  let data: any;
   try {
-    const data = await req.json();
-    const action = data.action;
+    data = await req.json();
+  } catch {
+    return NextResponse.json({ success: false, error: "Invalid JSON payload." }, { status: 400 });
+  }
+
+  try {
+    const action = data?.action;
 
     if (action === "getSubcategories") {
       const result = await getSubcategories(data.parentId);

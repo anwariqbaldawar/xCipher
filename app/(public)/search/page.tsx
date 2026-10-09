@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { db } from "@/lib/db";
+import { dbRead as db } from "@/lib/db";
 import { eq, ilike, and, or, sql } from "drizzle-orm";
 import { article as articleTable, category as categoryTable, user as userTable, tag as tagTable, _articleToTag } from "@/lib/db/schema";
 import { ARTICLE_CARD_COLUMNS, ARTICLE_CARD_WITH_TAGS_WITH } from "@/lib/queries";
@@ -43,6 +43,7 @@ export default async function SearchPage({ searchParams }: Props) {
       eq(articleTable.status, "PUBLISHED"),
       cat ? sql`${articleTable.categoryId} IN (SELECT id FROM "Category" WHERE slug = ${cat})` : undefined,
       q ? or(
+        sql`to_tsvector('english', coalesce(${articleTable.title}, '') || ' ' || coalesce(${articleTable.deck}, '') || ' ' || coalesce(${articleTable.textContent}, '')) @@ plainto_tsquery('english', ${q})`,
         ilike(articleTable.title, pattern),
         ilike(articleTable.deck, pattern),
         and(

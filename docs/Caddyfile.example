@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# xSypher Production Caddyfile (Oracle Cloud ARM64 + Cloudflare Origin TLS)
+#
+# Place at /etc/caddy/Caddyfile on the Oracle Ubuntu host and reload with:
+#   sudo systemctl reload caddy
+#
+# Preserves the incoming Host header so Next.js middleware and host-based
+# rewrites in next.config.ts route apex, admin and preview subdomains properly.
+# ─────────────────────────────────────────────────────────────────────────────
+
+www.xsypher.com {
+    redir https://xsypher.com{uri} permanent
+}
+
+xsypher.com {
+    encode zstd gzip
+
+    reverse_proxy 127.0.0.1:3000 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        health_uri /api/health
+        health_interval 30s
+        health_timeout 5s
+    }
+}
+
+admin.xsypher.com, preview.xsypher.com {
+    encode zstd gzip
+
+    header {
+        X-Robots-Tag "noindex, nofollow"
+    }
+
+    reverse_proxy 127.0.0.1:3000 {
+        header_up Host {host}
+        header_up X-Forwarded-Proto {scheme}
+        health_uri /api/health
+        health_interval 30s
+        health_timeout 5s
+    }
+}

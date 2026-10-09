@@ -15,19 +15,26 @@ export async function setupOwner(email: string, password: string, name: string) 
   try {
     const hashedPassword = await hashPassword(password);
 
-    const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(user);
-    
-    if (count > 0) {
-      throw new Error("Setup has already been completed.");
-    }
+    const createdUser = await db.transaction(async (tx) => {
+      // Serialize concurrent first-run bootstrap attempts across database sessions.
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(982451653)`);
 
-    const [createdUser] = await db.insert(user).values({
-      id: crypto.randomUUID(),
-      email,
-      name,
-      password: hashedPassword,
-      role: "OWNER",
-    }).returning();
+      const [{ count }] = await tx.select({ count: sql<number>`count(*)::int` }).from(user);
+
+      if (count > 0) {
+        throw new Error("Setup has already been completed.");
+      }
+
+      const [inserted] = await tx.insert(user).values({
+        id: crypto.randomUUID(),
+        email: email.trim().toLowerCase(),
+        name: name.trim(),
+        password: hashedPassword,
+        role: "OWNER",
+      }).returning();
+
+      return inserted;
+    });
 
     return { success: true, userId: createdUser.id };
   } catch (error: any) {

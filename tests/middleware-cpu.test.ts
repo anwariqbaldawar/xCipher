@@ -40,7 +40,7 @@ describe("middleware coverage", () => {
   it.each([
     ["xsypher.com", "/"],
     ["xsypher.com", "/article/story"],
-  ])("attaches a nonce-based CSP to public %s%s without decoding a session", async (host, path) => {
+  ])("attaches CSP and security headers to public %s%s without decoding a session", async (host, path) => {
     const response = await middleware(new NextRequest(`https://${host}${path}`, { headers: { host } }));
     expect(response.status).toBe(200);
     expect(auth).not.toHaveBeenCalled();
@@ -49,11 +49,23 @@ describe("middleware coverage", () => {
       .split(";")
       .map((directive) => directive.trim())
       .find((directive) => directive.startsWith("script-src")) || "";
-    expect(scriptSrc).toContain("'nonce-");
-    // 'unsafe-inline' must be gone from script-src (style-src keeps it for
-    // React style attributes, which cannot carry a nonce).
-    expect(scriptSrc).not.toContain("'unsafe-inline'");
+    expect(scriptSrc).toContain("'unsafe-inline'");
+    expect(scriptSrc).toContain("https://pagead2.googlesyndication.com");
     expect(response.headers.get("permissions-policy")).toContain("camera=()");
+  });
+
+  it.each([
+    ["admin.xsypher.com", "/login"],
+    ["xsypher.com", "/api/taxonomy"],
+  ])("attaches a strict nonce-based CSP to dynamic/console %s%s", async (host, path) => {
+    const response = await middleware(new NextRequest(`https://${host}${path}`, { headers: { host } }));
+    const csp = response.headers.get("content-security-policy") || "";
+    const scriptSrc = csp
+      .split(";")
+      .map((directive) => directive.trim())
+      .find((directive) => directive.startsWith("script-src")) || "";
+    expect(scriptSrc).toContain("'nonce-");
+    expect(scriptSrc).not.toContain("'unsafe-inline'");
   });
 
   it.each([

@@ -124,59 +124,99 @@ export async function acceptInvitation(token: string, formData: FormData) {
 
     const hashedPassword = await hashPassword(password);
 
-    let [existingAuthor] = await db.select().from(authorTable).where(eq(authorTable.email, invitation.email)).limit(1);
+    const user = await db.transaction(async (tx) => {
+      const [claimedInvite] = await tx
+        .update(invitationTable)
+        .set({ status: "ACCEPTED" })
+        .where(
+          and(
+            eq(invitationTable.id, invitation.id),
+            eq(invitationTable.status, "PENDING"),
+          ),
+        )
+        .returning();
 
-    if (!existingAuthor) {
-      const [authorByName] = await db.select()
+      if (!claimedInvite) {
+        throw new Error("Invitation has already been accepted or revoked.");
+      }
+
+      let [existingAuthor] = await tx
+        .select()
         .from(authorTable)
-        .leftJoin(userTable, eq(authorTable.id, userTable.authorId))
-        .where(and(eq(authorTable.name, name), isNull(userTable.id)))
+        .where(eq(authorTable.email, invitation.email))
         .limit(1);
-        
-      if (authorByName) {
-         existingAuthor = authorByName.Author;
-      }
-    }
 
-    let authorId = existingAuthor?.id;
+      if (!existingAuthor) {
+        const [authorByName] = await tx
+          .select()
+          .from(authorTable)
+          .leftJoin(userTable, eq(authorTable.id, userTable.authorId))
+          .where(and(eq(authorTable.name, name), isNull(userTable.id)))
+          .limit(1);
 
-    if (!authorId) {
-      const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `user-${randomHex(3)}`;
-      let slug = baseSlug;
-      let counter = 1;
-      while ((await db.select().from(authorTable).where(eq(authorTable.slug, slug)).limit(1)).length > 0) {
-        slug = `${baseSlug}-${counter}`;
-        counter++;
+        if (authorByName) {
+          existingAuthor = authorByName.Author;
+        }
       }
 
-      const [newAuthor] = await db.insert(authorTable).values({
+      let authorId = existingAuthor?.id;
+
+      if (!authorId) {
+        const baseSlug =
+          name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)+/g, "") || `user-${randomHex(3)}`;
+        let slug = baseSlug;
+        let counter = 1;
+        while (
+          (
+            await tx
+              .select()
+              .from(authorTable)
+              .where(eq(authorTable.slug, slug))
+              .limit(1)
+          ).length > 0
+        ) {
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+
+        const [newAuthor] = await tx
+          .insert(authorTable)
+          .values({
+            id: crypto.randomUUID(),
+            slug,
+            name,
+            email: invitation.email,
+            role: invitation.role,
+          })
+          .returning();
+        authorId = newAuthor.id;
+      }
+
+      const [createdUser] = await tx
+        .insert(userTable)
+        .values({
+          id: crypto.randomUUID(),
+          email: invitation.email,
+          name,
+          password: hashedPassword,
+          role: invitation.role,
+          authorId,
+        })
+        .returning();
+
+      await tx.insert(auditLog).values({
         id: crypto.randomUUID(),
-        slug,
-        name,
-        email: invitation.email,
-        role: invitation.role,
-      }).returning();
-      authorId = newAuthor.id;
-    }
+        userId: createdUser.id,
+        action: "ACCEPT_INVITATION",
+        entityType: "User",
+        entityId: createdUser.id,
+        details: { role: createdUser.role },
+      });
 
-    const [user] = await db.insert(userTable).values({
-      id: crypto.randomUUID(),
-      email: invitation.email,
-      name,
-      password: hashedPassword,
-      role: invitation.role,
-      authorId
-    }).returning();
-
-    await db.update(invitationTable).set({ status: "ACCEPTED" }).where(eq(invitationTable.id, invitation.id));
-
-    await db.insert(auditLog).values({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      action: "ACCEPT_INVITATION",
-      entityType: "User",
-      entityId: user.id,
-      details: { role: user.role }
+      return createdUser;
     });
 
     const admins = await db.select({ id: userTable.id }).from(userTable).where(inArray(userTable.role, ["ADMIN", "OWNER"]));

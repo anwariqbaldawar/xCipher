@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { eq, sum } from "drizzle-orm";
 import { author as authorTable, article as articleTable } from "@/lib/db/schema";
@@ -17,13 +18,18 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+const getAuthorBySlug = cache(async (slug: string) => {
+  const [author] = await db.query.author.findMany({
+    where: eq(authorTable.slug, slug),
+    with: { user: true },
+    limit: 1,
+  });
+  return author || null;
+});
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const [author] = await db.query.author.findMany({ 
-    where: eq(authorTable.slug, slug), 
-    with: { user: true },
-    limit: 1
-  });
+  const author = await getAuthorBySlug(slug);
   if (!author) return { title: `Author — ${siteConfig.name}` };
   
   const authorName = author.name || "Author";
@@ -57,11 +63,7 @@ export const revalidate = 600; // author profile
 export default async function AuthorProfile({ params }: Props) {
   const { slug } = await params;
 
-  const [author] = await db.query.author.findMany({ 
-    where: eq(authorTable.slug, slug), 
-    with: { user: true },
-    limit: 1
-  });
+  const author = await getAuthorBySlug(slug);
   if (!author) notFound();
 
   const socials = parseAuthorSocialLinks(author.socialLinks);

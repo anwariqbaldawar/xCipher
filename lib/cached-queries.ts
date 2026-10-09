@@ -169,20 +169,52 @@ export function getCategoryArticles(slug: string, subSlug?: string) {
 }
 
 /** Published articles carrying one tag. */
-export function getTagArticles(slug: string) {
+export function getTagArticles(slug: string, offset: number = 0, limit: number = LISTING_ARTICLE_LIMIT) {
   return unstable_cache(
     async () => {
       try {
-        return await queryPublicFeed(0, LISTING_ARTICLE_LIMIT, { tagSlug: slug });
+        return await queryPublicFeed(offset, limit, { tagSlug: slug });
       } catch (error) {
         console.warn(`[cached-queries] Failed to fetch tag articles for ${slug}:`, error);
         return [];
       }
     },
-    ["tag-articles-v2", slug],
+    ["tag-articles-v2", slug, String(offset), String(limit)],
     { tags: [CACHE_TAGS.articles, tagTag(slug)], revalidate: 300 }
   )();
 }
+
+/** Most-read published articles for the shared Sidebar. */
+export const getMostReadArticles = unstable_cache(
+  async (limit: number = 5) => {
+    try {
+      return await db.query.article.findMany({
+        where: and(
+          eq(articleTable.status, "PUBLISHED"),
+          or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
+        ),
+        orderBy: (a, { desc }) => [desc(a.views), desc(a.publishedAt)],
+        limit,
+        columns: {
+          id: true,
+          slug: true,
+          title: true,
+          readingTime: true,
+        },
+        with: {
+          category: {
+            columns: { name: true },
+          },
+        },
+      });
+    } catch (error) {
+      console.warn("[cached-queries] Failed to fetch most read articles:", error);
+      return [];
+    }
+  },
+  ["most-read-articles"],
+  { tags: [CACHE_TAGS.articles], revalidate: 300 },
+);
 
 /** Published articles by one author. */
 export function getAuthorArticles(authorId: string, authorSlug: string) {

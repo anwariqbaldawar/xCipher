@@ -1,14 +1,20 @@
 # BullMQ worker image — processes the publishing and notification queues.
 #
-# Separate from the Next.js standalone image on purpose: the standalone build
-# only traces files the app imports, and nothing imports lib/queue/worker.ts,
-# so the worker source is not in the web image. The worker needs the full lib/
-# tree (redis, email, google-indexing, queue) and tsx to run TypeScript.
-FROM node:22-alpine AS deps
+# Bundles lib/queue/worker.ts into a standalone ESM entry point in the builder
+# stage and prunes devDependencies so the production runner image carries only
+# production node_modules and runs on native `node`.
+FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package.json package-lock.json ./
-# tsx is a devDependency; the worker runs it, so dev deps are required here.
+COPY package.json package-lock.json tsconfig.json ./
 RUN npm ci --no-audit --no-fund
+COPY lib ./lib
+RUN npx esbuild lib/queue/worker.ts \
+      --bundle \
+      --platform=node \
+      --format=esm \
+      --packages=external \
+      --outfile=/app/worker.mjs \
+  && npm prune --omit=dev
 
 FROM node:22-alpine AS runner
 WORKDIR /app
@@ -17,10 +23,10 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 worker
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY --chown=worker:nodejs package.json tsconfig.json ./
-COPY --chown=worker:nodejs lib ./lib
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder --chown=worker:nodejs /app/package.json ./
+COPY --from=builder --chown=worker:nodejs /app/worker.mjs ./worker.mjs
 
 USER worker
 
-CMD ["npx", "tsx", "lib/queue/worker.ts"]
+CMD ["node", "worker.mjs"]

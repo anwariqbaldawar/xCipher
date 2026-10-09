@@ -58,29 +58,32 @@ describe("request-time backend configuration", () => {
     expect(() => db.select()).toThrow("DATABASE_URL is not set");
   });
 
-  it("executes separate writes through the real Neon HTTP driver", async () => {
+  it("executes separate writes through the real Neon Pool driver", async () => {
+    const { Pool } = await import("@neondatabase/serverless");
     const { db } = await import("@/lib/db");
     const { article, articleRevision } = await import("@/lib/db/schema");
     vi.stubEnv("DATABASE_URL", "postgresql://test:test@first.example.test/editor");
     const queries: string[] = [];
-    const httpFetch = vi.fn<typeof fetch>(async (_input, init) => {
-      const body = JSON.parse(String(init?.body)) as { query: string };
-      queries.push(body.query);
-      return Response.json({
-        fields: [{ name: "id", dataTypeID: 25 }], rows: [["story-1"]],
-        rowCount: 1, command: "UPDATE", rowAsArray: true,
-      });
-    });
-    vi.stubGlobal("fetch", httpFetch);
+    const poolQuery = vi.spyOn(Pool.prototype, "query").mockImplementation((async (queryConfig: any) => {
+      const sqlText = typeof queryConfig === "string" ? queryConfig : queryConfig?.text;
+      queries.push(String(sqlText));
+      return {
+        fields: [{ name: "id", dataTypeID: 25 }],
+        rows: [["story-1"]],
+        rowCount: 1,
+        command: "UPDATE",
+      } as any;
+    }) as any);
 
     const [saved] = await db.update(article).set({ title: "Updated live" })
       .where(eq(article.id, "story-1")).returning({ id: article.id });
     await db.insert(articleRevision).values({
       id: "revision-1", articleId: saved.id, userId: "user-1", title: "Updated live",
     });
-    expect(httpFetch).toHaveBeenCalledTimes(2);
-    expect(queries[0]).toMatch(/^update "Article"/);
-    expect(queries[1]).toMatch(/^insert into "ArticleRevision"/);
+    expect(poolQuery).toHaveBeenCalledTimes(2);
+    expect(queries[0]).toMatch(/^update "Article"/i);
+    expect(queries[1]).toMatch(/^insert into "ArticleRevision"/i);
+    poolQuery.mockRestore();
   });
 
   it("resolves Auth.js secrets, cookies and adapter only when requested", async () => {

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { user as userTable } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { verifyTotp } from "@/lib/totp";
+import { encryptTotpSecret, hashBackupCode, matchesBackupCode, verifyTotp } from "@/lib/totp";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Server-side 2FA verification for the login flow.
@@ -32,17 +32,28 @@ export async function verifyLoginCode(
 
   // Primary path: a 6-digit TOTP code from the authenticator app.
   if (verifyTotp(row.totpSecret, clean)) {
+    // Transparently upgrade legacy plaintext TOTP secret at rest when a key is present.
+    const encryptedSecret = encryptTotpSecret(row.totpSecret);
+    if (encryptedSecret !== row.totpSecret) {
+      await db
+        .update(userTable)
+        .set({ totpSecret: encryptedSecret })
+        .where(eq(userTable.id, userId))
+        .catch(() => undefined);
+    }
     return { ok: true };
   }
 
-  // Recovery path: a single-use backup code. Consumed on use so a leaked code
-  // cannot be replayed.
+  // Recovery path: a single-use backup code (supports both SHA-256 hashed and legacy plaintext codes).
   const normalized = clean.toUpperCase();
-  const remaining = (row.backupCodes || []).filter((c) => c.toUpperCase() !== normalized);
-  if (remaining.length !== (row.backupCodes || []).length) {
+  const storedCodes = row.backupCodes || [];
+  const remaining = storedCodes.filter((c) => !matchesBackupCode(c, normalized));
+  if (remaining.length !== storedCodes.length) {
     await db
       .update(userTable)
-      .set({ backupCodes: remaining })
+      .set({
+        backupCodes: remaining.map((c) => (c.startsWith("sha256:") ? c : hashBackupCode(c))),
+      })
       .where(eq(userTable.id, userId));
     return { ok: true };
   }

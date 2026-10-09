@@ -1,8 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   base32Decode,
+  decryptTotpSecret,
+  encryptTotpSecret,
   generateBackupCodes,
   generateTotpSecret,
+  hashBackupCode,
+  matchesBackupCode,
   otpauthUri,
   totpCode,
   verifyTotp,
@@ -81,5 +85,34 @@ describe("totp", () => {
     expect(uri).toContain("issuer=xSypher");
     expect(uri).toContain("digits=6");
     expect(uri).toContain("period=30");
+  });
+
+  it("encrypts TOTP secrets at rest and transparently verifies encrypted or legacy secrets", () => {
+    vi.stubEnv("NEXTAUTH_SECRET", "test-totp-encryption-key-secret-value");
+    const secret = generateTotpSecret();
+    const encrypted = encryptTotpSecret(secret);
+    expect(encrypted.startsWith("enc:v1:")).toBe(true);
+    expect(encrypted).not.toContain(secret);
+    expect(decryptTotpSecret(encrypted)).toBe(secret);
+    expect(decryptTotpSecret(secret)).toBe(secret);
+
+    const now = Date.now();
+    const code = totpCode(secret, now);
+    expect(verifyTotp(encrypted, code, 1, now)).toBe(true);
+    expect(verifyTotp(secret, code, 1, now)).toBe(true);
+    vi.unstubAllEnvs();
+  });
+
+  it("hashes backup codes and verifies both hashed and legacy plaintext codes", () => {
+    const [raw] = generateBackupCodes(1);
+    const hashed = hashBackupCode(raw);
+    expect(hashed.startsWith("sha256:")).toBe(true);
+    expect(hashed).not.toContain(raw);
+    expect(matchesBackupCode(hashed, raw)).toBe(true);
+    expect(matchesBackupCode(hashed, raw.toLowerCase())).toBe(true);
+    expect(matchesBackupCode(hashed, "0000000000")).toBe(false);
+    // Legacy plaintext backward compatibility
+    expect(matchesBackupCode(raw, raw)).toBe(true);
+    expect(matchesBackupCode(raw, "0000000000")).toBe(false);
   });
 });

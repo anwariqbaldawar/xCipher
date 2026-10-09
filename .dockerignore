@@ -6,7 +6,15 @@ README.md
 .next
 .git
 .github
-.env*.local
+.env
+.env.*
+!.env.example
 .wrangler/
 open-next.config.ts
 wrangler.json
+eslint.json
+eslint_summary.txt
+xSypher-Production-Audit-Report.md
+test-*.js
+test-*.ts
+temp

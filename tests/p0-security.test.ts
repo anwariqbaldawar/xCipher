@@ -72,3 +72,18 @@ describe('RSS article URLs', () => {
     expect(xml).toContain('<title>Phone &amp; review</title>');
   });
 });
+
+describe('Auth redirect allowlist', () => {
+  it('blocks open redirects to external domains containing localhost in their hostname', async () => {
+    const { createAuthConfig } = await import('@/lib/auth.config');
+    const redirect = createAuthConfig().callbacks?.redirect;
+    expect(redirect).toBeTypeOf('function');
+
+    const baseUrl = 'https://admin.xsypher.com';
+    expect(await redirect!({ url: 'https://evil-localhost.example.com/phish', baseUrl })).toBe(baseUrl);
+    expect(await redirect!({ url: 'https://localhost.attacker.com/phish', baseUrl })).toBe(baseUrl);
+    expect(await redirect!({ url: 'https://admin.xsypher.com/articles', baseUrl })).toBe('https://admin.xsypher.com/articles');
+    expect(await redirect!({ url: 'http://localhost:3000/admin', baseUrl })).toBe('http://localhost:3000/admin');
+    expect(await redirect!({ url: '/admin/articles', baseUrl })).toBe('https://admin.xsypher.com/admin/articles');
+  });
+});

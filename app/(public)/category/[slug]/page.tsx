@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -21,12 +22,17 @@ interface Props {
   searchParams: Promise<{ sub?: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+const getCategoryBySlug = cache(async (slug: string) => {
   const [cat] = await db.query.category.findMany({
     where: eq(categoryTable.slug, slug),
     limit: 1,
   });
+  return cat || null;
+});
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const cat = await getCategoryBySlug(slug);
 
   const catName = cat?.name;
   const catDesc = cat?.description;
@@ -62,10 +68,7 @@ export const revalidate = 300; // category listing
 export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
   const { sub } = await searchParams;
-  const [category] = await db.query.category.findMany({
-    where: eq(categoryTable.slug, slug),
-    limit: 1,
-  });
+  const category = await getCategoryBySlug(slug);
 
   if (!category) {
     notFound();

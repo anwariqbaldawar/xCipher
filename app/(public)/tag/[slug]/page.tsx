@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import { db } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { tag as tagTable, article as articleTable } from "@/lib/db/schema";
@@ -15,24 +16,38 @@ interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+const getTagWithCount = cache(async (slug: string) => {
+  const [tagResults, countResult] = await Promise.all([
+    db.query.tag.findMany({ where: eq(tagTable.slug, slug), limit: 1 }),
+    db
+      .select({ count: sql`count(*)`.mapWith(Number) })
+      .from(articleTable)
+      .where(publicFeedWhere({ tagSlug: slug })),
+  ]);
+  return {
+    tag: tagResults[0] || null,
+    totalCount: countResult[0]?.count || 0,
+  };
+});
+
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const [tag] = await db.query.tag.findMany({ where: eq(tagTable.slug, slug), limit: 1 });
+  const sp = await searchParams;
+  const requestedPage = typeof sp?.page === "string" ? Number(sp.page) : 1;
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 1 ? requestedPage : 1;
+  const { tag, totalCount: count } = await getTagWithCount(slug);
   
   if (!tag) {
     return { title: "Tag Not Found — xSypher" };
   }
-  
-  const [countResult] = await db.select({ count: sql`count(*)`.mapWith(Number) })
-    .from(articleTable)
-    .where(publicFeedWhere({ tagSlug: slug }));
-  const count = countResult?.count || 0;
+
+  const pageSuffix = page > 1 ? ` (Page ${page})` : "";
 
   return {
-    title: `${tag.name} News & Articles — xSypher`,
+    title: `${tag.name} News & Articles${pageSuffix} — xSypher`,
     description: tag.description || `Read the latest news and analysis about ${tag.name}.`,
     alternates: {
-      canonical: `${siteConfig.url}/tag/${tag.slug}`,
+      canonical: page > 1 ? `${siteConfig.url}/tag/${tag.slug}?page=${page}` : `${siteConfig.url}/tag/${tag.slug}`,
     },
     robots: {
       index: count >= 3,
@@ -41,12 +56,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-// Same ISR setup as the homepage and category listings: the page is prerendered
-// and revalidated every 5 minutes, and the feed query behind it is cached and
-// tag-invalidated (getTagArticles). With static rendering a ?page=N deep link
-// serves the first page — live pagination is the load-more control, which is
-// unaffected.
-export const dynamic = "force-static";
 export const revalidate = 300; // tag listing
 
 export default async function TagPage({ params, searchParams }: Props) {
@@ -57,20 +66,15 @@ export default async function TagPage({ params, searchParams }: Props) {
   const limit = 20;
   const skip = (page - 1) * limit;
 
-  const [tag] = await db.query.tag.findMany({ where: eq(tagTable.slug, slug), limit: 1 });
+  const [{ tag, totalCount }, articles] = await Promise.all([
+    getTagWithCount(slug),
+    getTagArticles(slug, skip, limit),
+  ]);
   if (!tag) {
     notFound();
   }
 
   const filter = { tagSlug: slug };
-  const whereClause = publicFeedWhere(filter);
-
-  const [tagArticles, countResult] = await Promise.all([
-    getTagArticles(slug),
-    db.select({ count: sql`count(*)`.mapWith(Number) }).from(articleTable).where(whereClause)
-  ]);
-  const totalCount = countResult[0]?.count || 0;
-  const articles = tagArticles.slice(0, limit);
 
   const hasNextPage = skip + limit < totalCount;
   const hasPrevPage = page > 1;
@@ -88,15 +92,20 @@ export default async function TagPage({ params, searchParams }: Props) {
           <div className="day-group">
             <div className="day-label" style={{ marginBottom: "16px" }}>Latest Stories</div>
             {articles.length > 0 ? (
-              <PaginatedFeed initialArticles={articles} filter={filter} initialOffset={skip} initialHasMore={hasNextPage} />
+              <PaginatedFeed initialArticles={articles} filter={filter} initialOffset={skip + articles.length} initialHasMore={hasNextPage} />
             ) : (
               <p className="muted" style={{ padding: "40px 0" }}>No published articles found with this tag.</p>
             )}
             
-            {hasPrevPage && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "32px", padding: "16px 0", borderTop: "1px solid var(--line)" }}>
-                <Link href={`/tag/${tag.slug}?page=${page - 1}`} className="btn-cs">← Previous Page</Link>
-              </div>
+            {(hasPrevPage || hasNextPage) && (
+              <nav aria-label="Tag archive pagination" style={{ display: "flex", justifyContent: "space-between", marginTop: "32px", padding: "16px 0", borderTop: "1px solid var(--line)" }}>
+                {hasPrevPage ? (
+                  <Link href={page === 2 ? `/tag/${tag.slug}` : `/tag/${tag.slug}?page=${page - 1}`} className="btn-cs">← Previous Page</Link>
+                ) : <span />}
+                {hasNextPage ? (
+                  <Link href={`/tag/${tag.slug}?page=${page + 1}`} className="btn-cs">Next Page →</Link>
+                ) : <span />}
+              </nav>
             )}
           </div>
         </div>

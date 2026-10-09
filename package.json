@@ -53,7 +53,7 @@
     "lru-cache": "^11.5.3",
     "lucide-react": "^1.46.0",
     "mermaid": "^12.0.0",
-    "next": "16.3.5",
+    "next": "16.4.0",
     "next-auth": "^5.0.0-beta.32",
     "next-themes": "^0.4.6",
     "postgres": "^3.4.9",
@@ -85,12 +85,16 @@
     "@types/trusted-types": "^2.0.7",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
-    "eslint-config-next": "16.3.5",
+    "eslint-config-next": "16.4.0",
     "tailwindcss": "^4",
     "ts-morph": "^28.0.0",
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vercel": "^39.0.0",
     "vitest": "^2.1.9"
+  },
+  "overrides": {
+    "lodash-es": "^4.18.1",
+    "katex": "^0.19.0"
   }
 }

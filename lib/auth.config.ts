@@ -22,14 +22,28 @@ import type { NextAuthConfig } from "next-auth";
  * time, before request-time environment is guaranteed to be in place.
  */
 
+export function isLocalHostname(hostname: string): boolean {
+  const bare = hostname.toLowerCase().split(":")[0];
+  return bare === "localhost" || bare.endsWith(".localhost") || bare === "127.0.0.1";
+}
+
+function isLocalUrl(rawUrl?: string): boolean {
+  if (!rawUrl) return false;
+  try {
+    return isLocalHostname(new URL(rawUrl).hostname);
+  } catch {
+    return isLocalHostname(rawUrl);
+  }
+}
+
 function resolveSecureCookies(): boolean {
   const env = process.env;
   return (
     env.NODE_ENV === "production" &&
     !(
-      env.NEXTAUTH_URL?.includes("localhost") ||
-      env.AUTH_URL?.includes("localhost") ||
-      env.NEXT_PUBLIC_SITE_URL?.includes("localhost")
+      isLocalUrl(env.NEXTAUTH_URL) ||
+      isLocalUrl(env.AUTH_URL) ||
+      isLocalUrl(env.NEXT_PUBLIC_SITE_URL)
     )
   );
 }
@@ -76,7 +90,12 @@ export function createAuthConfig(): NextAuthConfig {
         if (url.startsWith("/")) return `${baseUrl}${url}`;
         try {
           const urlObj = new URL(url);
-          if (urlObj.origin === baseUrl || urlObj.hostname.endsWith(".xsypher.com") || urlObj.hostname.includes("localhost")) {
+          if (
+            urlObj.origin === baseUrl ||
+            urlObj.hostname === "xsypher.com" ||
+            urlObj.hostname.endsWith(".xsypher.com") ||
+            isLocalHostname(urlObj.hostname)
+          ) {
             return url;
           }
         } catch {

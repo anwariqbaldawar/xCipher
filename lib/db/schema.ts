@@ -80,6 +80,10 @@ export const passwordResetToken = pgTable('PasswordResetToken', {
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
   userId: text('userId').notNull(),
   used: boolean('used').default(false).notNull(),
+}, (table) => {
+  return {
+    userIdUsedIdx: index('PasswordResetToken_userId_used_idx').on(table.userId, table.used),
+  };
 });
 
 export const author = pgTable('Author', {
@@ -209,6 +213,11 @@ export const auditLog = pgTable('AuditLog', {
   entityId: text('entityId'),
   details: json('details'),
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    createdAtIdx: index('AuditLog_createdAt_idx').on(table.createdAt),
+    userIdIdx: index('AuditLog_userId_idx').on(table.userId),
+  };
 });
 
 export const notification = pgTable('Notification', {
@@ -219,6 +228,10 @@ export const notification = pgTable('Notification', {
   type: text('type').default('SYSTEM').notNull(),
   isRead: boolean('isRead').default(false).notNull(),
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    userIdIsReadCreatedAtIdx: index('Notification_userId_isRead_createdAt_idx').on(table.userId, table.isRead, table.createdAt),
+  };
 });
 
 export const invitation = pgTable('Invitation', {
@@ -230,6 +243,10 @@ export const invitation = pgTable('Invitation', {
   status: text('status').default('PENDING').notNull(),
   invitedBy: text('invitedBy'),
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    statusExpiresIdx: index('Invitation_status_expires_idx').on(table.status, table.expires),
+  };
 });
 
 export const subscriber = pgTable('Subscriber', {
@@ -256,6 +273,10 @@ export const contactMessage = pgTable('ContactMessage', {
   userAgent: text('userAgent'),
   status: text('status').default('NEW').notNull(),
   createdAt: timestamp('createdAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
+}, (table) => {
+  return {
+    statusCreatedAtIdx: index('ContactMessage_status_createdAt_idx').on(table.status, table.createdAt),
+  };
 });
 
 export const comment = pgTable('Comment', {

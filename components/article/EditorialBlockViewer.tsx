@@ -119,7 +119,7 @@ export default function EditorialBlockViewer({ block, preview = false }: { block
           {block.first && <h3 className="text-xl font-bold mb-4 text-center">{block.first}</h3>}
           {block.firstImage?.src && (
             <figure className="mb-4">
-              <img src={block.firstImage.src} alt={block.firstImage.alt} className="w-full rounded-xl object-cover" />
+              <img src={optimizeImageUrl(block.firstImage.src, 800)} alt={block.firstImage.alt} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
               {block.firstImage.caption && <figcaption className="text-sm mt-2 text-[var(--muted)] text-center">{block.firstImage.caption}</figcaption>}
             </figure>
           )}
@@ -133,7 +133,7 @@ export default function EditorialBlockViewer({ block, preview = false }: { block
           {block.second && <h3 className="text-xl font-bold mb-4 text-center">{block.second}</h3>}
           {block.secondImage?.src && (
             <figure className="mb-4">
-              <img src={block.secondImage.src} alt={block.secondImage.alt} className="w-full rounded-xl object-cover" />
+              <img src={optimizeImageUrl(block.secondImage.src, 800)} alt={block.secondImage.alt} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
               {block.secondImage.caption && <figcaption className="text-sm mt-2 text-[var(--muted)] text-center">{block.secondImage.caption}</figcaption>}
             </figure>
           )}

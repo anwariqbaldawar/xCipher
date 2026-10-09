@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
+import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
@@ -31,22 +32,44 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const [article] = await db.query.article.findMany({ 
+const getPublishedArticleBySlug = cache(async (slug: string) => {
+  const [article] = await db.query.article.findMany({
     where: and(eq(articleTable.slug, slug), eq(articleTable.status, "PUBLISHED")),
     limit: 1,
-    with: { category: { with: { parent: true } }, authorModel: { columns: { name: true, slug: true } } },
+    columns: {
+      id: true, slug: true, title: true, deck: true, img: true,
+      featuredImageAlt: true, featuredImageCaption: true, featuredImageCredit: true,
+      author: true, role: true, views: true, status: true, createdAt: true,
+      publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true,
+      isAnonymous: true, readingTime: true, seoTitle: true, seoDesc: true,
+    },
+    with: {
+      category: { with: { parent: true } },
+      authorModel: true,
+      tags: { with: { tag: true } },
+    },
   });
+  return article || null;
+});
+
+const getHistoricalArticleBySlug = cache(async (slug: string) => {
+  const [historicalArticle] = await db.query.article.findMany({
+    where: and(
+      sql`${slug} = ANY(${articleTable.previousSlugs})`,
+      eq(articleTable.status, "PUBLISHED"),
+    ),
+    limit: 1,
+    columns: { id: true, slug: true },
+  });
+  return historicalArticle || null;
+});
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await getPublishedArticleBySlug(slug);
 
   if (!article) {
-    const [historicalArticle] = await db.query.article.findMany({
-      where: and(
-        sql`${slug} = ANY(${articleTable.previousSlugs})`,
-        eq(articleTable.status, "PUBLISHED")
-      ),
-      limit: 1
-    });
+    const historicalArticle = await getHistoricalArticleBySlug(slug);
     if (historicalArticle) return {};
     return {};
   }
@@ -88,21 +111,10 @@ export const revalidate = 3600; // article
 
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
-  const [article] = await db.query.article.findMany({ 
-    where: and(eq(articleTable.slug, slug), eq(articleTable.status, "PUBLISHED")),
-    limit: 1,
-    columns: {
-      id: true, slug: true, title: true, deck: true, img: true, featuredImageAlt: true, featuredImageCaption: true, featuredImageCredit: true, author: true, role: true, views: true,
-      status: true, createdAt: true, publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true, isAnonymous: true, readingTime: true
-    },
-    with: { category: { with: { parent: true } }, authorModel: true, tags: { with: { tag: true } } } 
-  });
+  const article = await getPublishedArticleBySlug(slug);
   
   if (!article) {
-    const [historicalArticle] = await db.query.article.findMany({
-      where: and(sql`${slug} = ANY(${articleTable.previousSlugs})`, eq(articleTable.status, "PUBLISHED")),
-      limit: 1
-    });
+    const historicalArticle = await getHistoricalArticleBySlug(slug);
     if (historicalArticle) {
       redirect(`/article/${historicalArticle.slug}`);
     }

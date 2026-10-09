@@ -180,8 +180,9 @@ iQIzBAEBCAAdFiEE... [SIGNATURE TRUNCATED FOR DISPLAY]
             We actively reject the surveillance-capitalism model utilized by legacy media. The xSypher platform is engineered to function perfectly without extracting your personal data.
           </p>
           <ul>
-            <li><strong>Third-Party Trackers:</strong> Zero. We do not use Google Analytics, Meta Pixels, or equivalent tracking scripts.</li>
-            <li><strong>Self-Hosted Analytics:</strong> We use an anonymized, self-hosted analytics instance that records page views without using cookies or storing IP addresses.</li>
+            <li><strong>Third-Party Marketing Trackers:</strong> Zero by default. We do not use Google Analytics or Meta Pixels, and optional advertising or session diagnostics never load unless you explicitly grant consent via our cookie preferences.</li>
+            <li><strong>Error Diagnostics:</strong> Crash reporting runs with personal data collection disabled (<code>userInfo: false</code>) and text/media masking enforced whenever optional session diagnostics are consented to.</li>
+            <li><strong>First-Party View Counting:</strong> Article view counts are aggregated anonymously in our Redis/PostgreSQL pipeline without storing reader IP addresses or cross-site tracking cookies.</li>
             <li><strong>Log Retention:</strong> Standard web server access logs are aggressively purged every 7 days and are never shared.</li>
           </ul>
 
