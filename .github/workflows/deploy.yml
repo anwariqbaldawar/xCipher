@@ -47,21 +47,17 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-            export PATH="$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:$HOME/.local/bin:/usr/local/bin:$PATH"
             cd /home/ubuntu/apps/xsypher
             git fetch origin main
             git reset --hard origin/main
             
-            # Run idempotent schema migrations (falls back gracefully if host node_modules is not installed)
-            if command -v node >/dev/null 2>&1 && [ -d node_modules ]; then
-              node migrate.mjs
-            else
-              echo "Skipping host migrate.mjs (node or node_modules not on host); running container build..."
-            fi
-            
-            # Rebuild and restart containers
+            # Rebuild containers
             docker compose -f docker-compose.prod.yml build --no-cache
+            
+            # Run idempotent schema migrations using the worker container (has Node 22 + postgres + .env.production)
+            docker compose -f docker-compose.prod.yml run --rm --no-deps xsypher-worker node migrate.mjs || node migrate.mjs || true
+            
+            # Restart containers
             docker compose -f docker-compose.prod.yml up -d
             
             # Prune dangling images to conserve disk space
