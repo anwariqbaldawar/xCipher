@@ -50,6 +50,11 @@ jobs:
             cd /home/ubuntu/apps/xsypher
             git fetch origin main
             git reset --hard origin/main
+            # Load user profile/NVM to ensure 'node' and 'npm' are in PATH during non-interactive SSH
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            source ~/.profile || true
+            source ~/.bashrc || true
             
             # Rebuild containers
             docker compose -f docker-compose.prod.yml build --no-cache
