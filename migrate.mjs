@@ -1,8 +1,24 @@
 import postgres from "postgres";
-import { readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-const connectionString = process.env.DATABASE_URL;
+function resolveDatabaseUrl() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  for (const envFile of [".env.production", ".env.local", ".env"]) {
+    const filePath = join(process.cwd(), envFile);
+    if (!existsSync(filePath)) continue;
+    const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+    for (const line of lines) {
+      const match = line.match(/^\s*DATABASE_URL\s*=\s*(.+)\s*$/);
+      if (match) {
+        return match[1].trim().replace(/^['"]|['"]$/g, "");
+      }
+    }
+  }
+  return undefined;
+}
+
+const connectionString = resolveDatabaseUrl();
 
 if (!connectionString) {
   console.error("DATABASE_URL not set");
