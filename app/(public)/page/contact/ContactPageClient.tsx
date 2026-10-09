@@ -273,7 +273,7 @@ export default function ContactPageClient() {
                           required
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Ahmad Khan"
+                          placeholder="John Doe"
                           className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30 transition-colors font-[family:var(--f-body)] text-sm sm:text-base placeholder:text-[var(--faint)]"
                         />
                       </div>
@@ -292,7 +292,7 @@ export default function ContactPageClient() {
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="ahmad@example.com"
+                          placeholder="john@example.com"
                           className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30 transition-colors font-[family:var(--f-body)] text-sm sm:text-base placeholder:text-[var(--faint)]"
                         />
                       </div>
