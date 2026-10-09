@@ -6,7 +6,7 @@ WORKDIR /app
 # Check package manager and install dependencies
 COPY package.json package-lock.json* yarn.lock* pnpm-lock.yaml* ./
 RUN \
-  if [ -f package-lock.json ]; then npm ci; \
+  if [ -f package-lock.json ]; then npm ci || npm install; \
   elif [ -f yarn.lock ]; then yarn --frozen-lockfile; \
   elif [ -f pnpm-lock.yaml ]; then corepack enable pnpm && pnpm i --frozen-lockfile; \
   else echo "Lockfile not found." && npm install; \
