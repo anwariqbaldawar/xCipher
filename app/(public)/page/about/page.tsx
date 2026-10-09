@@ -485,8 +485,9 @@ export default function AboutPage() {
                     <SocialIcon platform="linkedin" />
                   </a>
                   <a 
-                    href="mailto:anwariqbalhurmaz@gmai.com" 
-                    aria-label="Email Anwar Iqbal Dawar"
+                    href="mailto:anwar@xsypher.com" 
+                    aria-label="Email: anwar@xsypher.com"
+                    title="anwar@xsypher.com"
                     className="p-2 rounded-lg bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--line)] transition-colors"
                   >
                     <Mail className="w-4 h-4" />
@@ -538,14 +539,14 @@ export default function AboutPage() {
             </div>
           </div>
 
-          {/* TEAM MEMBERS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          {/* TEAM MEMBERS GRID: Balanced 2x2 Layout on Tablets & Desktops */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
             
-            {/* Team Member 1 */}
-            <div className="group p-6 rounded-xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+            {/* Team Member 1: Ameer Muawiya Khattak */}
+            <div className="group p-6 sm:p-7 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)]/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
+                <div className="flex items-start gap-4 sm:gap-5 mb-4">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
                     <Image
                       src="/amk.webp"
                       alt="Ameer Muawiya Khattak"
@@ -555,85 +556,95 @@ export default function AboutPage() {
                     />
                   </div>
                   <div className="pt-0.5 min-w-0">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1.5">
                       Co-Founder &amp; CTO
                     </span>
                     <h3 className="font-[family:var(--f-display)] text-lg sm:text-xl font-bold text-[var(--ink)] leading-snug">
                       Ameer Muawiya Khattak
                     </h3>
-                    <p className="text-[11px] text-[var(--faint)] mt-0.5">Engineering &amp; Infrastructure</p>
+                    <p className="text-xs text-[var(--faint)] mt-0.5 font-[family:var(--f-ui)]">Engineering &amp; Infrastructure</p>
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Oversees xSypher&apos;s technical infrastructure and system architecture, driving platform scalability and engineering excellence across all services.
+                  Oversees xSypher&apos;s core engineering infrastructure and distributed cloud systems. Leads high-availability server architecture, microservices scaling, and platform reliability engineering across all services.
                 </p>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-[var(--line)] flex items-center justify-between">
-                <div className="flex gap-1.5 text-xs text-[var(--faint)]">
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Infrastructure</span>
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Architecture</span>
+              <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5 text-xs text-[var(--muted)]">
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Cloud Architecture</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">DevOps</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">SRE</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Infrastructure</span>
                 </div>
-                <div className="flex gap-2">
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                <div className="shrink-0 flex items-center gap-1">
+                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="github" />
                   </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="X" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                  <a href="https://www.instagram.com/xd_mk_37/?hl=en" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="instagram" />
+                  </a>
+                  <a href="https://x.com/MaviKtk" target="_blank" rel="noopener noreferrer" aria-label="X" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="x" />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Team Member 2 */}
-            <div className="group p-6 rounded-xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+            {/* Team Member 2: Tariq Jameel */}
+            <div className="group p-6 sm:p-7 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)]/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
+                <div className="flex items-start gap-4 sm:gap-5 mb-4">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
                     <Image
-                      src="/tariq.webp"
-                      alt="Tariq Aziz"
+                      src="/tj.webp"
+                      alt="Tariq Jameel"
                       width={96}
                       height={96}
                       className="w-full h-full object-cover object-top"
                     />
                   </div>
                   <div className="pt-0.5 min-w-0">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1">
-                      Social Media Coordinator
+                    <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1.5">
+                      Systems &amp; Security Engineer
                     </span>
                     <h3 className="font-[family:var(--f-display)] text-lg sm:text-xl font-bold text-[var(--ink)] leading-snug">
-                      Tariq Aziz
+                      Tariq Jameel
                     </h3>
-                    <p className="text-[11px] text-[var(--faint)] mt-0.5">Community &amp; Communications</p>
+                    <p className="text-xs text-[var(--faint)] mt-0.5 font-[family:var(--f-ui)]">Computer Engineer &bull; Cyber Infrastructure</p>
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Coordinates xSypher&apos;s digital footprint and community engagement, ensuring our technical journalism reaches a worldwide audience across all platforms.
+                  Computer Engineer focused on cyber defense, networking protocols, and Linux system administration. Adept in Python automation and modern web development architecture.
                 </p>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-[var(--line)] flex items-center justify-between">
-                <div className="flex gap-1.5 text-xs text-[var(--faint)]">
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Social Media</span>
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Community</span>
+              <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5 text-xs text-[var(--muted)]">
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Cybersecurity</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Linux &amp; Python</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Networking</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Web Dev</span>
                 </div>
-                <div className="flex gap-2">
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                <div className="shrink-0 flex items-center gap-1">
+                  <a href="https://github.com/tariq-jameel-2024" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="github" />
                   </a>
-                  <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                  <a href="https://www.linkedin.com/in/tariq-jameel-4392a8370" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="linkedin" />
+                  </a>
+                  <a href="https://x.com/TJameel99371" target="_blank" rel="noopener noreferrer" aria-label="X" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="x" />
                   </a>
                 </div>
               </div>
             </div>
 
-            {/* Team Member 3 */}
-            <div className="group p-6 rounded-xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+            {/* Team Member 3: Khizar Muzzamail */}
+            <div className="group p-6 sm:p-7 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)]/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-start gap-4 mb-4">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/50 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
+                <div className="flex items-start gap-4 sm:gap-5 mb-4">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
                     <Image
                       src="/km.webp"
                       alt="Khizar Muzzamail"
@@ -643,30 +654,84 @@ export default function AboutPage() {
                     />
                   </div>
                   <div className="pt-0.5 min-w-0">
-                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1">
+                    <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1.5">
                       Lead Security Researcher
                     </span>
                     <h3 className="font-[family:var(--f-display)] text-lg sm:text-xl font-bold text-[var(--ink)] leading-snug">
                       Khizar Muzzamail
                     </h3>
-                    <p className="text-[11px] text-[var(--faint)] mt-0.5">Vulnerability Research &amp; Audits</p>
+                    <p className="text-xs text-[var(--faint)] mt-0.5 font-[family:var(--f-ui)]">Vulnerability Research &amp; Audits</p>
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Leads vulnerability analysis, threat intelligence, and deep-dive security audits to bring cutting-edge cybersecurity insights to our readers.
+                  Leads threat intelligence research, adversary simulation, and systematic vulnerability assessments. Audits zero-day vectors, cloud attack surfaces, and deep-dive technical insights for our security readers.
                 </p>
               </div>
 
-              <div className="mt-5 pt-4 border-t border-[var(--line)] flex items-center justify-between">
-                <div className="flex gap-1.5 text-xs text-[var(--faint)]">
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Threat Intel</span>
-                  <span className="px-2 py-0.5 rounded bg-[var(--surface-2)]">Security Audits</span>
+              <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5 text-xs text-[var(--muted)]">
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Threat Intel</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Security Audits</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">AppSec</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Zero-Day</span>
                 </div>
-                <div className="flex gap-2">
-                  <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                <div className="shrink-0 flex items-center gap-1">
+                  <a href="https://github.com/khizar5370" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="github" />
                   </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="X" className="text-[var(--muted)] hover:text-[var(--ink)] transition-colors">
+                  <a href="https://www.linkedin.com/in/khizar-khan-800aa7415" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="linkedin" />
+                  </a>
+                  <a href="https://x.com/Khizar5370" target="_blank" rel="noopener noreferrer" aria-label="X" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="x" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Team Member 4: Tariq Aziz */}
+            <div className="group p-6 sm:p-7 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)]/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg flex flex-col justify-between">
+              <div>
+                <div className="flex items-start gap-4 sm:gap-5 mb-4">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-colors">
+                    <Image
+                      src="/tariq.webp"
+                      alt="Tariq Aziz"
+                      width={96}
+                      height={96}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <div className="pt-0.5 min-w-0">
+                    <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20 mb-1.5">
+                      Social Media Coordinator
+                    </span>
+                    <h3 className="font-[family:var(--f-display)] text-lg sm:text-xl font-bold text-[var(--ink)] leading-snug">
+                      Tariq Aziz
+                    </h3>
+                    <p className="text-xs text-[var(--faint)] mt-0.5 font-[family:var(--f-ui)]">Community &amp; Communications</p>
+                  </div>
+                </div>
+                <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
+                  Drives xSypher&apos;s global digital footprint, content dissemination, and community growth. Manages multi-channel audience engagement, editorial outreach, and media communications across all public ecosystems.
+                </p>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-1.5 text-xs text-[var(--muted)]">
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Social Media</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Growth</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">PR</span>
+                  <span className="px-2.5 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--line)] font-medium">Branding</span>
+                </div>
+                <div className="shrink-0 flex items-center gap-1">
+                  <a href="https://www.facebook.com/tariq.dawar.571980" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="facebook" />
+                  </a>
+                  <a href="https://www.instagram.com/tariq_dawar0/?hl=en" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
+                    <SocialIcon platform="instagram" />
+                  </a>
+                  <a href="https://x.com/TariqAzizr0l" target="_blank" rel="noopener noreferrer" aria-label="X" className="p-1.5 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors">
                     <SocialIcon platform="x" />
                   </a>
                 </div>

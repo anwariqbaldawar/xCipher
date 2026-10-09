@@ -77,7 +77,7 @@ export async function submitContactMessage(input: {
 
     // Notify the desk. Delivery is best-effort: the row above is the durable
     // record, so a missing RESEND_API_KEY or a worker outage loses no message.
-    const to = process.env.CONTACT_EMAIL || "editor@xsypher.com";
+    const to = process.env.CONTACT_EMAIL || "contact@xsypher.com";
     const departmentLabel = DEPARTMENTS[department];
     await notificationQueue
       .add("sendEmail", {

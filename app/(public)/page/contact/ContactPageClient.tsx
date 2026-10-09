@@ -134,7 +134,31 @@ export default function ContactPageClient() {
                 </p>
               </div>
 
-              {/* Method 1: Editorial & Tips */}
+              {/* Method 1: General Inquiries */}
+              <div className="group p-5 sm:p-6 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-200 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center text-[var(--accent)] shrink-0 transition-colors">
+                    <Mail className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-[family:var(--f-display)] text-base font-bold text-[var(--ink)]">
+                      General Inquiries &amp; Feedback
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-body)] mt-1 mb-2 leading-relaxed">
+                      For general questions, reader feedback, administrative queries, and all other communications.
+                    </p>
+                    <a
+                      href="mailto:contact@xsypher.com"
+                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-[var(--accent)] hover:underline break-all"
+                    >
+                      <Mail className="w-3.5 h-3.5 shrink-0" />
+                      contact@xsypher.com
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Method 2: Editorial & Tips */}
               <div className="group p-5 sm:p-6 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-200 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center text-[var(--accent)] shrink-0 transition-colors">
@@ -158,7 +182,7 @@ export default function ContactPageClient() {
                 </div>
               </div>
 
-              {/* Method 2: Partnerships & PR */}
+              {/* Method 3: Partnerships & PR */}
               <div className="group p-5 sm:p-6 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-200 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center text-[var(--accent)] shrink-0 transition-colors">
@@ -182,7 +206,7 @@ export default function ContactPageClient() {
                 </div>
               </div>
 
-              {/* Method 3: Technical Support */}
+              {/* Method 4: Technical Support */}
               <div className="group p-5 sm:p-6 rounded-2xl bg-[var(--surface)] border border-[var(--line)] hover:border-[var(--accent)] transition-all duration-200 shadow-sm">
                 <div className="flex items-start gap-4">
                   <div className="w-11 h-11 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] group-hover:border-[var(--accent)]/40 flex items-center justify-center text-[var(--accent)] shrink-0 transition-colors">
@@ -206,7 +230,7 @@ export default function ContactPageClient() {
                 </div>
               </div>
 
-              {/* Method 4: Secure Drop Note */}
+              {/* Method 5: Secure Drop Note */}
               <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
                 <div className="text-xs text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
@@ -273,7 +297,7 @@ export default function ContactPageClient() {
                           required
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          placeholder="John Doe"
+                          placeholder="Alex Mercer"
                           className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30 transition-colors font-[family:var(--f-body)] text-sm sm:text-base placeholder:text-[var(--faint)]"
                         />
                       </div>
@@ -292,7 +316,7 @@ export default function ContactPageClient() {
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder="john@example.com"
+                          placeholder="alex.mercer@example.com"
                           className="w-full px-4 py-3 rounded-xl bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]/30 transition-colors font-[family:var(--f-body)] text-sm sm:text-base placeholder:text-[var(--faint)]"
                         />
                       </div>
@@ -424,7 +448,7 @@ export default function ContactPageClient() {
                   About xSypher
                 </h3>
                 <p className="text-xs text-[var(--muted)] font-[family:var(--f-body)] mt-1">
-                  Learn about our mission, core pillars, and editorial staff led by Ahmad Khan.
+                  Learn about our mission, core pillars, and editorial staff led by Anwar Iqbal Dawar.
                 </p>
               </div>
               <span className="mt-4 text-xs font-semibold text-[var(--accent)] inline-flex items-center gap-1">

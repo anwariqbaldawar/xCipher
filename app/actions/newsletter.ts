@@ -17,7 +17,7 @@ function getNewsletterConfig() {
   const env = process.env;
   return {
     siteUrl: env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
-    from: env.NEWSLETTER_FROM_EMAIL || "newsletter@xsypher.com",
+    from: env.NEWSLETTER_FROM_EMAIL || "xSypher Newsletter <newsletter@xsypher.com>",
   };
 }
 
@@ -72,7 +72,7 @@ export async function subscribeNewsletter(
       const unsubscribeUrl = `${siteUrl}/unsubscribe/${subscriber.unsubscribeToken}`;
       await notificationQueue.add('sendEmail', {
         options: {
-          from: `xSypher <${from}>`,
+          from: from.includes("<") ? from : `xSypher Newsletter <${from}>`,
           to: normalizedEmail,
           subject: "Welcome to xSypher",
           html: `

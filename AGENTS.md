@@ -110,3 +110,7 @@ By following these rules, you ensure xSypher remains highly performant, globally
 
 ### L. Dependency Minimization (Caching)
 When implementing in-memory caching or rate-limiting within a single Node.js instance, prefer using native `Map` with custom garbage collection (e.g., stochastic pruning) instead of adding external dependencies like `lru-cache`.
+
+### M. Optical Alignment & Specificity Guardrails
+- **Never Use Cosmetic Containers to Mask Alignment Issues:** When fixing alignment between icons and text headings, never wrap icons in arbitrary decorative containers (e.g., box badges) unless explicitly requested by the design system.
+- **Inspect CSS Specificity on Typography:** Global typography stylesheets (such as `.prose h1, .prose h2`, `.ed-body`, or `.tiptap-content`) often define explicit margins (e.g., `margin: 3rem 0 1rem`) with specificity `(0, 1, 1)`. Normal utility classes like `m-0` with specificity `(0, 1, 0)` will be silently overridden. Always verify computed styles or apply high-specificity resets (e.g., `!m-0`) and isolate elements outside prose scopes to ensure sub-pixel optical vertical alignment.

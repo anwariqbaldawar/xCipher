@@ -87,6 +87,10 @@ export const notificationWorker = new Worker('notification', async (job: Job) =>
     const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) throw new Error("Brevo API key is missing.");
     
+    const senderMatch = typeof from === "string" ? from.match(/^(.*?)\s*<(.+?)>$/) : null;
+    const senderName = senderMatch ? senderMatch[1].trim() : "xSypher Newsletter";
+    const senderEmail = senderMatch ? senderMatch[2].trim() : (from || "newsletter@xsypher.com");
+
     const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: {
@@ -95,7 +99,7 @@ export const notificationWorker = new Worker('notification', async (job: Job) =>
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        sender: { name: "xSypher", email: from },
+        sender: { name: senderName, email: senderEmail },
         subject,
         htmlContent: htmlWithFooter,
         messageVersions

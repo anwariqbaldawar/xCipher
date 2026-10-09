@@ -54,11 +54,11 @@ export default function TransparencyReportPage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-16 sm:px-8 sm:py-20">
-        <div className="prose">
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <Landmark className="w-6 h-6 text-[var(--accent)]" />
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] m-0">
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-16 sm:pt-12 sm:pb-20 sm:px-8">
+        <div className="prose !max-w-none !mx-0 w-full">
+          <div className="flex items-center gap-3 sm:gap-3.5 mb-4 not-prose">
+            <Landmark className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--accent)] shrink-0" />
+            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] tracking-tight leading-tight !m-0">
               1. Editorial Independence &amp; Financial Breakdown
             </h2>
           </div>
@@ -77,11 +77,11 @@ export default function TransparencyReportPage() {
             No external entity—including our advertisers—is granted pre-publication review rights, editorial influence, or insight into our upcoming investigations.
           </p>
 
-          <hr className="my-12 border-[var(--line)]" />
+          <hr className="my-8 border-[var(--line)] not-prose" />
 
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <Lock className="w-6 h-6 text-[var(--accent)]" />
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] m-0">
+          <div className="flex items-center gap-3 sm:gap-3.5 mb-4 not-prose">
+            <Lock className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--accent)] shrink-0" />
+            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] tracking-tight leading-tight !m-0">
               2. Government Data Requests &amp; Warrant Canary
             </h2>
           </div>
@@ -135,7 +135,7 @@ export default function TransparencyReportPage() {
 {`-----BEGIN PGP SIGNED MESSAGE-----
 Hash: SHA256
 
-I, Ahmad Khan, Editor-in-Chief of xSypher, confirm that as of
+I, Anwar Iqbal Dawar, Founder & Lead Editor of xSypher, confirm that as of
 [October 15, 2026], xSypher has not received any National Security 
 Letters, FISA orders, or any other classified requests for user data.
 
@@ -151,11 +151,11 @@ iQIzBAEBCAAdFiEE... [SIGNATURE TRUNCATED FOR DISPLAY]
             <em>You can verify this signature using our official Public PGP Key hosted on our <Link href="/page/contact">Contact Desk</Link> page.</em>
           </p>
 
-          <hr className="my-12 border-[var(--line)]" />
+          <hr className="my-8 border-[var(--line)] not-prose" />
 
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <FileSignature className="w-6 h-6 text-[var(--accent)]" />
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] m-0">
+          <div className="flex items-center gap-3 sm:gap-3.5 mb-4 not-prose">
+            <FileSignature className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--accent)] shrink-0" />
+            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] tracking-tight leading-tight !m-0">
               3. Journalistic Conflict of Interest Policy
             </h2>
           </div>
@@ -168,11 +168,11 @@ iQIzBAEBCAAdFiEE... [SIGNATURE TRUNCATED FOR DISPLAY]
             <li><strong>Bounties:</strong> If our staff uncovers a zero-day vulnerability during the course of reporting, they are barred from claiming financial bug bounties from the affected vendor to prevent perverse incentives.</li>
           </ul>
 
-          <hr className="my-12 border-[var(--line)]" />
+          <hr className="my-8 border-[var(--line)] not-prose" />
 
-          <div className="flex items-center gap-3 mb-6 not-prose">
-            <Activity className="w-6 h-6 text-[var(--accent)]" />
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] m-0">
+          <div className="flex items-center gap-3 sm:gap-3.5 mb-4 not-prose">
+            <Activity className="w-6 h-6 sm:w-7 sm:h-7 text-[var(--accent)] shrink-0" />
+            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] tracking-tight leading-tight !m-0">
               4. Infrastructure Privacy &amp; Telemetry
             </h2>
           </div>
@@ -190,7 +190,7 @@ iQIzBAEBCAAdFiEE... [SIGNATURE TRUNCATED FOR DISPLAY]
             For a full breakdown of how we handle standard operational data (like newsletter signups or payment processing), please read our <Link href="/page/privacy-policy">Privacy Policy</Link>.
           </p>
           
-          <hr className="my-12 border-[var(--line)]" />
+          <hr className="my-8 border-[var(--line)] not-prose" />
           
           <p>
             <strong>Last Updated:</strong> October 2026<br />

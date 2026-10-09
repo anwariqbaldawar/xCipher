@@ -15,7 +15,7 @@ export { SocialIcon };
 
 export default function AuthorProfileView({ author, articles, socials, totalViews, articleFeed }: { author: any, articles: any[], socials: any[], totalViews: number, articleFeed?: ReactNode }) {
   return (
-    <div className="ap-root overflow-x-hidden w-full max-w-[100vw]">
+    <div className="ap-root w-full max-w-[100vw]">
       {/* ── Hero / Banner ─────────────────────────── */}
       <section className="ap-hero">
         <div className="ap-banner" aria-hidden="true">
@@ -119,9 +119,9 @@ export default function AuthorProfileView({ author, articles, socials, totalView
       </div>
 
       {/* ── Body: About + Articles + Sidebar ─────────── */}
-      <div className="wrap ap-body min-w-0 max-w-full overflow-x-hidden">
+      <div className="wrap ap-body min-w-0 max-w-full">
         
-        <div className="ap-main-col min-w-0 max-w-full overflow-x-hidden">
+        <div className="ap-main-col min-w-0 max-w-full">
           {/* About */}
           {author.bio && (
             <section className="ap-about min-w-0 max-w-full" aria-label="About">

@@ -6,7 +6,7 @@ export async function GET() {
   const expiresDate = new Date();
   expiresDate.setFullYear(expiresDate.getFullYear() + 1);
 
-  const content = `Contact: mailto:editor@xsypher.com
+  const content = `Contact: mailto:contact@xsypher.com
 Contact: mailto:privacy@xsypher.com
 Expires: ${expiresDate.toISOString()}
 Preferred-Languages: en
