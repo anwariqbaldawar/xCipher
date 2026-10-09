@@ -51,8 +51,14 @@ jobs:
             cd /home/ubuntu/apps/xsypher
             git fetch origin main
             git reset --hard origin/main
+            # Load user profile/NVM to ensure 'node' and 'npm' are in PATH during non-interactive SSH
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            source ~/.profile || true
+            source ~/.bashrc || true
             
             # Run idempotent schema migrations
+            npm install --production=false
             node migrate.mjs
             
             # Rebuild and restart containers
