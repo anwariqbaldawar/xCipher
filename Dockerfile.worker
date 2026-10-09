@@ -13,6 +13,7 @@ RUN npx esbuild lib/queue/worker.ts \
       --platform=node \
       --format=esm \
       --packages=external \
+      --alias:next/cache=next/cache.js \
       --outfile=/app/worker.mjs \
   && npm prune --omit=dev
 
