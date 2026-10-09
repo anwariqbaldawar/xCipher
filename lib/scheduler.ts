@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS, articleTag, categoryTag } from "./cache-tags";
 import { notifyPublished } from "@/lib/notifications";
+import { enqueueGoogleIndexing } from "@/lib/google-indexing";
 import { eq, lte, and, inArray, sql } from "drizzle-orm";
 import { article as articleTable, auditLog } from "@/lib/db/schema";
 
@@ -146,7 +147,10 @@ export async function runScheduledPublications(
   // rather than being skipped as a self-notify.
   if (notifyTargets.length > 0) {
     const results = await Promise.allSettled(
-      notifyTargets.map((article) => notifyPublished(article, ""))
+      notifyTargets.map(async (article) => {
+        await notifyPublished(article, "");
+        await enqueueGoogleIndexing(article.slug, "URL_UPDATED");
+      })
     );
     for (const r of results) {
       if (r.status === "rejected") {

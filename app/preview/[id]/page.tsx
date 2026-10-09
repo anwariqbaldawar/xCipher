@@ -170,7 +170,7 @@ export default async function PreviewPage({ params }: Props) {
                 {subCat && (
                   <>
                     <span className="sep">/</span>
-                    <Link href={`/category/${subCat.slug}`}>{subCat.name}</Link>
+                    <Link href={`/category/${catSlug}?sub=${subCat.slug}`}>{subCat.name}</Link>
                   </>
                 )}
                 <span className="sep">/</span>

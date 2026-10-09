@@ -53,8 +53,8 @@ async function triggerScheduledPublishing(): Promise<void> {
 // Worker for Publishing related jobs (e.g. Google Indexing ping, view flush, scheduled publish)
 export const publishingWorker = new Worker('publishing', async (job: Job) => {
   if (job.name === 'pingGoogleIndexing') {
-    const { url } = job.data;
-    await notifyGoogleIndexing(url);
+    const { url, type } = job.data;
+    await notifyGoogleIndexing(url, type);
   } else if (job.name === 'flushArticleViews') {
     const flushed = await flushArticleViews();
     if (flushed > 0) {

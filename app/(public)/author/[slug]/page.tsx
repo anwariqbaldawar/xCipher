@@ -33,6 +33,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!author) return { title: `Author — ${siteConfig.name}` };
   
   const authorName = author.name || "Author";
+  const articles = await getAuthorArticles(author.id, slug);
   
   return {
     title: `${authorName} — ${siteConfig.name}`,
@@ -40,6 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       canonical: `${siteConfig.url}/author/${slug}`,
     },
+    ...(articles.length === 0 && { robots: { index: false, follow: true } }),
     openGraph: {
       title: `${authorName} — ${siteConfig.name}`,
       description: author.overview || author.bio?.slice(0, 160) || "",

@@ -1,7 +1,7 @@
 import { dbRead } from "@/lib/db";
 import { siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
-import { article as articleTable, tag as tagTable, _articleToTag } from "@/lib/db/schema";
+import { article as articleTable, tag as tagTable, category as categoryTable, author as authorTable, _articleToTag } from "@/lib/db/schema";
 import { NextRequest } from "next/server";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,14 +62,38 @@ export async function GET(request?: NextRequest) {
         offset,
         limit: SITEMAP_ARTICLE_LIMIT,
       }),
-      page === 1 ? dbRead.query.category.findMany({ columns: { slug: true }, limit: 1000 }) : Promise.resolve([]),
-      page === 1 ? dbRead.query.author.findMany({ columns: { slug: true }, limit: 1000 }) : Promise.resolve([]),
+      page === 1
+        ? dbRead
+            .select({ slug: categoryTable.slug })
+            .from(categoryTable)
+            .where(
+              sql`"Category"."parentId" IS NULL AND "Category"."slug" !~ '\\s' AND EXISTS (
+                SELECT 1 FROM "Article" a WHERE a."categoryId" = "Category"."id" AND a."status" = 'PUBLISHED'
+                UNION ALL
+                SELECT 1 FROM "Article" a JOIN "Category" sub ON a."categoryId" = sub."id" WHERE sub."parentId" = "Category"."id" AND a."status" = 'PUBLISHED'
+              )`
+            )
+            .limit(1000)
+        : Promise.resolve([]),
+      page === 1
+        ? dbRead
+            .select({ slug: authorTable.slug })
+            .from(authorTable)
+            .where(
+              sql`EXISTS (
+                SELECT 1 FROM "_ArticleToAuthor" ata
+                JOIN "Article" a ON a."id" = ata."A"
+                WHERE ata."B" = "Author"."id" AND a."status" = 'PUBLISHED' AND a."isAnonymous" = false
+              )`
+            )
+            .limit(1000)
+        : Promise.resolve([]),
       page === 1
         ? dbRead
             .select({ slug: tagTable.slug })
             .from(tagTable)
             .where(
-              sql`(SELECT count(*) FROM "_ArticleToTag" JOIN "Article" ON "Article"."id" = "_ArticleToTag"."A" WHERE "_ArticleToTag"."B" = ${tagTable.id} AND "Article"."status" = 'PUBLISHED'::"ArticleStatus") >= 3`,
+              sql`(SELECT count(*) FROM "_ArticleToTag" JOIN "Article" ON "Article"."id" = "_ArticleToTag"."A" WHERE "_ArticleToTag"."B" = ${tagTable.id} AND "Article"."status" = 'PUBLISHED'::"ArticleStatus") >= 3 AND ${tagTable.slug} !~ '\\s'`,
             )
             .limit(2000)
         : Promise.resolve([]),

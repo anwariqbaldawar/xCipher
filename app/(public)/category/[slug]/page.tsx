@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getCategoryArticles } from "@/lib/cached-queries";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, isNull } from "drizzle-orm";
 import { category as categoryTable } from "@/lib/db/schema";
 import { siteConfig } from "@/lib/seo";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
@@ -25,9 +25,13 @@ interface Props {
 const getCategoryBySlug = cache(async (slug: string) => {
   const [cat] = await db.query.category.findMany({
     where: eq(categoryTable.slug, slug),
+    with: { parent: { columns: { slug: true, name: true } } },
     limit: 1,
   });
-  return cat || null;
+  if (!cat) return null;
+  const result = await db.execute(sql`SELECT count(*) FROM "Article" a WHERE (a."categoryId" = ${cat.id} OR a."categoryId" IN (SELECT id FROM "Category" WHERE "parentId" = ${cat.id})) AND a."status" = 'PUBLISHED'`);
+  const count = result.rows[0]?.count || 0;
+  return { ...cat, publishedArticleCount: Number(count) };
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -45,12 +49,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       canonical: `${siteConfig.url}/category/${slug}`,
     },
+    ...(cat.publishedArticleCount === 0 && { robots: { index: false, follow: true } }),
   };
 }
 
 export async function generateStaticParams() {
   try {
     const categories = await db.query.category.findMany({
+      where: isNull(categoryTable.parentId),
       columns: { slug: true },
     });
     return categories.map((category) => ({ slug: category.slug }));
@@ -72,6 +78,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   if (!category) {
     notFound();
+  }
+
+  if (category.parentId && category.parent?.slug) {
+    permanentRedirect(`/category/${category.parent.slug}?sub=${category.slug}`);
   }
 
   const subcategories = await db.query.category.findMany({

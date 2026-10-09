@@ -158,8 +158,8 @@ export default async function Home() {
                 className="object-cover"
               />
           </Link>
-          <Link href={`/category/${lead.category?.slug || "news"}`} className="kicker">
-            {lead.category?.name || "News"}
+          <Link href={`/category/${(lead.category as any)?.parent?.slug || lead.category?.slug || "news"}`} className="kicker">
+            {(lead.category as any)?.parent ? `${(lead.category as any).parent.name} / ${lead.category?.name}` : lead.category?.name || "News"}
           </Link>
           <h1>
             <Link href={`/article/${lead.slug}`}>

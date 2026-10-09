@@ -107,13 +107,20 @@ async function route(req: NextRequest, requestHeaders: Headers): Promise<NextRes
     const hostname = req.headers.get("host") || "";
     const pathname = url.pathname;
 
+    const isLocalDev = checkIsLocalDev(hostname, url.hostname);
+
+    if (!isLocalDev && hostname === "www.xsypher.com") {
+      url.protocol = "https:";
+      url.hostname = "xsypher.com";
+      url.port = "";
+      return NextResponse.redirect(url, 308);
+    }
+
     // Fast path: exit early for normal apex domain traffic that doesn't need protection or rewrites
     const isSpecialSubdomain = hostname.startsWith("admin.") || hostname.startsWith("preview.");
     if (!isSpecialSubdomain && !pathname.startsWith("/admin") && !pathname.startsWith("/api/auth")) {
       return NextResponse.next({ request: { headers: requestHeaders } });
     }
-
-    const isLocalDev = checkIsLocalDev(hostname, url.hostname);
 
     if (!isLocalDev) {
       if (hostname) url.hostname = hostname;

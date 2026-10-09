@@ -175,7 +175,7 @@ export default async function ArticlePage({ params }: Props) {
         "@type": "ListItem",
         "position": mainCat ? 3 : 2,
         "name": subCat ? subCat.name : catName,
-        "item": `${siteUrl}/category/${subCat ? subCat.slug : catSlug}`
+        "item": `${siteUrl}/category/${subCat ? `${catSlug}?sub=${subCat.slug}` : catSlug}`
       },
       {
         "@type": "ListItem",
@@ -215,7 +215,7 @@ export default async function ArticlePage({ params }: Props) {
                 {subCat && (
                   <>
                     <span className="sep">/</span>
-                    <Link href={`/category/${subCat.slug}`}>{subCat.name}</Link>
+                    <Link href={`/category/${catSlug}?sub=${subCat.slug}`}>{subCat.name}</Link>
                   </>
                 )}
                 <span className="sep">/</span>

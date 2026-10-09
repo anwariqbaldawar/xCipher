@@ -37,6 +37,12 @@ describe("middleware coverage", () => {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
   });
 
+  it("permanently redirects www.xsypher.com to apex domain", async () => {
+    const response = await middleware(new NextRequest("https://www.xsypher.com/article/story", { headers: { host: "www.xsypher.com" } }));
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://xsypher.com/article/story");
+  });
+
   it.each([
     ["xsypher.com", "/"],
     ["xsypher.com", "/article/story"],

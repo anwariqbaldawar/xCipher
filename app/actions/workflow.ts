@@ -23,6 +23,7 @@ import {
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
 import { CACHE_TAGS, articleTag, articleMutationTags } from "@/lib/cache-tags";
 import { deleteFileFromR2, deleteKeyFromR2, fetchFromR2, getR2Config } from "@/lib/storage";
+import { enqueueGoogleIndexing } from "@/lib/google-indexing";
 import { ArticleStatus, Role } from "@/lib/types";
 
 export type ActionResponse<T = any> =
@@ -550,6 +551,7 @@ export async function publishArticle(id: string): Promise<ActionResponse> {
     });
 
     await notifyPublished(articleData, actor.id);
+    await enqueueGoogleIndexing(articleData.slug, "URL_UPDATED");
 
     revalidatePath(`/admin/articles`);
     revalidatePath(`/admin/review`);
@@ -575,6 +577,7 @@ export async function unpublishArticle(id: string): Promise<ActionResponse> {
           
 
     await notifyUnpublished(articleData, actor.id);
+    await enqueueGoogleIndexing(articleData.slug, "URL_DELETED");
 
     revalidatePath(`/admin/articles`);
     revalidatePath(`/admin/editor/${id}`);
@@ -655,6 +658,7 @@ export async function archiveArticle(id: string): Promise<ActionResponse> {
             });
           
 
+    await enqueueGoogleIndexing(articleData.slug, "URL_DELETED");
     revalidatePath(`/admin/articles`);
     revalidatePath(`/admin/editor/${id}`);
     revalidateArticleRoutes(articleData as any);
@@ -756,6 +760,7 @@ export async function deleteArticlePermanently(id: string): Promise<ActionRespon
             await db.delete(article).where(eq(article.id, id));
           
 
+    await enqueueGoogleIndexing(articleData.slug, "URL_DELETED");
     revalidatePath(`/admin/articles`);
     revalidatePath(`/article/${articleData.slug}`);
     revalidatePath(`/`);
