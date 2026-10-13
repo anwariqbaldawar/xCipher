@@ -119,7 +119,11 @@ export function generateNewsArticleJsonLd(article: NewsArticleSource) {
       ...(author.slug ? { url: `${siteConfig.url}/author/${author.slug}` } : {}),
     }],
     "publisher": {
+      // SCH-001: keep the inline name/logo Google's NewsArticle requirements
+      // expect AND link the node to the site-wide Organization entity, so the
+      // Knowledge-Graph view sees one publisher rather than two.
       "@type": "Organization",
+      "@id": new URL("/#organization", siteConfig.url).href,
       "name": siteConfig.publisher,
       ...(siteConfig.logoUrl ? {
         "logo": {

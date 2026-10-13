@@ -35,8 +35,13 @@ export function generateOrganizationJsonLd() {
     name: siteConfig.name,
     url: siteConfig.url,
     logo: siteConfig.logoUrl,
-    // Only advertise profiles configured for this publication; do not invent handles.
-    sameAs: [`https://x.com/${siteConfig.twitter.replace(/^@/, "")}`],
+    // Only advertise profiles that verifiably exist for this publication; do
+    // not invent handles (SCH-001). Add LinkedIn/YouTube/Wikidata here as
+    // those profiles get created — each one strengthens the entity.
+    sameAs: [
+      `https://x.com/${siteConfig.twitter.replace(/^@/, "")}`,
+      "https://github.com/anwariqbaldawar",
+    ],
   };
 }
 
@@ -58,6 +63,9 @@ export function generatePersonJsonLd(author: AuthorIdentity) {
     url,
     jobTitle: author.role?.trim() || "Author",
     image: webUrl(author.avatar, siteConfig.url),
+    // SCH-001: tie authors to the publication entity so Knowledge-Graph tools
+    // resolve one publisher with named staff rather than a loose profile.
+    worksFor: { "@id": new URL("/#organization", siteConfig.url).href },
     sameAs: [...new Set(parseAuthorSocialLinks(author.socialLinks).map(link => link.url))],
   };
 }
