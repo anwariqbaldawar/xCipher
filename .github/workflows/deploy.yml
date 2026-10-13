@@ -35,6 +35,20 @@ jobs:
       - name: Production dependency security audit
         run: npm audit --omit=dev --package-lock-only --audit-level=high
 
+      # Audit BE-001: lint was never in CI while failing locally (351 errors,
+      # mostly no-explicit-any in tests). Non-blocking until that debt is
+      # cleared, then flip to a required gate.
+      - name: ESLint (non-blocking while debt is cleared)
+        run: npm run lint
+        continue-on-error: true
+
+      # Catches build breaks here instead of mid-deploy on the VPS (Audit BE-001).
+      - name: Production build gate
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://xsypher.com
+          NEXT_TELEMETRY_DISABLED: "1"
+
   deploy:
     name: Deploy to ARM64 Host
     needs: verify
@@ -57,13 +71,32 @@ jobs:
             source ~/.profile || true
             source ~/.bashrc || true
             
-            # Run idempotent schema migrations
-            npm install --production=false
+            # Reproducible install (Audit BE-002: npm install on the host could
+            # drift from the lockfile; npm ci fails loudly instead).
+            npm ci --no-audit --no-fund
             node migrate.mjs
-            
-            # Rebuild and restart containers
-            docker compose -f docker-compose.prod.yml build --no-cache
+
+            # Rebuild and restart containers. --no-cache dropped: layer caching
+            # is the point of the Dockerfile's staged build (Audit BE-002).
+            docker compose -f docker-compose.prod.yml build
             docker compose -f docker-compose.prod.yml up -d
-            
+
+            # Post-deploy health gate (Audit BE-002). Uses the LIVENESS endpoint,
+            # not /api/health, so a Redis blip does not roll back a good release
+            # (Audit BE-007). ~60s window.
+            ok=0
+            for i in $(seq 1 15); do
+              if curl -fsS --max-time 3 http://127.0.0.1:3000/api/healthz >/dev/null 2>&1; then
+                ok=1; break
+              fi
+              sleep 4
+            done
+            if [ "$ok" != "1" ]; then
+              echo "Post-deploy health gate FAILED — dumping recent web logs"
+              docker compose -f docker-compose.prod.yml logs --tail=80 xsypher-web
+              exit 1
+            fi
+            echo "Post-deploy health gate OK"
+
             # Prune dangling images to conserve disk space
             docker image prune -f
