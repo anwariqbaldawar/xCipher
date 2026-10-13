@@ -641,6 +641,8 @@ Owner ne "DO everything" approve kiya; yeh sab **`arena/80f1fb0b-xcipher` branch
 
 **Known limitation (build-time env):** `NEXT_PUBLIC_*` values build ke waqt inline hote hain. Docker build context se `.env.*` excluded hai aur `docker-compose.prod.yml` env sirf runtime par deta hai, is liye host ki `.env.production` build ko nahi milti. Iska asar: (a) Bing verification — file/DNS method use karein (fix applied); (b) Google verification meta tag aur (c) koi bhi `NEXT_PUBLIC_*` analytics ID — in ke liye ya DNS/hardcoded constant use karein, ya Docker build-args add karein (`fixes/bing-verification.md` section C).
 
+**Delivery docs (aap ke sawal ke jawab):** `docs/changes-report-roman-urdu.md` — har change ka "kya badla / kyun / na karne par nuqsaan / faida + example" (Roman Urdu); `docs/agent-deploy-runbook.md` — SSH-wale AI agent ko dene ke liye copy-paste prompt (rollback point, verification matrix, hard do-not list, report format).
+
 **Deferred (deliberately):** CRW-002 crawlable pagination (staging + real DB data ke saath test karna hai — `/latest` aur `/category` ka render model badalta hai).
 
 ### 12.6 Quality check (pre-delivery)
