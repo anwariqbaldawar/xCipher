@@ -827,6 +827,15 @@ export default function ArticleEditor({
         if (editor.storage.characterCount.words() < 50) {
           throw new Error("Pre-flight Check Failed: Article must be at least 50 words.");
         }
+        // Audit CMS-001: accessibility gate. A featured image without alt text
+        // shipped for weeks because the field was optional; article-route
+        // falls back to the title, but a descriptive alt is the WCAG 2.2
+        // requirement and only the editor knows what the image shows.
+        const featuredImage = watch("img") || getValues("img");
+        const featuredAlt = (watch("featuredImageAlt") || getValues("featuredImageAlt") || "").trim();
+        if (featuredImage && !featuredAlt) {
+          throw new Error("Pre-flight Check Failed: Featured image alt text is required for accessibility.");
+        }
       }
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);

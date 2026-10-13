@@ -140,7 +140,7 @@ export const DataChart = Node.create({
               let foundData = false;
               for (const line of lines) {
                 // Remove unicode blocks, symbols
-                let clean = line.replace(/[█░▓▒▄▀\[\]\|]/g, ' ').trim();
+                const clean = line.replace(/[█░▓▒▄▀\[\]\|]/g, ' ').trim();
                 
                 // Find the first numeric block, optionally with +, -, $, %
                 const numMatch = clean.match(/[-+]?\$?\d+(\.\d+)?[%]?/);

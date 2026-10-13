@@ -35,6 +35,50 @@ const ALLOWED_FRAME_HOSTS = [
   "https://www.google.com",
 ].join(" ");
 
+// SEC-002: connect-src was `'self' https:` — any HTTPS endpoint could receive
+// XHR/fetch data, so an injection had an open exfiltration channel. This is the
+// explicit allowlist, built from Google's own CSP guidance for AdSense/Google
+// Ads (developers.google.com/tag-platform/security/guides/csp) plus the third
+// parties this site actually loads. Google uses regional adservice domains, so
+// the locales our readers are in are listed explicitly (CSP cannot wildcard a
+// TLD). If a new integration needs fetch access, add its host here — do not
+// revert to `https:`.
+const ALLOWED_CONNECT_HOSTS = [
+  // Google ad + measurement surfaces (documented set)
+  "https://pagead2.googlesyndication.com",
+  "https://tpc.googlesyndication.com",
+  "https://www.googletagmanager.com",
+  "https://www.googleadservices.com",
+  "https://partner.googleadservices.com",
+  "https://googleads.g.doubleclick.net",
+  "https://ad.doubleclick.net",
+  "https://*.g.doubleclick.net",
+  "https://www.google.com",
+  "https://*.google.com",
+  "https://*.google-analytics.com",
+  "https://*.adtrafficquality.google",
+  "https://fundingchoicesmessages.google.com",
+  // Regional AdSense domains for our main audiences
+  "https://*.google.com.pk",
+  "https://*.google.co.uk",
+  "https://*.google.co.in",
+  "https://*.google.ca",
+  "https://*.google.com.au",
+  "https://*.google.ie",
+  "https://*.google.de",
+  "https://*.google.com.sg",
+  "https://*.google.ae",
+  "https://*.google.com.sa",
+  // First-party services
+  "https://*.sentry.io",
+  "https://cloudflareinsights.com",
+  "https://static.cloudflareinsights.com",
+  // Embeds
+  "https://www.tiktok.com",
+  "https://react-tweet.vercel.app",
+  "https://*.twimg.com",
+].join(" ");
+
 function buildCsp(nonce: string, isStaticPublic: boolean): string {
   const isDev = process.env.NODE_ENV === "development";
   const scriptSrc = isStaticPublic
@@ -53,7 +97,7 @@ function buildCsp(nonce: string, isStaticPublic: boolean): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "connect-src 'self' https:",
+    `connect-src 'self' ${ALLOWED_CONNECT_HOSTS}`,
   ].join("; ");
 }
 

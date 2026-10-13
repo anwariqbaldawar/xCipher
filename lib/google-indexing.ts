@@ -100,8 +100,15 @@ export async function enqueueGoogleIndexing(slug: string, type: "URL_UPDATED" | 
       removeOnComplete: true,
       removeOnFail: 10,
     });
-    // Ping IndexNow
-    await fetch(`https://api.indexnow.org/indexnow?url=${encodeURIComponent(url)}&key=${process.env.INDEXNOW_KEY || "xsypher-key"}`).catch(() => {});
+    // Ping IndexNow. CRW-005: the old `|| "xsypher-key"` fallback meant every
+    // deployment missing the env var pinged with a guessable shared key, which
+    // lets anyone submit URLs as this domain. Skip loudly instead.
+    const indexNowKey = process.env.INDEXNOW_KEY?.trim();
+    if (indexNowKey) {
+      await fetch(`https://api.indexnow.org/indexnow?url=${encodeURIComponent(url)}&key=${indexNowKey}`).catch(() => {});
+    } else {
+      console.warn("[indexnow] INDEXNOW_KEY is not set — URL ping skipped. Generate one (openssl rand -hex 16) and add it to .env.production on the host.");
+    }
   } catch (e) {
     await notifyGoogleIndexing(url, type);
   }

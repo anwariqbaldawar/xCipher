@@ -1,8 +1,14 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { ArrowUpRight, Award, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
-import { Tweet } from 'react-tweet';
+
+// PERF-002: react-tweet (and its embed runtime) sat in the article's initial
+// bundle even though an X post only renders after the reader expands the
+// preview. Loading it on demand keeps the article first-load JS smaller; the
+// wrapper (button/placeholder) is unaffected and no core content is lazy.
+const Tweet = dynamic(() => import('react-tweet').then((m) => m.Tweet), { ssr: false });
 import { type EditorialBlock, socialPost } from '@/lib/editorial-blocks';
 import { optimizeImageUrl } from '@/lib/image-url';
 import TableOfContents from './TableOfContents';

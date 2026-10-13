@@ -257,7 +257,7 @@ export async function syncAllExistingAuthors() {
       // 2. If no existing author found, create one
       if (!authorIdToLink) {
         const name = u.name || `User ${u.id.substring(0, 6)}`;
-        let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `user-${u.id.substring(0, 6)}`;
+        const baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || `user-${u.id.substring(0, 6)}`;
         
         // Ensure slug uniqueness
         let uniqueSlug = baseSlug;

@@ -3,6 +3,9 @@ import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 
 export const siteConfig = {
   name: "xSypher",
+  // Single source of truth for the brand line: used by the <title> template,
+  // the RSS channel and anywhere else the positioning is quoted (CON-002).
+  tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
   twitter: "@xSypherTech",
@@ -116,7 +119,11 @@ export function generateNewsArticleJsonLd(article: NewsArticleSource) {
       ...(author.slug ? { url: `${siteConfig.url}/author/${author.slug}` } : {}),
     }],
     "publisher": {
+      // SCH-001: keep the inline name/logo Google's NewsArticle requirements
+      // expect AND link the node to the site-wide Organization entity, so the
+      // Knowledge-Graph view sees one publisher rather than two.
       "@type": "Organization",
+      "@id": new URL("/#organization", siteConfig.url).href,
       "name": siteConfig.publisher,
       ...(siteConfig.logoUrl ? {
         "logo": {

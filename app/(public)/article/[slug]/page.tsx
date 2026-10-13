@@ -42,6 +42,7 @@ const getPublishedArticleBySlug = cache(async (slug: string) => {
       author: true, role: true, views: true, status: true, createdAt: true,
       publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true,
       isAnonymous: true, readingTime: true, seoTitle: true, seoDesc: true,
+      metaTitle: true, metaDescription: true, ogImage: true, canonicalUrl: true,
     },
     with: {
       category: { with: { parent: true } },
@@ -79,17 +80,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const authorName = getArticleAuthor(article).name;
   const catName = article.category?.parent?.name || article.category?.name || "News";
   const ogParams = new URLSearchParams();
-  ogParams.set("title", article.seoTitle || article.title);
+  ogParams.set("title", article.metaTitle || article.seoTitle || article.title);
   ogParams.set("author", authorName);
   ogParams.set("category", catName);
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
   const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
 
   return constructMetadata({
-    title: article.seoTitle || article.title,
-    description: article.seoDesc || article.deck || "",
-    image: ogUrl,
-    canonical: `/article/${article.slug}`,
+    // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription
+    // (they drive the character counters and the Google SERP preview). This call
+    // previously read only the legacy seoTitle/seoDesc fields, so anything typed
+    // into the primary inputs never shipped. Primary first, legacy fallback.
+    // ogImage and canonicalUrl were saved but never consumed — now wired too.
+    title: article.metaTitle || article.seoTitle || article.title,
+    description: article.metaDescription || article.seoDesc || article.deck || "",
+    image: article.ogImage || ogUrl,
+    canonical: article.canonicalUrl || `/article/${article.slug}`,
     type: "article",
     publishedTime: article.publishedAt ? article.publishedAt.toISOString() : article.createdAt.toISOString(),
     modifiedTime: article.updatedAt.toISOString(),

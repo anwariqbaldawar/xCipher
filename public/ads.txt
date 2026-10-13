@@ -1,0 +1,6 @@
+# ads.txt — xsypher.com (audit AD-001)
+# AdSense authorised seller record. REPLACE pub-XXXXXXXXXXXXXXXX with the real
+# publisher ID from AdSense → Account → Account information (format: pub-16 digits).
+# Kept served (200) so the ads.txt crawler stops reporting the 404; the record
+# only validates once the real ID is in place.
+google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0

@@ -6,7 +6,17 @@ import { hasRemoteMatch } from 'next/dist/shared/lib/match-remote-pattern';
 
 const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
 vi.mock('@/lib/db', () => ({ db: { query: { article: { findMany } } } }));
-vi.mock('@/lib/seo', () => ({ siteConfig: { url: 'https://xsypher.com' } }));
+// Fixture mirrors the real siteConfig fields the feed route consumes; the RSS
+// channel title/description now come from siteConfig (audit CON-002), so the
+// mock must carry `name`/`tagline`/`description` too.
+vi.mock('@/lib/seo', () => ({
+  siteConfig: {
+    url: 'https://xsypher.com',
+    name: 'xSypher',
+    tagline: 'Independent Technology News, Analysis and Reviews',
+    description: 'xSypher is an independent technology publication.',
+  },
+}));
 
 afterEach(() => {
   vi.unstubAllEnvs();

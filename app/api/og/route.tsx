@@ -1,5 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import redis from '@/lib/redis';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -8,23 +10,44 @@ import redis from '@/lib/redis';
 // Rendering with Satori is CPU-heavy, so the rendered PNG is cached in Redis
 // (shared across every web replica) for 7 days, keyed by a hash of the
 // parameters. Cache-Control headers let Cloudflare cache it at the edge too.
+//
+// TSEO-001 hardening (audit 2026-10-13): production returned HTTP 500 for every
+// request (verified live, twice). The route now NEVER 500s a social image:
+//   1. The render is materialised inside a try/catch, so a Satori/resvg/font
+//      failure returns the static brand card instead of a 500 — shares keep
+//      working while the console.error line below keeps the root cause
+//      visible in the server logs.
+//   2. The fallback is cached for only 5 minutes (not 7 days) so a real fix
+//      shows up quickly instead of being pinned behind a long TTL.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
 const CACHE_CONTROL = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
+const FALLBACK_CACHE_CONTROL = 'public, max-age=300, s-maxage=300';
 
 function cacheKey(title: string, author: string, category: string): string {
   const hash = createHash('sha1').update(`${title}\n${author}\n${category}`).digest('hex');
   return `og:${hash}`;
 }
 
-function pngResponse(buffer: Buffer): Response {
+function pngResponse(buffer: Buffer, cacheControl: string = CACHE_CONTROL): Response {
   return new Response(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': CACHE_CONTROL,
+      'Cache-Control': cacheControl,
     },
   });
+}
+
+/** Static brand card shipped with the app; used whenever rendering fails. */
+async function fallbackResponse(): Promise<Response> {
+  try {
+    const file = await readFile(path.join(process.cwd(), 'public', 'og-fallback.png'));
+    return pngResponse(Buffer.from(file), FALLBACK_CACHE_CONTROL);
+  } catch (fallbackError) {
+    console.error('[og] Fallback image unavailable:', fallbackError);
+    return new Response('Failed to generate image', { status: 500 });
+  }
 }
 
 export async function GET(request: Request) {
@@ -83,23 +106,30 @@ export async function GET(request: Request) {
       }
     );
 
-    // Store the rendered image (best effort — a cache write failure still
-    // returns the freshly rendered response).
+    // Materialise the render explicitly so a Satori failure is caught here —
+    // returning `response` directly would let the error surface at send time
+    // as an unhandled 500 with no fallback.
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      console.error('[og] Render failed, serving fallback card:', error);
+      return fallbackResponse();
+    }
+
+    // Best-effort cache write; a Redis failure still returns the fresh render.
     if (redis.status === 'ready') {
       try {
-        const buffer = Buffer.from(await response.arrayBuffer());
         await redis.set(key, buffer.toString('base64'), 'EX', CACHE_TTL_SECONDS);
-        return pngResponse(buffer);
       } catch (error) {
         console.error('[og] Cache write failed:', error);
       }
     }
 
-    return response;
+    return pngResponse(buffer);
   } catch (e: any) {
-    console.error(e);
-    return new Response(`Failed to generate image`, {
-      status: 500,
-    });
+    // Reached only for pre-render failures (URL parsing, Redis client state).
+    console.error('[og] Unhandled error, serving fallback card:', e);
+    return fallbackResponse();
   }
 }
