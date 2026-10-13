@@ -49,6 +49,8 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
             primaryTextColor: isDark ? '#ffffff' : '#111111',
             lineColor: isDark ? '#e0e0e0' : '#333333',
             edgeLabelBackground: 'transparent',
+            labelBackground: 'transparent',
+            tertiaryColor: 'transparent',
           },
           themeCSS: `
             .node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect { 
@@ -68,15 +70,37 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
               /* Inherit Mermaid's nowrap/break-spaces measurement policy. */
               white-space: inherit !important;
             }
-            .edgeLabel rect {
+            /* Remove box and background completely from edge labels */
+            .edgeLabel,
+            .edgeLabel *,
+            .edgeLabel span,
+            .edgeLabel p,
+            .edgeLabel div,
+            .edgeLabel rect,
+            .label rect,
+            .labelBkg,
+            rect.label-container {
+              background: transparent !important;
+              background-color: transparent !important;
               fill: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+              outline: none !important;
             }
-            .edgeLabel text {
-              fill: var(--ink, #111111) !important;
+            /* Edge label text: dark mode white, light mode black */
+            .edgeLabel,
+            .edgeLabel *,
+            .edgeLabel span,
+            .edgeLabel p,
+            .edgeLabel div,
+            .edgeLabel text,
+            .edgeLabel tspan {
+              color: ${isDark ? '#ffffff' : '#111111'} !important;
+              fill: ${isDark ? '#ffffff' : '#111111'} !important;
               font-weight: 500 !important;
             }
             .edgePath path, .flowchart-link {
-              stroke: var(--ink, #333333) !important;
+              stroke: ${isDark ? '#e0e0e0' : '#333333'} !important;
             }
           `,
           fontFamily: "var(--f-ui), sans-serif",
@@ -124,6 +148,77 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
           .mermaid-svg-container svg {
             max-width: 100% !important;
             height: auto !important;
+          }
+          /* Remove background box from line edge labels */
+          .mermaid-svg-container .edgeLabel,
+          .mermaid-svg-container .edgeLabel *,
+          .mermaid-svg-container .edgeLabel rect,
+          .mermaid-svg-container .label rect,
+          .mermaid-svg-container .labelBkg,
+          .mermaid-svg-container rect.label-container,
+          .mermaid-wrapper .edgeLabel,
+          .mermaid-wrapper .edgeLabel *,
+          .mermaid-wrapper .edgeLabel rect,
+          .mermaid-wrapper .label rect,
+          .mermaid-wrapper .labelBkg,
+          .mermaid-wrapper rect.label-container {
+            background: transparent !important;
+            background-color: transparent !important;
+            fill: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+          }
+          /* Light mode text: black */
+          .mermaid-svg-container .edgeLabel,
+          .mermaid-svg-container .edgeLabel *,
+          .mermaid-svg-container .edgeLabel text,
+          .mermaid-svg-container .edgeLabel tspan,
+          .mermaid-svg-container .edgeLabel span,
+          .mermaid-svg-container .edgeLabel p,
+          .mermaid-svg-container .edgeLabel div,
+          .mermaid-wrapper .edgeLabel,
+          .mermaid-wrapper .edgeLabel *,
+          .mermaid-wrapper .edgeLabel text,
+          .mermaid-wrapper .edgeLabel tspan,
+          .mermaid-wrapper .edgeLabel span,
+          .mermaid-wrapper .edgeLabel p,
+          .mermaid-wrapper .edgeLabel div {
+            color: #111111 !important;
+            fill: #111111 !important;
+            font-weight: 500 !important;
+          }
+          /* Dark mode text: white */
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel *,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel text,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel tspan,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel span,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel p,
+          :root[data-theme="dark"] .mermaid-svg-container .edgeLabel div,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel *,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel text,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel tspan,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel span,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel p,
+          :root[data-theme="dark"] .mermaid-wrapper .edgeLabel div,
+          .dark .mermaid-svg-container .edgeLabel,
+          .dark .mermaid-svg-container .edgeLabel *,
+          .dark .mermaid-svg-container .edgeLabel text,
+          .dark .mermaid-svg-container .edgeLabel tspan,
+          .dark .mermaid-svg-container .edgeLabel span,
+          .dark .mermaid-svg-container .edgeLabel p,
+          .dark .mermaid-svg-container .edgeLabel div,
+          .dark .mermaid-wrapper .edgeLabel,
+          .dark .mermaid-wrapper .edgeLabel *,
+          .dark .mermaid-wrapper .edgeLabel text,
+          .dark .mermaid-wrapper .edgeLabel tspan,
+          .dark .mermaid-wrapper .edgeLabel span,
+          .dark .mermaid-wrapper .edgeLabel p,
+          .dark .mermaid-wrapper .edgeLabel div {
+            color: #ffffff !important;
+            fill: #ffffff !important;
           }
         `}</style>
       </div>

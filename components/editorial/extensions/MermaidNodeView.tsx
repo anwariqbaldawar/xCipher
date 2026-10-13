@@ -123,6 +123,8 @@ export const MermaidNodeView = (props: any) => {
             primaryTextColor: isDark ? '#ffffff' : '#111111',
             lineColor: isDark ? '#e0e0e0' : '#333333',
             edgeLabelBackground: 'transparent',
+            labelBackground: 'transparent',
+            tertiaryColor: 'transparent',
           },
           themeCSS: `
             .node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect {
@@ -142,15 +144,37 @@ export const MermaidNodeView = (props: any) => {
               /* Inherit Mermaid's nowrap/break-spaces measurement policy. */
               white-space: inherit !important;
             }
-            .edgeLabel rect {
+            /* Remove box and background completely from edge labels */
+            .edgeLabel,
+            .edgeLabel *,
+            .edgeLabel span,
+            .edgeLabel p,
+            .edgeLabel div,
+            .edgeLabel rect,
+            .label rect,
+            .labelBkg,
+            rect.label-container {
+              background: transparent !important;
+              background-color: transparent !important;
               fill: transparent !important;
+              border: none !important;
+              box-shadow: none !important;
+              outline: none !important;
             }
-            .edgeLabel text {
-              fill: var(--ink, #111111) !important;
+            /* Edge label text: dark mode white, light mode black */
+            .edgeLabel,
+            .edgeLabel *,
+            .edgeLabel span,
+            .edgeLabel p,
+            .edgeLabel div,
+            .edgeLabel text,
+            .edgeLabel tspan {
+              color: ${isDark ? '#ffffff' : '#111111'} !important;
+              fill: ${isDark ? '#ffffff' : '#111111'} !important;
               font-weight: 500 !important;
             }
             .edgePath path, .flowchart-link {
-              stroke: var(--ink, #333333) !important;
+              stroke: ${isDark ? '#e0e0e0' : '#333333'} !important;
             }
           `,
           fontFamily: "var(--f-ui), sans-serif",

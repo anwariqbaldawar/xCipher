@@ -7875,20 +7875,127 @@ body.is-article .prose pre {
 .mermaid-wrapper foreignObject {
     overflow: visible !important;
 }
+/* Remove background box completely from line edge labels */
 .mermaid-svg-container .edgeLabel,
-.mermaid-wrapper .edgeLabel {
+.mermaid-svg-container .edgeLabel *,
+.mermaid-svg-container .edgeLabel rect,
+.mermaid-svg-container .label rect,
+.mermaid-svg-container .labelBkg,
+.mermaid-svg-container rect.label-container,
+.mermaid-wrapper .edgeLabel,
+.mermaid-wrapper .edgeLabel *,
+.mermaid-wrapper .edgeLabel rect,
+.mermaid-wrapper .label rect,
+.mermaid-wrapper .labelBkg,
+.mermaid-wrapper rect.label-container,
+.mermaid .edgeLabel,
+.mermaid .edgeLabel *,
+.mermaid .edgeLabel rect,
+.mermaid .label rect,
+.mermaid .labelBkg {
+    background: transparent !important;
     background-color: transparent !important;
+    fill: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
 }
+
+/* Light mode text: black */
+.mermaid-svg-container .edgeLabel,
+.mermaid-svg-container .edgeLabel *,
 .mermaid-svg-container .edgeLabel text,
-.mermaid-wrapper .edgeLabel text {
-    fill: var(--ink, #111111) !important;
+.mermaid-svg-container .edgeLabel tspan,
+.mermaid-svg-container .edgeLabel span,
+.mermaid-svg-container .edgeLabel p,
+.mermaid-svg-container .edgeLabel div,
+.mermaid-wrapper .edgeLabel,
+.mermaid-wrapper .edgeLabel *,
+.mermaid-wrapper .edgeLabel text,
+.mermaid-wrapper .edgeLabel tspan,
+.mermaid-wrapper .edgeLabel span,
+.mermaid-wrapper .edgeLabel p,
+.mermaid-wrapper .edgeLabel div,
+.mermaid .edgeLabel,
+.mermaid .edgeLabel *,
+.mermaid .edgeLabel text,
+.mermaid .edgeLabel tspan,
+.mermaid .edgeLabel span,
+.mermaid .edgeLabel p,
+.mermaid .edgeLabel div {
+    color: #111111 !important;
+    fill: #111111 !important;
     font-weight: 500 !important;
 }
+
+/* Dark mode text: white */
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel *,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel text,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel tspan,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel span,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel p,
+:root[data-theme="dark"] .mermaid-svg-container .edgeLabel div,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel *,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel text,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel tspan,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel span,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel p,
+:root[data-theme="dark"] .mermaid-wrapper .edgeLabel div,
+:root[data-theme="dark"] .mermaid .edgeLabel,
+:root[data-theme="dark"] .mermaid .edgeLabel *,
+:root[data-theme="dark"] .mermaid .edgeLabel text,
+:root[data-theme="dark"] .mermaid .edgeLabel tspan,
+:root[data-theme="dark"] .mermaid .edgeLabel span,
+:root[data-theme="dark"] .mermaid .edgeLabel p,
+:root[data-theme="dark"] .mermaid .edgeLabel div,
+.dark .mermaid-svg-container .edgeLabel,
+.dark .mermaid-svg-container .edgeLabel *,
+.dark .mermaid-svg-container .edgeLabel text,
+.dark .mermaid-svg-container .edgeLabel tspan,
+.dark .mermaid-svg-container .edgeLabel span,
+.dark .mermaid-svg-container .edgeLabel p,
+.dark .mermaid-svg-container .edgeLabel div,
+.dark .mermaid-wrapper .edgeLabel,
+.dark .mermaid-wrapper .edgeLabel *,
+.dark .mermaid-wrapper .edgeLabel text,
+.dark .mermaid-wrapper .edgeLabel tspan,
+.dark .mermaid-wrapper .edgeLabel span,
+.dark .mermaid-wrapper .edgeLabel p,
+.dark .mermaid-wrapper .edgeLabel div,
+.dark .mermaid .edgeLabel,
+.dark .mermaid .edgeLabel *,
+.dark .mermaid .edgeLabel text,
+.dark .mermaid .edgeLabel tspan,
+.dark .mermaid .edgeLabel span,
+.dark .mermaid .edgeLabel p,
+.dark .mermaid .edgeLabel div {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+
 .mermaid-svg-container .edgePath path,
 .mermaid-svg-container .flowchart-link,
 .mermaid-wrapper .edgePath path,
-.mermaid-wrapper .flowchart-link {
+.mermaid-wrapper .flowchart-link,
+.mermaid .edgePath path,
+.mermaid .flowchart-link {
     stroke: var(--ink, #333333) !important;
+}
+:root[data-theme="dark"] .mermaid-svg-container .edgePath path,
+:root[data-theme="dark"] .mermaid-svg-container .flowchart-link,
+:root[data-theme="dark"] .mermaid-wrapper .edgePath path,
+:root[data-theme="dark"] .mermaid-wrapper .flowchart-link,
+:root[data-theme="dark"] .mermaid .edgePath path,
+:root[data-theme="dark"] .mermaid .flowchart-link,
+.dark .mermaid-svg-container .edgePath path,
+.dark .mermaid-svg-container .flowchart-link,
+.dark .mermaid-wrapper .edgePath path,
+.dark .mermaid-wrapper .flowchart-link,
+.dark .mermaid .edgePath path,
+.dark .mermaid .flowchart-link {
+    stroke: #e0e0e0 !important;
 }
 .mermaid-svg-container div,
 .mermaid-wrapper div {
