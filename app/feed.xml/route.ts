@@ -57,9 +57,9 @@ export async function GET() {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>xSypher - Advanced Tech &amp; Security Insights</title>
+    <title>${siteConfig.name} — ${escapeXml(siteConfig.tagline)}</title>
     <link>${siteUrl}</link>
-    <description>Original reporting, hands-on reviews and analysis shaping modern life.</description>
+    <description>${escapeXml(siteConfig.description)}</description>
     <language>en-us</language>
     <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml" />
 ${rssItems}

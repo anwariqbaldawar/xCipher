@@ -60,8 +60,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => {
         }
         
         if (!user.isActive) {
+          // SEC-004: keep the server-side trail, but return the same generic
+          // message as a wrong password so the response cannot be used to
+          // confirm that an email belongs to a deactivated account.
           console.warn(`[auth] Inactive user attempted login: ${credentials.email}`);
-          throw new Error("Account is deactivated.");
+          throw new Error("Invalid email or password");
         }
         
         if (!user.password) {

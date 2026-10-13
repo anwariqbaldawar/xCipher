@@ -3,6 +3,9 @@ import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 
 export const siteConfig = {
   name: "xSypher",
+  // Single source of truth for the brand line: used by the <title> template,
+  // the RSS channel and anywhere else the positioning is quoted (CON-002).
+  tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
   twitter: "@xSypherTech",

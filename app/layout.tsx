@@ -68,7 +68,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteConfig.url,
   },
-  title: `${siteConfig.name} — Independent Technology News, Analysis and Reviews`,
+  title: `${siteConfig.name} — ${siteConfig.tagline}`,
   description: siteConfig.description,
   icons: {
     icon: [
@@ -79,6 +79,12 @@ export const metadata: Metadata = {
   },
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+    // MON-002: Bing Webmaster Tools verification. Next's Verification type has
+    // no `bing` key, so it goes through `other` (msvalidate.01) and is only
+    // emitted when the env var is set.
+    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
+      ? { other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
+      : {}),
   },
 };
 

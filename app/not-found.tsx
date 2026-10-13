@@ -4,6 +4,14 @@ import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import ScrollReveal from "@/components/common/ScrollReveal";
 
+// CRW-006: without its own metadata this route inherited the root layout's
+// homepage title, so a 404 URL previewed as the homepage in any surface that
+// reads <title> before honouring the status code.
+export const metadata = {
+  title: "Page not found — xSypher",
+  robots: { index: false, follow: true },
+};
+
 export default function GlobalNotFound() {
   return (
     <>
