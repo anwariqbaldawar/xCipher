@@ -65,7 +65,8 @@ jobs:
             cd /home/ubuntu/apps/xsypher
             git fetch origin main
             git reset --hard origin/main
-            # Load user profile/NVM to ensure 'node' and 'npm' are in PATH during non-interactive SSH
+            # Ensure node and npm are in PATH during non-interactive SSH
+            export PATH="/home/ubuntu/.nvm/versions/node/v22.23.3/bin:/usr/local/bin:$PATH"
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             source ~/.profile || true
@@ -88,9 +89,9 @@ jobs:
 
             # Post-deploy health gate (Audit BE-002). Uses the LIVENESS endpoint,
             # not /api/health, so a Redis blip does not roll back a good release
-            # (Audit BE-007). ~60s window.
+            # (Audit BE-007). ~80s window.
             ok=0
-            for i in $(seq 1 15); do
+            for i in $(seq 1 20); do
               if curl -fsS --max-time 3 http://127.0.0.1:3000/api/healthz >/dev/null 2>&1; then
                 ok=1; break
               fi

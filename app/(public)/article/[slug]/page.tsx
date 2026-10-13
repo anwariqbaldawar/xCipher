@@ -12,21 +12,31 @@ import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
 import { constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
 import { getArticleAuthor } from "@/lib/personas";
+import nextDynamic from "next/dynamic";
 import { serializeJsonLd, withEditorialSchema } from "@/lib/article-schema";
 import ArticleBody from "@/components/article/ArticleBody";
-import ArticleSidebar from "@/components/article/ArticleSidebar";
-import TableOfContents from "@/components/article/TableOfContents";
 import StoryCard from "@/components/article/StoryCard";
-import CommentsSection from "@/components/article/CommentsSection";
 import ProgressBar from "@/components/article/ProgressBar";
 import ListenButton from "@/components/article/ListenButton";
 import { fetchFromR2 } from "@/lib/storage";
 import ArticleMobileToolbar from "@/components/article/ArticleMobileToolbar";
 import ViewCounter from "@/components/article/ViewCounter";
 import ActiveCategorySetter from "@/components/layout/ActiveCategorySetter";
-import ShareRow from "@/components/article/ShareRow";
 import ArticleByline from "@/components/article/ArticleByline";
 import AuthorBox from "@/components/article/AuthorBox";
+
+const CommentsSection = nextDynamic(() => import("@/components/article/CommentsSection"), {
+  loading: () => (
+    <section id="comments" className="comments scroll-mt-28" aria-labelledby="cmtH">
+      <h2 id="cmtH">Discussion</h2>
+      <p style={{ color: "var(--ink-muted)", fontSize: "14px" }}>Loading discussion…</p>
+    </section>
+  ),
+});
+
+const ShareRow = nextDynamic(() => import("@/components/article/ShareRow"));
+const ArticleSidebar = nextDynamic(() => import("@/components/article/ArticleSidebar"));
+const TableOfContents = nextDynamic(() => import("@/components/article/TableOfContents"));
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -257,13 +267,13 @@ export default async function ArticlePage({ params }: Props) {
               </div>
               
               <figure className="art-hero mb-0">
-                <div className="ph r-169 relative w-full overflow-hidden rounded-xl">
+                <div className="ph r-169 relative w-full overflow-hidden rounded-xl aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
                   <Image 
                     src={getImgSrc(article.img || "", 1400, 788)} 
                     alt={article.featuredImageAlt || article.title}
                     fill 
                     sizes="(max-width: 640px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 83vw, 900px"
-                    priority 
+                    priority={true} 
                     className="object-cover"
                   />
                 </div>

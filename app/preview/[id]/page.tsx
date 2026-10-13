@@ -207,12 +207,12 @@ export default async function PreviewPage({ params }: Props) {
               </div>
               
               <figure className="art-hero mb-8">
-                <div className="ph r-169 relative w-full overflow-hidden rounded-xl">
+                <div className="ph r-169 relative w-full overflow-hidden rounded-xl aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
                   <Image 
                     src={getImgSrc(article.img || "", 1400, 788)} 
                     alt={article.title} 
                     fill 
-                    priority 
+                    priority={true} 
                     className="object-cover"
                   />
                 </div>
