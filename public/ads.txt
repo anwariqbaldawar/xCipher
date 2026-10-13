@@ -1,6 +1,10 @@
-# ads.txt — xsypher.com (audit AD-001)
-# AdSense authorised seller record. REPLACE pub-XXXXXXXXXXXXXXXX with the real
-# publisher ID from AdSense → Account → Account information (format: pub-16 digits).
-# Kept served (200) so the ads.txt crawler stops reporting the 404; the record
-# only validates once the real ID is in place.
-google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+# ads.txt — xsypher.com
+#
+# No advertising partner is enabled on this site yet (no AdSense account).
+# An empty records section is a valid ads.txt and declares "no authorised
+# sellers". A placeholder publisher ID would be an INVALID record and can
+# suppress demand — do not publish one until AdSense exists.
+#
+# WHEN ADSENSE IS APPROVED:
+#   replace the line below with the real record from AdSense -> Account:
+# google.com, pub-[16_DIGITS_HERE], DIRECT, f08c47fec0942fa0

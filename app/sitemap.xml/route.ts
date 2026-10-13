@@ -13,7 +13,7 @@ import { sql } from "drizzle-orm";
 //                           with the <news:news> namespace Google requires)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 const SITEMAP_ARTICLE_LIMIT = 45000;
 

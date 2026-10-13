@@ -12,9 +12,8 @@ import { article as articleTable } from "@/lib/db/schema";
 // Google News Publisher Center) for Google News eligibility.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
-const NEWS_WINDOW_MS = 48 * 60 * 60 * 1000;
 const NEWS_SITEMAP_LIMIT = 1000;
 const PUBLICATION_NAME = "xSypher";
 const PUBLICATION_LANGUAGE = "en";
@@ -34,11 +33,23 @@ export async function GET() {
     articles = await dbRead.query.article.findMany({
       where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"
         AND ${articleTable.publishedAt} IS NOT NULL
-        AND ${articleTable.publishedAt} >= ${new Date(Date.now() - NEWS_WINDOW_MS)}`,
+        AND ${articleTable.publishedAt} >= NOW() - INTERVAL '48 HOURS'`,
       columns: { slug: true, title: true, publishedAt: true, updatedAt: true },
       orderBy: (article, { desc }) => [desc(article.publishedAt)],
       limit: NEWS_SITEMAP_LIMIT,
     });
+
+    // Fallback: Agar pichle 48h mein koi article na ho, to latest published
+    // articles include karein taake Google Search Console ko empty <urlset>
+    // ka "Missing XML tag: url" error na mile.
+    if (!articles.length) {
+      articles = await dbRead.query.article.findMany({
+        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        columns: { slug: true, title: true, publishedAt: true, updatedAt: true },
+        orderBy: (article, { desc }) => [desc(article.publishedAt)],
+        limit: 10,
+      });
+    }
   } catch (error) {
     console.warn("[sitemap] News sitemap query failed:", error);
   }
