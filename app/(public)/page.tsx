@@ -153,7 +153,7 @@ export default async function Home() {
                 src={getImgSrc(lead.img || "", 1280, 720)} 
                 alt={lead.alt || lead.title} 
                 fill
-                sizes="(max-width: 900px) 100vw, 66vw"
+                sizes="(max-width: 640px) 100vw, (max-width: 900px) 100vw, 66vw"
                 priority 
                 className="object-cover"
               />

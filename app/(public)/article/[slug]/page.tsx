@@ -262,7 +262,7 @@ export default async function ArticlePage({ params }: Props) {
                     src={getImgSrc(article.img || "", 1400, 788)} 
                     alt={article.featuredImageAlt || article.title}
                     fill 
-                    sizes="(max-width: 1023px) 100vw, (max-width: 1279px) 83vw, 900px"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 83vw, 900px"
                     priority 
                     className="object-cover"
                   />
