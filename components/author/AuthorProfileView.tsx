@@ -16,8 +16,28 @@ function prepareBioHtml(html: string | null | undefined): string {
   const sanitized = sanitizeBioHtml(html);
   if (!sanitized) return "";
 
-  // Wrap any table in a responsive scroll container so wide tables never blow out mobile screens
-  return sanitized.replace(/(<table(?:\s+[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
+  // 1. Clean empty paragraphs & stray breaks inside table cells that create awkward blank vertical gaps
+  let cleaned = sanitized.replace(/(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/gi, (_all, open, content, close) => {
+    const cleanedContent = content
+      .replace(/<p>\s*(?:<br\s*\/?>)?\s*<\/p>/gi, "")
+      .replace(/(?:<br\s*\/?>\s*)+$/gi, "")
+      .trim();
+    return `${open}${cleanedContent}${close}`;
+  });
+
+  // 2. If the first row of table contains only <strong> tags inside <td>, promote to <th> for proper semantic header styling
+  cleaned = cleaned.replace(/<table([^>]*)>\s*(?:<tbody>)?\s*<tr>([\s\S]*?)<\/tr>/i, (fullMatch, tableAttrs, firstRowContent) => {
+    if (firstRowContent.includes("<td") && !firstRowContent.includes("<th") && firstRowContent.includes("<strong>")) {
+      const promotedRow = firstRowContent
+        .replace(/<td([^>]*)>/gi, '<th$1 scope="col">')
+        .replace(/<\/td>/gi, "</th>");
+      return `<table${tableAttrs}><thead><tr>${promotedRow}</tr></thead><tbody>`;
+    }
+    return fullMatch;
+  });
+
+  // 3. Wrap any table in a responsive scroll container so wide tables never blow out screens
+  return cleaned.replace(/(<table(?:\s+[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
     return `<div class="tableWrapper overflow-x-auto my-6">${match}</div>`;
   });
 }
@@ -45,7 +65,7 @@ export default function AuthorProfileView({ author, articles, socials, totalView
           <div className="ap-hero-info flex flex-col items-center md:items-start text-center md:text-left">
             <div className="flex flex-row items-center justify-center md:justify-start gap-2 w-full text-center md:text-left flex-wrap">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--ink)] tracking-tight max-w-full break-words text-balance">
-                {author.name || "Author"}
+                {author.name?.trim() || "Author"}
               </h1>
               {author.verifiedTitle && (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--accent)" className="shrink-0 translate-y-[2px]" aria-label="Verified Staff">
@@ -238,7 +258,11 @@ export default function AuthorProfileView({ author, articles, socials, totalView
         </div>
 
         {/* Right Sidebar */}
-        <Sidebar />
+        <div className="ap-side-col min-w-0">
+          <div className="lg:sticky lg:top-28">
+            <Sidebar />
+          </div>
+        </div>
 
       </div>
     </div>

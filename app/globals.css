@@ -4589,9 +4589,9 @@ select.ed-input {
 @media(min-width:700px) {
     .ap-hero-inner {
         flex-direction: row;
-        align-items: center;
+        align-items: flex-start;
         text-align: left;
-        gap: 28px;
+        gap: 32px;
         padding-top: 140px
     }
 }
@@ -4855,10 +4855,11 @@ h1.ap-name {
     max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin: 1.5rem 0;
+    margin: 1.75rem 0;
     border: 1px solid var(--line);
-    border-radius: var(--r-md);
+    border-radius: var(--r-lg);
     background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     scrollbar-width: thin;
     scrollbar-color: var(--line-2) transparent;
 }
@@ -4866,41 +4867,77 @@ h1.ap-name {
 .ap-bio table,
 .ap-bio .tableWrapper > table {
     width: 100% !important;
-    min-width: 480px;
-    border-collapse: collapse !important;
+    min-width: 580px;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    border: none !important;
     font-size: 13.5px;
     line-height: 1.6;
     text-align: left;
     margin: 0 !important;
 }
 
-.ap-bio th {
+/* Table Header Row (both thead th and any legacy top-row headers) */
+.ap-bio th,
+.ap-bio thead td {
     background: var(--surface-2) !important;
     color: var(--ink) !important;
-    font-weight: 600 !important;
-    font-size: 12px !important;
-    letter-spacing: 0.04em !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
-    padding: 12px 16px !important;
-    border-bottom: 1px solid var(--line) !important;
+    padding: 13px 18px !important;
+    border: none !important;
+    border-bottom: 2px solid var(--line) !important;
+    border-right: 1px solid var(--line-2) !important;
     white-space: nowrap !important;
 }
 
+.ap-bio th:last-child,
+.ap-bio thead td:last-child {
+    border-right: none !important;
+}
+
 .ap-bio td {
-    padding: 12px 16px !important;
+    padding: 14px 18px !important;
     color: var(--ink-2) !important;
+    border: none !important;
     border-bottom: 1px solid var(--line-2) !important;
+    border-right: 1px solid var(--line-2) !important;
     vertical-align: top !important;
     word-break: normal !important;
     overflow-wrap: break-word !important;
+}
+
+.ap-bio td:last-child {
+    border-right: none !important;
 }
 
 .ap-bio tr:last-child td {
     border-bottom: none !important;
 }
 
-.ap-bio tr:hover td {
+.ap-bio tbody tr:hover td {
     background: var(--surface-2) !important;
+}
+
+/* First column optical styling (Bold Domain title) */
+.ap-bio tbody td:first-child {
+    font-weight: 600 !important;
+    color: var(--ink) !important;
+}
+
+/* Proportional column balance for 3-column matrix on desktop */
+@media(min-width: 768px) {
+    .ap-bio table th:first-child:nth-last-child(3),
+    .ap-bio table td:first-child:nth-last-child(3) {
+        width: 26% !important;
+        min-width: 150px;
+    }
+    .ap-bio table th:first-child:nth-last-child(3) ~ th,
+    .ap-bio table td:first-child:nth-last-child(3) ~ td {
+        width: 37% !important;
+    }
 }
 
 .ap-body {
@@ -4919,15 +4956,26 @@ h1.ap-name {
     word-break: break-word;
 }
 
-@media(min-width:900px) {
+@media(min-width:1024px) {
     .ap-body {
-        grid-template-columns: minmax(0, 1fr) 340px;
-        gap: 60px;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 48px;
     }
 
     .ap-main-col {
         border-right: 1px solid var(--line);
-        padding-right: 60px;
+        padding-right: 48px;
+    }
+}
+
+@media(min-width:1280px) {
+    .ap-body {
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 56px;
+    }
+
+    .ap-main-col {
+        padding-right: 56px;
     }
 }
 
@@ -5039,13 +5087,7 @@ h1.ap-name {
 
 @media(min-width:640px) {
     .ap-articles-rest {
-        grid-template-columns: 1fr 1fr
-    }
-}
-
-@media(min-width:1000px) {
-    .ap-articles-rest {
-        grid-template-columns: 1fr 1fr 1fr
+        grid-template-columns: repeat(2, minmax(0, 1fr))
     }
 }
 
