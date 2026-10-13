@@ -11,8 +11,8 @@ import { siteConfig } from '@/lib/seo';
 //    policy is Option A (visibility-first): every major AI crawler is allowed
 //    so citations and search visibility are maximised while training is a
 //    deliberate trade-off the owner accepted. To switch to Option B (block
-//    training crawlers, keep search/retrieval), swap the last group's rules
-//    per fixes/robots-training-block.txt.
+//    training crawlers, keep search/retrieval), change the last group's
+//    `allow: '/'` to `disallow: '/'` for the listed user agents.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const DISALLOWED_PATHS = [

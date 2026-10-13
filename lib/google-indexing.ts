@@ -107,7 +107,7 @@ export async function enqueueGoogleIndexing(slug: string, type: "URL_UPDATED" | 
     if (indexNowKey) {
       await fetch(`https://api.indexnow.org/indexnow?url=${encodeURIComponent(url)}&key=${indexNowKey}`).catch(() => {});
     } else {
-      console.warn("[indexnow] INDEXNOW_KEY is not set — URL ping skipped. Run fixes/indexnow-key.sh on the host.");
+      console.warn("[indexnow] INDEXNOW_KEY is not set — URL ping skipped. Generate one (openssl rand -hex 16) and add it to .env.production on the host.");
     }
   } catch (e) {
     await notifyGoogleIndexing(url, type);

@@ -59,10 +59,10 @@ temp
 test-*.js
 test-*.ts
 
-# audit workspace (venv, raw logs, one-off scripts) — deliverables are tracked:
-# report.html, report.md, findings.json, fixes/
+# Audit workspace — venv, raw logs, the report generator and the audit
+# deliverables (report.html/report.md, findings.json, fixes/, operator docs).
+# None of it ships with the app, so none of it is tracked.
 /audit/*
-!/audit/build_report.py
 
 # local editor/AI tooling state must never carry secrets into git again (SEC-001)
 .vscode/settings.local.json

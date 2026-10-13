@@ -83,7 +83,7 @@ export const metadata: Metadata = {
   // `.env.production` will NOT reach the rendered HTML.
   //   • Bing  → use public/BingSiteAuth.xml (file method) or a DNS TXT record.
   //   • Google→ use a DNS TXT record (google-site-verification=...) OR pass the
-  //     value as a Docker build arg (see fixes/bing-verification.md).
+  //     value as a Docker build arg (Dockerfile ARG -> compose build.args).
   // The meta-tag path below still works when the value is present at build.
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
