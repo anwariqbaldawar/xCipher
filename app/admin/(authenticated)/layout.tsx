@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { redirect } from "next/navigation";
@@ -120,18 +121,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
           <div className="cs-nav-divider" />
 
-          <AdminNavLinks 
-            userRole={userRole as Role}
-            canReview={canViewReviewQueue(userRole as Role)}
-            canManageUsers={canViewUsersList(userRole as Role)}
-            canViewLogs={canViewAuditLogs(userRole as Role)}
-            canModerateComments={canModerateComments(userRole as Role)}
-            canViewSubscribers={canViewSubscribers(userRole as Role)}
-            canViewTaxonomy={canViewTaxonomy(userRole as Role)}
-            canManageAuthors={authorize(userRole as Role, "author.manage.all")}
-            reviewCount={reviewCount}
-            pendingCommentsCount={pendingCommentsCount}
-          />
+          <Suspense fallback={null}>
+            <AdminNavLinks 
+              userRole={userRole as Role}
+              canReview={canViewReviewQueue(userRole as Role)}
+              canManageUsers={canViewUsersList(userRole as Role)}
+              canViewLogs={canViewAuditLogs(userRole as Role)}
+              canModerateComments={canModerateComments(userRole as Role)}
+              canViewSubscribers={canViewSubscribers(userRole as Role)}
+              canViewTaxonomy={canViewTaxonomy(userRole as Role)}
+              canManageAuthors={authorize(userRole as Role, "author.manage.all")}
+              reviewCount={reviewCount}
+              pendingCommentsCount={pendingCommentsCount}
+            />
+          </Suspense>
         </nav>
   );
   return (

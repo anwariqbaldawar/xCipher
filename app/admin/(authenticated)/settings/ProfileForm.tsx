@@ -22,9 +22,8 @@ import {
 import { updateProfile } from "@/app/actions/profile";
 
 import { showToast } from "@/lib/utils";
-import { useEditor, EditorContent } from "@tiptap/react";
-import { EditorToolbar } from "@/components/editorial/EditorToolbar";
-import { EditorBubbleMenu } from "@/components/editorial/EditorBubbleMenu";
+import { useEditor } from "@tiptap/react";
+import RichTextField from "@/components/editorial/RichTextField";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
@@ -453,6 +452,37 @@ export default function ProfileForm({
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-4xl mx-auto pb-32 overflow-hidden max-w-full">
+      {/* ── Top Header Actions for Quick Saving ──────── */}
+      <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-[var(--line)]">
+        <div>
+          <h2 className="text-lg font-bold text-[var(--ink)]">
+            {editingOtherName ? `Editing ${editingOtherName}'s Profile` : "Public Profile"}
+          </h2>
+          <p className="text-xs text-[var(--muted)]">
+            Configure your author persona, byline info, and biography.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={busy || !isDirty}
+            className="px-3.5 py-2 text-xs font-medium rounded-xl border border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Reset
+          </button>
+          <button
+            type="submit"
+            onClick={handleSubmit}
+            disabled={busy || !isDirty}
+            className="px-4 py-2 text-xs font-semibold rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-deep)] transition-all shadow-xs disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </div>
+
       {editingOtherName && (
         <div
           className="mb-8 p-4 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] text-sm text-[var(--ink)] flex items-center gap-3"
@@ -796,23 +826,12 @@ export default function ProfileForm({
           <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2">
             Full Biography
           </label>
-          {bioEditor ? (
-            <div className="pf-bio-editor rounded-xl border border-[var(--line)] overflow-hidden bg-[var(--surface)]">
-              <EditorToolbar editor={bioEditor} />
-              <div
-                className="ed-body prose max-w-none p-4 min-h-[180px] text-[var(--ink)] focus:outline-none"
-                aria-label="Full biography"
-              >
-                <EditorBubbleMenu editor={bioEditor} />
-                <EditorContent editor={bioEditor} />
-              </div>
-            </div>
-          ) : (
-            <div className="h-48 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] animate-pulse" />
-          )}
-          <span className="block mt-2 text-[11.5px] text-[var(--muted)]">
-            Displayed on your full public author profile page.
-          </span>
+          <RichTextField
+            editor={bioEditor}
+            minHeight={180}
+            hint="Displayed on your full public author profile page."
+            ariaLabel="Full biography"
+          />
         </div>
       </div>
 
@@ -906,28 +925,28 @@ export default function ProfileForm({
         </div>
       </div>
 
-      {/* ── Task 2: Sticky "Save Changes" Bottom Bar ──────────────────────── */}
+      {/* ── Sticky Save Changes Bar ──────────────────────── */}
       <div
-        className={`fixed bottom-0 left-0 right-0 z-40 transition-all duration-300 ease-in-out transform ${
+        className={`pf-save-bar fixed left-0 right-0 z-[60] transition-all duration-300 ease-in-out transform bottom-[calc(65px+env(safe-area-inset-bottom))] md:bottom-0 ${
           isDirty
             ? "translate-y-0 opacity-100 pointer-events-auto"
             : "translate-y-full opacity-0 pointer-events-none"
         }`}
       >
-        <div className="bg-[var(--surface)]/80 backdrop-blur-md border-t border-[var(--line)] shadow-2xl px-4 py-3 sm:py-4">
+        <div className="bg-[var(--surface)]/95 backdrop-blur-md border-t border-[var(--line)] shadow-2xl px-4 py-3 sm:py-4">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-2.5 h-2.5 rounded-full bg-[var(--warning)] animate-pulse shrink-0" />
-              <span className="text-sm font-medium text-[var(--warning)] sm:text-[var(--ink)]">
+              <span className="text-xs sm:text-sm font-medium text-[var(--ink)] truncate">
                 You have unsaved changes.
               </span>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
               <button
                 type="button"
                 onClick={handleReset}
                 disabled={busy}
-                className="px-5 py-2.5 text-sm font-medium rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] hover:shadow-sm border border-transparent hover:border-[var(--line)] transition-all duration-200 disabled:opacity-50 active:scale-95"
+                className="px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-xl text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] border border-[var(--line)] transition-all duration-200 disabled:opacity-50 active:scale-95 min-h-[40px]"
               >
                 Reset
               </button>
@@ -935,7 +954,7 @@ export default function ProfileForm({
                 type="submit"
                 onClick={handleSubmit}
                 disabled={busy}
-                className="relative overflow-hidden group px-6 py-2.5 text-sm font-semibold rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-deep)] disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2"
+                className="relative overflow-hidden group px-4 sm:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-[var(--accent)] text-white hover:bg-[var(--accent-deep)] disabled:opacity-50 transition-all duration-200 shadow-md hover:shadow-lg active:scale-95 flex items-center gap-2 min-h-[40px]"
               >
                 <div className="absolute inset-0 w-full h-full bg-white/20 scale-x-0 group-hover:scale-x-100 transition-transform origin-left ease-out duration-300" />
                 <span className="relative flex items-center gap-2">

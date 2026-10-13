@@ -105,5 +105,8 @@
   .mobile-console .cs-main .overflow-x-auto:has(> :is(table.admin-table, table.console-data-table)) { overflow-x: visible; }
   .mobile-console .comment-moderator-note { opacity: 1; position: static; width: 100%; margin-top: 4px; }
   .mobile-console .console-bulk-bar { bottom: calc(77px + env(safe-area-inset-bottom)); left: 12px; right: 12px; transform: none; width: auto; max-width: none; flex-wrap: wrap; }
+  .mobile-console .pf-save-bar { bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 60; }
+  .mobile-console:has(.pf-save-bar) .console-fab,
+  .mobile-console:has([aria-current=page][href*="settings"]) .console-fab { display: none !important; }
 }
 @media (prefers-reduced-motion: reduce) { .studio-publishing-sheet[open] { animation: none; }.console-fab { transition: none; } }

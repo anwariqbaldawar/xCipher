@@ -3,16 +3,17 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Role } from "@/lib/types";
+import { isConsoleRouteActive } from "@/lib/admin-route";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // AdminNavLinks — capability-driven navigation
 //
-// Changes from original:
-//   • "Drafts" removed (handled by /admin/articles?status=DRAFT,REVISION_REQUESTED)
-//   • "Review Queue" links to /admin/articles?status=SUBMITTED
-//   • Taxonomy uses canViewTaxonomy (not canReview — fixes the REVIEWER dead link)
-//   • Active state uses prefix matching (not exact equality)
-//   • Editor route (/admin/editor/[id]) keeps the "New Story" item active
+// Changes:
+//   • Capability-gated routes for all newsroom roles
+//   • Exact/prefix matching via centralized isConsoleRouteActive
+//   • Zero dual-selection: Dashboard is mutually exclusive from sub-routes
+//   • aria-current="page" + "on" class for accessible active states
+//   • Graceful handling of apex (/admin/*) and subdomain (/*) routes
 // ──────────────────────────────────────────────────────────────────────────────
 
 interface AdminNavLinksProps {
@@ -43,31 +44,25 @@ export default function AdminNavLinks({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Active state: prefix match with special cases
-  const isActive = (path: string, exact?: boolean) => {
-    if (exact) return pathname === path;
-    return !!pathname?.startsWith(path);
-  };
-
   // Special case: /admin/articles with status=SUBMITTED acts as the review queue
   const isReviewQueue =
-    pathname === "/admin/articles" &&
+    (pathname === "/admin/articles" || pathname === "/articles") &&
     searchParams?.get("status") === "SUBMITTED";
 
-  /**
-   * Active state was communicated by a CSS class alone, which is colour-only:
-   * a screen reader announced every item identically, so "which section am I
-   * in" was unanswerable without sight. aria-current="page" is the property
-   * assistive tech actually reads for this, and it costs nothing visually.
-   */
-  const navProps = (active: boolean) => ({
-    className: active ? "on text-white !text-white" : "",
-    "aria-current": active ? ("page" as const) : undefined,
-  });
+  const navProps = (targetHref: string, exact: boolean = false) => {
+    const active = isConsoleRouteActive(pathname, targetHref, {
+      exact,
+      isReviewQueue,
+    });
+    return {
+      className: active ? "on text-white !text-white" : "",
+      "aria-current": active ? ("page" as const) : undefined,
+    };
+  };
 
   return (
     <>
-      <Link href="/admin" {...navProps(isActive("/admin", true))}>
+      <Link href="/admin" {...navProps("/admin", true)}>
         <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
           <rect x="3" y="3" width="7" height="9" rx="1" />
           <rect x="14" y="3" width="7" height="5" rx="1" />
@@ -81,7 +76,7 @@ export default function AdminNavLinks({
 
       <Link
         href="/admin/articles"
-        {...navProps(isActive("/admin/articles") && !isReviewQueue)}
+        {...navProps("/admin/articles")}
       >
         <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2V4z" />
@@ -94,7 +89,7 @@ export default function AdminNavLinks({
       {canReview && (
         <Link
           href="/admin/articles?status=SUBMITTED"
-          {...navProps(isReviewQueue)}
+          {...navProps("/admin/articles?status=SUBMITTED")}
           style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -121,18 +116,14 @@ export default function AdminNavLinks({
         </Link>
       )}
 
-      <Link href="/admin/editor" {...navProps(isActive("/admin/editor"))}>
+      <Link href="/admin/editor" {...navProps("/admin/editor")}>
         <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <path d="M12 5v14M5 12h14" />
         </svg>
         New Story
       </Link>
 
-      {/* No capability prop: the media page is scoped by buildArticleScope, so
-          everyone with console access sees exactly the art on the articles they
-          can already see, and nothing more. Gating the link on a role would
-          hide a view that is safe for all of them. */}
-      <Link href="/admin/media" {...navProps(isActive("/admin/media"))}>
+      <Link href="/admin/media" {...navProps("/admin/media")}>
         <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
           <circle cx="8.5" cy="8.5" r="1.5" />
@@ -146,7 +137,7 @@ export default function AdminNavLinks({
       )}
 
       {canManageAuthors && (
-        <Link href="/admin/authors" {...navProps(isActive("/admin/authors"))}>
+        <Link href="/admin/authors" {...navProps("/admin/authors")}>
           <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
@@ -156,7 +147,7 @@ export default function AdminNavLinks({
       )}
 
       {canViewTaxonomy && (
-        <Link href="/admin/taxonomy" {...navProps(isActive("/admin/taxonomy"))}>
+        <Link href="/admin/taxonomy" {...navProps("/admin/taxonomy")}>
           <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
             <line x1="7" y1="7" x2="7.01" y2="7" />
@@ -170,7 +161,7 @@ export default function AdminNavLinks({
       )}
 
       {canManageUsers && (
-        <Link href="/admin/users" {...navProps(isActive("/admin/users"))}>
+        <Link href="/admin/users" {...navProps("/admin/users")}>
           <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
             <circle cx="9" cy="7" r="4" />
@@ -183,7 +174,7 @@ export default function AdminNavLinks({
       {canModerateComments && (
         <Link 
           href="/admin/comments" 
-          {...navProps(isActive("/admin/comments"))}
+          {...navProps("/admin/comments")}
           style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
         >
           <span style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -210,7 +201,7 @@ export default function AdminNavLinks({
       )}
 
       {canViewSubscribers && (
-        <Link href="/admin/subscribers" {...navProps(isActive("/admin/subscribers"))}>
+        <Link href="/admin/subscribers" {...navProps("/admin/subscribers")}>
           <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
             <polyline points="22,6 12,13 2,6" />
@@ -220,7 +211,7 @@ export default function AdminNavLinks({
       )}
 
       {canViewLogs && (
-        <Link href="/admin/audit-logs" {...navProps(isActive("/admin/audit-logs"))}>
+        <Link href="/admin/audit-logs" {...navProps("/admin/audit-logs")}>
           <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
@@ -230,7 +221,7 @@ export default function AdminNavLinks({
 
       <div className="cs-nav-group">You</div>
 
-      <Link href="/admin/settings" {...navProps(isActive("/admin/settings"))}>
+      <Link href="/admin/settings" {...navProps("/admin/settings")}>
         <svg className="ic-s" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <circle cx="12" cy="12" r="3" />
           <path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.4 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.4-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.2-1.2z" />
