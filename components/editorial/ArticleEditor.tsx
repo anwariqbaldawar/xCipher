@@ -1610,9 +1610,11 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
                       }}
                     >
                       <option value="" disabled>Select author…</option>
-                      {availableAuthors.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}</option>
-                      ))}
+                      {availableAuthors
+                        .filter((a, index, self) => self.findIndex(s => s.id === a.id) === index)
+                        .map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
                     </select>
                   ) : (
                     <input className="w-full text-sm bg-[var(--surface-3)] border border-[var(--line-2)] rounded-md px-3 py-2 text-[var(--muted)] cursor-not-allowed" value={watch("author")} readOnly title="Set from profile settings" />
@@ -1811,6 +1813,86 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            </details>
+
+            {/* ── Section D: Content Health & Accessibility ── */}
+            <details className="group border-b border-[var(--line-2)] pb-4">
+              <summary className="flex cursor-pointer items-center justify-between font-bold text-sm tracking-wide uppercase text-[var(--muted)] hover:text-[var(--ink)] transition-colors list-none [&::-webkit-details-marker]:hidden">
+                Content Health & Accessibility
+                <svg className="w-4 h-4 text-[var(--muted)] group-open:rotate-90 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </summary>
+              <div className="pt-4 space-y-4 animate-in fade-in duration-200">
+                {/* Reading Metrics */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded bg-[var(--surface-3)] border border-[var(--line-2)]">
+                    <span className="text-[var(--muted)] block">Reading Time</span>
+                    <span className="text-base font-bold text-[var(--ink)]">
+                      {Math.max(1, Math.ceil((editor?.storage?.characterCount?.words?.() || 0) / 200))} min
+                    </span>
+                  </div>
+                  <div className="p-2.5 rounded bg-[var(--surface-3)] border border-[var(--line-2)]">
+                    <span className="text-[var(--muted)] block">Word Count</span>
+                    <span className="text-base font-bold text-[var(--ink)]">
+                      {(editor?.storage?.characterCount?.words?.() || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Alt Text Audit */}
+                <div className="p-3 rounded bg-[var(--surface-3)] border border-[var(--line-2)] space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className="text-[var(--ink)]">Image Accessibility Audit</span>
+                    {featuredImageUrl && !watch("featuredImageAlt")?.trim() ? (
+                      <span className="text-[var(--bad)] font-medium">Needs Attention</span>
+                    ) : (
+                      <span className="text-emerald-500 font-medium">Healthy</span>
+                    )}
+                  </div>
+                  <div className="text-xs space-y-1.5 text-[var(--ink-2)]">
+                    <div className="flex items-center justify-between">
+                      <span>Featured Image Alt:</span>
+                      {featuredImageUrl ? (
+                        watch("featuredImageAlt")?.trim() ? (
+                          <span className="text-emerald-500 font-semibold">Set</span>
+                        ) : (
+                          <span className="text-[var(--bad)] font-semibold">Missing</span>
+                        )
+                      ) : (
+                        <span className="text-[var(--muted)]">No image</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Readiness Checklist */}
+                <div className="space-y-1.5 text-xs">
+                  <span className="font-semibold uppercase tracking-wider text-[var(--muted)] block">Publish Readiness</span>
+                  <div className="space-y-1 text-[var(--ink-2)]">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${watch("title")?.trim() ? "bg-emerald-500" : "bg-[var(--bad)]"}`} />
+                      <span>Headline defined</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${watch("deck")?.trim() ? "bg-emerald-500" : "bg-[var(--bad)]"}`} />
+                      <span>Standfirst / Excerpt defined</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${watch("cat") ? "bg-emerald-500" : "bg-[var(--bad)]"}`} />
+                      <span>Category selected</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${featuredImageUrl ? "bg-emerald-500" : "bg-[var(--warn)]"}`} />
+                      <span>Featured thumbnail {featuredImageUrl ? "ready" : "recommended"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${(editor?.storage?.characterCount?.words?.() || 0) >= 30 ? "bg-emerald-500" : "bg-[var(--warn)]"}`} />
+                      <span>Minimum story length met</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </details>

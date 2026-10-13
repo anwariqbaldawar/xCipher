@@ -91,3 +91,67 @@ export function exportSize(crop: PixelArea, max: number = AVATAR_EXPORT_SIZE): n
 export function isLowResolution(image: Dimensions, target: number = AVATAR_EXPORT_SIZE): boolean {
   return Math.min(image.width, image.height) < target;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Editorial Crop Presets & Multi-Aspect Ratio Calculations
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type CropPresetKey = "16:10" | "16:9" | "4:3" | "1:1" | "1.91:1";
+
+export interface CropPreset {
+  id: CropPresetKey;
+  label: string;
+  description: string;
+  aspect: number;
+  maxWidth: number;
+}
+
+export const CROP_PRESETS: Record<CropPresetKey, CropPreset> = {
+  "16:10": {
+    id: "16:10",
+    label: "16:10",
+    description: "Thumbnail (16:10)",
+    aspect: 16 / 10,
+    maxWidth: 1200,
+  },
+  "16:9": {
+    id: "16:9",
+    label: "16:9",
+    description: "Hero / Video (16:9)",
+    aspect: 16 / 9,
+    maxWidth: 1200,
+  },
+  "4:3": {
+    id: "4:3",
+    label: "4:3",
+    description: "Editorial (4:3)",
+    aspect: 4 / 3,
+    maxWidth: 1200,
+  },
+  "1:1": {
+    id: "1:1",
+    label: "1:1",
+    description: "Square (1:1)",
+    aspect: 1,
+    maxWidth: 1000,
+  },
+  "1.91:1": {
+    id: "1.91:1",
+    label: "1.91:1",
+    description: "Social Card / OG (1.91:1)",
+    aspect: 1.91 / 1,
+    maxWidth: 1200,
+  },
+};
+
+/**
+ * Computes destination canvas dimensions respecting the preset's aspect ratio and max bounds.
+ */
+export function calculateCropDimensions(
+  safeArea: PixelArea,
+  preset: CropPreset
+): { width: number; height: number } {
+  const outWidth = Math.max(1, Math.min(preset.maxWidth, safeArea.width));
+  const outHeight = Math.max(1, Math.round(outWidth / preset.aspect));
+  return { width: outWidth, height: outHeight };
+}

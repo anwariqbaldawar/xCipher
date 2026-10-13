@@ -206,6 +206,8 @@ export async function upsertArticle(data: any) {
       }
     }
 
+    const assignedAuthorId = resolvedByline?.authorId ?? existingArticle?.authorId ?? userWithAuth.authorId ?? null;
+
     const payload = {
       title: data.title.trim(),
       slug: uniqueSlug,
@@ -233,7 +235,7 @@ export async function upsertArticle(data: any) {
       scheduledFor,
       readingTime: calculateReadTime(sanitizedBodyHtml || data.bodyHtml),
       updatedAt: new Date(),
-      ...(resolvedByline ? { authorId: resolvedByline.authorId } : {}),
+      ...(assignedAuthorId ? { authorId: assignedAuthorId } : {}),
       ...(data.status === "PUBLISHED" && (!existingArticle || existingArticle.status !== "PUBLISHED") 
           ? { publishedAt: new Date() } 
           : {}),

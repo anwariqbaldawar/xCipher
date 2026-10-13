@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { authorize } from "@/lib/capabilities";
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
-import { CACHE_TAGS, authorTag } from "@/lib/cache-tags";
+import { CACHE_TAGS, authorTag, articleTag } from "@/lib/cache-tags";
 import { eq, sql, inArray, isNull } from "drizzle-orm";
 import { user as userTable, author as authorTable, article } from "@/lib/db/schema";
 
@@ -157,16 +157,25 @@ export async function updateProfile(data: any) {
         }).where(eq(userTable.id, dbUser.id));
     }
 
-    // Cascade update to denormalized author name on all articles
-    const affectedArticles = await db.update(article).set({ author: name })
-      .where(eq(article.authorId, author.id)).returning({ slug: article.slug });
+    // Cascade update to denormalized author name and role on all articles
+    const articleUpdateData: { author: string; role?: string } = { author: name };
+    if (finalRole && isEditorialAdmin) {
+      articleUpdateData.role = finalRole;
+    }
+    const affectedArticles = await db.update(article).set(articleUpdateData)
+      .where(eq(article.authorId, author.id)).returning({ id: article.id, slug: article.slug });
 
     const authorSlugs = new Set([author.slug, ...updatedPreviousSlugs]);
     await Promise.all([
       revalidateTag(CACHE_TAGS.articles, { expire: 0 }),
+      revalidateTag(CACHE_TAGS.authors, { expire: 0 }),
+      revalidateTag(CACHE_TAGS.homepage, { expire: 0 }),
+      ...affectedArticles.map(item => revalidateTag(articleTag(item.slug), { expire: 0 })),
       ...Array.from(authorSlugs, slug => revalidateTag(authorTag(slug), { expire: 0 })),
       ...Array.from(authorSlugs, slug => revalidatePath(`/author/${slug}`)),
       ...affectedArticles.map(item => revalidatePath(`/article/${item.slug}`)),
+      revalidatePath('/'),
+      revalidatePath('/authors'),
       revalidatePath('/sitemap.xml'),
       revalidatePath('/feed.xml'),
       revalidatePath('/admin/settings'),

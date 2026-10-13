@@ -23,8 +23,8 @@ import {
   LabelList
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { formatChartValue } from '@/lib/chart-format';
-import { Maximize } from 'lucide-react';
+import { formatChartValue, calculateSeriesStats } from '@/lib/chart-format';
+import { Maximize, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import MediaModal, { type MediaSummary } from './MediaModal';
 
 interface DynamicChartProps {
@@ -73,6 +73,12 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
   const chartHeight = chartType === 'pie' ? (isMobile ? 370 : 360) : (isMobile ? 400 : 500);
   const formatValue = (value: unknown, key: string) => formatChartValue(value, key);
   const [isFullViewOpen, setIsFullViewOpen] = useState(false);
+
+  const primaryStats = useMemo(() => {
+    if (!keys[0] || !config) return null;
+    const values = config.map(d => d[keys[0]]);
+    return calculateSeriesStats(values);
+  }, [config, keys]);
 
   const formatAxisTick = (val: unknown) => {
     const str = String(val ?? '');
@@ -437,6 +443,68 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
         </div>
       </div>
       </div>
+
+      {primaryStats && primaryStats.count > 1 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+          {primaryStats.min !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Min:</span> {formatValue(primaryStats.min, keys[0])}
+            </span>
+          )}
+          {primaryStats.max !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Max:</span> {formatValue(primaryStats.max, keys[0])}
+            </span>
+          )}
+          {primaryStats.mean !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Avg:</span> {formatValue(primaryStats.mean, keys[0])}
+            </span>
+          )}
+          {primaryStats.change !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Trend:</span>
+              {primaryStats.change > 0 ? (
+                <span className="inline-flex items-center text-emerald-500 font-semibold"><TrendingUp className="w-3 h-3 mr-0.5" />+{primaryStats.change}%</span>
+              ) : primaryStats.change < 0 ? (
+                <span className="inline-flex items-center text-rose-500 font-semibold"><TrendingDown className="w-3 h-3 mr-0.5" />{primaryStats.change}%</span>
+              ) : (
+                <span className="inline-flex items-center text-[var(--muted)]"><Minus className="w-3 h-3 mr-0.5" />0%</span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Accessible Table Fallback */}
+      <details className="mt-3 group border-t border-[var(--line)] pt-2">
+        <summary className="cursor-pointer text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors select-none font-medium">
+          View data as accessible table ({config.length} observations)
+        </summary>
+        <div className="mt-2 overflow-x-auto rounded border border-[var(--line)] bg-[var(--surface-2)] p-2">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--line)]">
+                <th scope="col" className="p-2 font-semibold text-[var(--ink)]">Observation</th>
+                {keys.map((k) => (
+                  <th key={k} scope="col" className="p-2 font-semibold text-[var(--ink)]">{k}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {config.map((row, idx) => (
+                <tr key={idx} className="border-b border-[var(--line)]/50 last:border-0 hover:bg-[var(--surface-3)]">
+                  <th scope="row" className="p-2 font-medium text-[var(--ink-2)]">{String(row.name ?? `Row ${idx + 1}`)}</th>
+                  {keys.map((k) => (
+                    <td key={k} className="p-2 text-[var(--ink)]">{formatValue(row[k], k)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+
       <MediaModal
         open={isFullViewOpen}
         onClose={() => setIsFullViewOpen(false)}

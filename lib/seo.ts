@@ -86,6 +86,10 @@ interface NewsArticleSource extends ArticleAuthorSource {
   deck?: string | null;
   seoTitle?: string | null;
   seoDesc?: string | null;
+  metaTitle?: string | null;
+  metaDescription?: string | null;
+  ogImage?: string | null;
+  canonicalUrl?: string | null;
   img?: string | null;
   featuredImageCaption?: string | null;
   featuredImageCredit?: string | null;
@@ -96,14 +100,23 @@ interface NewsArticleSource extends ArticleAuthorSource {
 
 export function generateNewsArticleJsonLd(article: NewsArticleSource) {
   const author = getArticleAuthor(article);
+  const headline = article.metaTitle || article.seoTitle || article.title;
+  const description = article.metaDescription || article.seoDesc || article.deck;
+  const displayImage = article.ogImage || article.img;
+  const canonical = article.canonicalUrl
+    ? (article.canonicalUrl.startsWith("http://") || article.canonicalUrl.startsWith("https://")
+        ? article.canonicalUrl
+        : `${siteConfig.url}${article.canonicalUrl.startsWith("/") ? article.canonicalUrl : `/${article.canonicalUrl}`}`)
+    : `${siteConfig.url}/article/${article.slug}`;
+
   return {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
-    "headline": article.seoTitle || article.title,
-    "description": article.seoDesc || article.deck,
-    "image": article.img ? [{
+    "headline": headline,
+    "description": description,
+    "image": displayImage ? [{
       "@type": "ImageObject",
-      "url": getImgSrc(article.img, 1200, 630),
+      "url": getImgSrc(displayImage, 1200, 630),
       ...(article.featuredImageCaption ? { caption: article.featuredImageCaption } : {}),
       ...(article.featuredImageCredit ? { creditText: article.featuredImageCredit } : {}),
     }] : undefined,
@@ -134,7 +147,7 @@ export function generateNewsArticleJsonLd(article: NewsArticleSource) {
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `${siteConfig.url}/article/${article.slug}`
+      "@id": canonical
     }
   };
 }

@@ -12,6 +12,7 @@ import EditorialTicker from "@/components/home/EditorialTicker";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import AdUnit from "@/components/common/AdUnit";
 import { siteConfig } from "@/lib/seo";
+import { getReadingTimeMinutes } from "@/lib/reading-time";
 
 export const metadata: Metadata = {
   alternates: {
@@ -124,14 +125,14 @@ export default async function Home() {
   }));
   
   let picks = [...placedPicks];
-  if (picks.length < 4) {
+  if (picks.length < 5) {
     const pickIds = picks.map(a => a.id);
-    const fallbackPicks = latest.filter(a => !pickIds.includes(a.id)).slice(0, 4 - picks.length);
+    const fallbackPicks = latest.filter(a => !pickIds.includes(a.id)).slice(0, 5 - picks.length);
     picks = [...picks, ...fallbackPicks.map(a => ({ ...a, pick: true }))];
   }
   
   const pickFeat = picks[0];
-  const pickRest = picks.slice(1, 4);
+  const pickGrid = picks.slice(1, 5);
 
   return (
     <>
@@ -321,50 +322,107 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Editor's Picks */}
-      <section className="wrap" aria-label="Editors picks">
-        <div className="picks" data-reveal>
-          <div className="picks-in">
-            {pickFeat && (
-              <article className="pick-feat story">
-                <span className="pick-badge">
-                  <svg className="ic-s" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.5 6.8L12 16.9 6.5 20.5 8 13.7 3 9.3l6.4-.7L12 2z"/>
-                  </svg>
-                  Editor's Pick
-                </span>
-                <Link href={`/article/${pickFeat.slug}`} className="ph r-169" style={{ marginTop: "14px" }} tabIndex={-1} aria-hidden="true">
-                  <Image 
-                    src={getImgSrc(pickFeat.img || "", 900, 506)} 
-                    alt={pickFeat.alt || pickFeat.title} 
-                    fill 
-                    sizes="(max-width: 900px) 100vw, 50vw"
-                    className="object-cover"
-                  />
-                </Link>
-                <Link href={`/category/${pickFeat.category?.slug || "news"}`} className="kicker" style={{ marginTop: "16px" }}>
-                  {pickFeat.category?.name || "News"}
-                </Link>
-                <h3 className="text-2xl font-bold tracking-tight text-[var(--ink)] leading-tight mb-2">
-                  <Link href={`/article/${pickFeat.slug}`}>
-                    <span className="hlink">{pickFeat.title}</span>
-                  </Link>
-                </h3>
-                <p className="story-deck">{pickFeat.deck}</p>
-                <div className="byline">
-                  <ArticleByline article={pickFeat} size={34} />
-                  <span><span className="dot">·</span> {<RelativeTime dateTime={new Date(pickFeat.createdAt).toISOString()} />}</span>
+      {/* Editor's Picks Showcase */}
+      {picks.length > 0 && (
+        <section className="wrap" aria-label="Editor's picks">
+          <div className="picks" data-reveal>
+            {/* Section Header */}
+            <div className="picks-head">
+              <div className="picks-header-row">
+                <div className="flex items-center gap-2.5">
+                  <span className="pick-badge">
+                    <svg className="ic-s" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2l2.6 6.6L21 9.3l-5 4.4 1.5 6.8L12 16.9 6.5 20.5 8 13.7 3 9.3l6.4-.7L12 2z"/>
+                    </svg>
+                    Editor&apos;s Picks
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-widest text-[var(--muted)]">
+                    Curated Deep Dives &amp; Analysis
+                  </span>
                 </div>
-              </article>
-            )}
-            <div className="pick-side">
-              {pickRest.map(a => (
-                <StoryCard key={a.id} article={a} showDeck={false} />
-              ))}
+                <span className="text-xs text-[var(--muted)] hidden sm:inline-block font-mono">
+                  {picks.length} Curated Stories
+                </span>
+              </div>
+            </div>
+
+            <div className="picks-in">
+              {/* Featured Lead Pick */}
+              {pickFeat && (
+                <article className="pick-feat story">
+                  <Link href={`/article/${pickFeat.slug}`} className="ph r-169" tabIndex={-1} aria-hidden="true">
+                    <Image 
+                      src={getImgSrc(pickFeat.img || "", 900, 506)} 
+                      alt={pickFeat.alt || pickFeat.title} 
+                      fill 
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-300 hover:scale-[1.02]"
+                    />
+                  </Link>
+                  <Link href={`/category/${pickFeat.category?.slug || "news"}`} className="kicker" style={{ marginTop: "16px" }}>
+                    {pickFeat.category?.name || "News"}
+                  </Link>
+                  <h3 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--ink)] leading-tight mb-2">
+                    <Link href={`/article/${pickFeat.slug}`}>
+                      <span className="hlink">{pickFeat.title}</span>
+                    </Link>
+                  </h3>
+                  <p className="story-deck line-clamp-3 text-[var(--ink-2)] text-sm sm:text-base leading-relaxed mb-4">
+                    {pickFeat.deck}
+                  </p>
+                  <div className="byline">
+                    <ArticleByline article={pickFeat} size={32} />
+                    <span className="text-xs text-[var(--muted)]">
+                      <span className="dot mx-1">·</span>
+                      <RelativeTime dateTime={new Date(pickFeat.createdAt).toISOString()} />
+                      <span className="dot mx-1">·</span>
+                      {getReadingTimeMinutes(pickFeat)} min read
+                    </span>
+                  </div>
+                </article>
+              )}
+
+              {/* Multi-Item Editorial Grid */}
+              <div className="pick-grid">
+                {pickGrid.map((a) => (
+                  <article key={a.id} className="pick-card group">
+                    <Link href={`/article/${a.slug}`} className="ph r-169 mb-3 block" tabIndex={-1} aria-hidden="true">
+                      <Image 
+                        src={getImgSrc(a.img || "", 600, 338)} 
+                        alt={a.title} 
+                        fill 
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    </Link>
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div>
+                        <Link href={`/category/${(a.category?.parent || a.category)?.slug || "news"}`} className="kicker plain !text-[11px] mb-1 inline-block">
+                          {a.category?.name || "News"}
+                        </Link>
+                        <h4 className="text-sm sm:text-base font-semibold leading-snug tracking-tight text-[var(--ink)] group-hover:text-[var(--accent)] transition-colors line-clamp-2 mb-2">
+                          <Link href={`/article/${a.slug}`}>
+                            <span className="hlink">{a.title}</span>
+                          </Link>
+                        </h4>
+                        {a.deck && (
+                          <p className="text-xs text-[var(--muted)] line-clamp-2 leading-relaxed mb-3">
+                            {a.deck}
+                          </p>
+                        )}
+                      </div>
+                      <div className="pt-2 border-t border-[var(--line-2)]/60 flex items-center justify-between text-xs text-[var(--muted)] mt-auto">
+                        <ArticleByline article={a} size={20} />
+                        <span>{getReadingTimeMinutes(a)}m</span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Newsletter */}
       <div className="wrap">

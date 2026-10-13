@@ -82,10 +82,11 @@ export function getArticleAuthor(article: ArticleAuthorSource) {
 
 /** Remove private attribution before a row crosses a public client boundary. */
 export function maskPublicArticle<T extends ArticleAuthorSource>(article: T) {
+  const resolvedAuthor = getArticleAuthor(article);
   return {
     ...article,
-    author: article.isAnonymous ? getArticleAuthor(article).name : article.author,
-    role: article.isAnonymous ? "Editorial Desk" : article.role,
+    author: article.isAnonymous ? resolvedAuthor.name : (article.authorModel?.name || article.author),
+    role: article.isAnonymous ? "Editorial Desk" : (article.authorModel?.role || article.role),
     authorId: article.isAnonymous ? null : article.authorId,
     authorModel: article.isAnonymous ? null : article.authorModel,
   };

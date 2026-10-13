@@ -127,13 +127,13 @@ export const InteractiveChartBlock = Node.create({
               const numStr = match[2].replace(/,/g, '');
               const suffix = match[3].trim();
               const numericValue = parseFloat(numStr);
-              rowData[header] = isNaN(numericValue) ? 0 : numericValue;
+              rowData[header] = isNaN(numericValue) ? null : numericValue;
               if (prefix && !config[header].prefix) config[header].prefix = prefix;
               if (suffix && !config[header].suffix) config[header].suffix = suffix;
             } else {
               const clean = cellValue.replace(/[$,€£¥%\s]/g, '');
               const num = parseFloat(clean);
-              rowData[header] = isNaN(num) ? 0 : num;
+              rowData[header] = isNaN(num) ? null : num;
             }
           }
           data.push(rowData);

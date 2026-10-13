@@ -6,6 +6,10 @@ import type { Area } from "react-easy-crop";
 import { ZoomIn, ZoomOut, RotateCw, X, Check, Loader2, AlertCircle } from "lucide-react";
 import {
   normaliseCropArea,
+  calculateCropDimensions,
+  CROP_PRESETS,
+  type CropPresetKey,
+  type CropPreset,
   type PixelArea,
 } from "@/lib/crop";
 
@@ -20,14 +24,13 @@ interface Props {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
-const ASPECT_RATIO = 16 / 10;
-const MAX_WIDTH = 1200;
 
 async function renderThumbnailCrop(
   imageSrc: string,
   area: PixelArea,
   rotation: number,
-  fileName: string
+  fileName: string,
+  preset: CropPreset
 ): Promise<File> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
@@ -40,9 +43,8 @@ async function renderThumbnailCrop(
   const safe = normaliseCropArea(area, { width: image.naturalWidth, height: image.naturalHeight });
   if (!safe) throw new Error("That selection is empty. Drag to choose part of the photo.");
 
-  // Target size respects aspect ratio and maximum width
-  const outWidth = Math.min(MAX_WIDTH, safe.width);
-  const outHeight = Math.round(outWidth / ASPECT_RATIO);
+  // Target size respects aspect ratio and maximum bounds from preset
+  const { width: outWidth, height: outHeight } = calculateCropDimensions(safe, preset);
 
   const canvas = document.createElement("canvas");
   canvas.width = outWidth;
@@ -73,12 +75,12 @@ async function renderThumbnailCrop(
   );
 
   const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, "image/webp", 0.80)
+    canvas.toBlob(resolve, "image/webp", 0.85)
   );
   if (!blob) throw new Error("The cropped image could not be created.");
 
-  const base = fileName.replace(/\.[^.]+$/, "") || "thumbnail";
-  return new File([blob], `${base}-cropped.webp`, { type: "image/webp" });
+  const base = fileName.replace(/\.[^.]+$/, "") || "image";
+  return new File([blob], `${base}-${preset.id.replace(':', 'x')}.webp`, { type: "image/webp" });
 }
 
 export default function ThumbnailCropper({
@@ -89,12 +91,15 @@ export default function ThumbnailCropper({
   onCropped,
   busy,
 }: Props) {
+  const [presetKey, setPresetKey] = useState<CropPresetKey>("16:10");
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [area, setArea] = useState<Area | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
+
+  const activePreset = CROP_PRESETS[presetKey];
 
   const panelRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -142,14 +147,14 @@ export default function ThumbnailCropper({
     setError(null);
     setWorking(true);
     try {
-      const file = await renderThumbnailCrop(imageSrc, area, rotation, fileName);
+      const file = await renderThumbnailCrop(imageSrc, area, rotation, fileName, activePreset);
       onCropped(file);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The image could not be cropped.");
     } finally {
       setWorking(false);
     }
-  }, [area, imageSrc, rotation, fileName, onCropped]);
+  }, [area, imageSrc, rotation, fileName, activePreset, onCropped]);
 
   if (!open) return null;
 
@@ -167,7 +172,10 @@ export default function ThumbnailCropper({
         style={{ maxWidth: "800px" }}
       >
         <div className="imd-head">
-          <h2 id={titleId} className="imd-title">Position thumbnail</h2>
+          <div className="flex flex-col">
+            <h2 id={titleId} className="imd-title">Position and crop image</h2>
+            <span className="text-xs text-[var(--muted)]">{activePreset.description}</span>
+          </div>
           <button
             type="button"
             onClick={onCancel}
@@ -179,13 +187,37 @@ export default function ThumbnailCropper({
           </button>
         </div>
 
+        {/* Aspect Ratio Presets Toolbar */}
+        <div className="flex flex-wrap items-center gap-1.5 px-6 py-2.5 bg-[var(--surface-2)] border-b border-[var(--line)]">
+          <span className="text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mr-1">Aspect Ratio:</span>
+          {(Object.keys(CROP_PRESETS) as CropPresetKey[]).map((key) => {
+            const preset = CROP_PRESETS[key];
+            const isSelected = presetKey === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setPresetKey(key)}
+                disabled={disabled}
+                className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
+                  isSelected
+                    ? "bg-[var(--accent)] text-white shadow-sm"
+                    : "bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--surface-3)] hover:text-[var(--ink)] border border-[var(--line-2)]"
+                }`}
+              >
+                {preset.label}
+              </button>
+            );
+          })}
+        </div>
+
         <div className="crop-stage" style={{ height: "400px" }}>
           <Cropper
             image={imageSrc}
             crop={crop}
             zoom={zoom}
             rotation={rotation}
-            aspect={ASPECT_RATIO}
+            aspect={activePreset.aspect}
             cropShape="rect"
             showGrid={true}
             minZoom={MIN_ZOOM}

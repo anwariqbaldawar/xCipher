@@ -216,7 +216,7 @@ export const DataChart = Node.create({
             for (const i of numericColIndices) {
               const cleanVal = (row[i] || '').replace(/[$,€£¥%\s]/g, '');
               const val = Number(cleanVal);
-              obj[headers[i] || `Value ${i}`] = isNaN(val) ? 0 : val;
+              obj[headers[i] || `Value ${i}`] = cleanVal !== '' && !isNaN(val) ? val : null;
             }
             return obj;
           });

@@ -118,7 +118,7 @@ export const getHomePicks = unstable_cache(
           eq(articleTable.homepagePlacement, "picks")
         ),
         orderBy: (a, { desc }) => [desc(a.publishedAt)],
-        limit: 4,
+        limit: 6,
         columns: ARTICLE_CARD_COLUMNS,
         with: ARTICLE_CARD_WITH,
       });

@@ -10,7 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { formatChartValue } from '@/lib/chart-format';
+import { formatChartValue, calculateSeriesStats } from '@/lib/chart-format';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface ChartDataItem {
   name: string;
@@ -36,6 +37,12 @@ export default function InteractiveChartViewer({ data, config }: Props) {
   }, [data]);
 
   const [activeMetric, setActiveMetric] = useState<string>(keys[0] || '');
+
+  const activeStats = useMemo(() => {
+    if (!activeMetric || !data) return null;
+    const values = data.map(d => d[activeMetric]);
+    return calculateSeriesStats(values);
+  }, [data, activeMetric]);
 
   const formatValue = (value: any, name: string) => {
     const keyConfig = config[name] || {};
@@ -122,6 +129,67 @@ export default function InteractiveChartViewer({ data, config }: Props) {
         </ResponsiveContainer>
         </div>
       </div>
+
+      {activeStats && activeStats.count > 1 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--muted)]">
+          {activeStats.min !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Min:</span> {formatValue(activeStats.min, activeMetric)}
+            </span>
+          )}
+          {activeStats.max !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Max:</span> {formatValue(activeStats.max, activeMetric)}
+            </span>
+          )}
+          {activeStats.mean !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Avg:</span> {formatValue(activeStats.mean, activeMetric)}
+            </span>
+          )}
+          {activeStats.change !== null && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Trend:</span>
+              {activeStats.change > 0 ? (
+                <span className="inline-flex items-center text-emerald-500 font-semibold"><TrendingUp className="w-3 h-3 mr-0.5" />+{activeStats.change}%</span>
+              ) : activeStats.change < 0 ? (
+                <span className="inline-flex items-center text-rose-500 font-semibold"><TrendingDown className="w-3 h-3 mr-0.5" />{activeStats.change}%</span>
+              ) : (
+                <span className="inline-flex items-center text-[var(--muted)]"><Minus className="w-3 h-3 mr-0.5" />0%</span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Accessible Table Fallback */}
+      <details className="mt-3 group border-t border-[var(--line)] pt-2">
+        <summary className="cursor-pointer text-xs text-[var(--muted)] hover:text-[var(--ink)] transition-colors select-none font-medium">
+          View data as accessible table ({data.length} observations)
+        </summary>
+        <div className="mt-2 overflow-x-auto rounded border border-[var(--line)] bg-[var(--surface-2)] p-2">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--line)]">
+                <th scope="col" className="p-2 font-semibold text-[var(--ink)]">Observation</th>
+                {keys.map((k) => (
+                  <th key={k} scope="col" className="p-2 font-semibold text-[var(--ink)]">{k}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, idx) => (
+                <tr key={idx} className="border-b border-[var(--line)]/50 last:border-0 hover:bg-[var(--surface-3)]">
+                  <th scope="row" className="p-2 font-medium text-[var(--ink-2)]">{String(row.name ?? `Row ${idx + 1}`)}</th>
+                  {keys.map((k) => (
+                    <td key={k} className="p-2 text-[var(--ink)]">{formatValue(row[k], k)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
     </div>
   );
 }

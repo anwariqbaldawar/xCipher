@@ -1781,16 +1781,64 @@ a.ph:hover img {
     opacity: .7
 }
 
+.picks-head {
+    position: relative;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+    z-index: 1;
+}
+
+.picks-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
 .picks-in {
     position: relative;
     display: grid;
-    gap: 30px
+    gap: 32px;
+    z-index: 1;
 }
 
 @media(min-width:1024px) {
     .picks-in {
-        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr)
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr);
+        align-items: stretch;
     }
+}
+
+.pick-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: 1fr;
+}
+
+@media(min-width: 640px) {
+    .pick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+}
+
+.pick-card {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pick-card:hover {
+    border-color: var(--line-2);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.08);
 }
 
 .pick-badge {
@@ -5814,6 +5862,12 @@ select.ed-rail-input {
     /* Native arrow sits too close to the edge at this padding. */
     padding-right: 28px;
     cursor: pointer;
+}
+
+select.ed-rail-input option {
+    background-color: var(--surface);
+    color: var(--ink);
+    padding: 8px 12px;
 }
 
 /* The mobile drawer scrolls, so its header needs to stay reachable -- closing
