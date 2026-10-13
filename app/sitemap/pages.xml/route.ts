@@ -1,12 +1,22 @@
 import { dbRead } from "@/lib/db";
+import { article as articleTable, tag as tagTable, category as categoryTable, author as authorTable } from "@/lib/db/schema";
 import { siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
-import { article as articleTable, tag as tagTable, category as categoryTable, author as authorTable, _articleToTag } from "@/lib/db/schema";
 import { NextRequest } from "next/server";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Regular sitemap: static pages, categories, tags, authors and published
 // articles. Reads go to the read replica when DATABASE_URL_REPLICA is set.
+//
+// FINDING CRW-001 FIX (audit 2026-10-13):
+//  1. Pehle saari queries ek hi Promise.all mein theen — ek bhi query fail hoti
+//     to poora dynamic section chup-chaap khaali reh jaata tha (live sitemap
+//     mein sirf 19 static URLs, lastmod hardcoded fallback par).
+//  2. Authors query legacy table "_ArticleToAuthor" use karti thi jo Drizzle
+//     schema mein exist nahi karti (Prisma migration leftover) — [Likely] yehi
+//     batch fail karwa rahi thi.
+// Ab: har query ka apna try/catch (partial success), authors = Article.authorId
+// se, aur failure par loud warn taake monitoring alert kar sake.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const revalidate = 3600;
@@ -43,18 +53,25 @@ const STATIC_PUBLIC_PATHS: { path: string; changefreq: string; priority: string 
   { path: "/page/sitemap", changefreq: "weekly", priority: "0.4" },
 ];
 
+async function safely<T>(label: string, query: Promise<T>): Promise<T | null> {
+  try {
+    return await query;
+  } catch (error) {
+    // Loud, greppable warning: monitoring (Sentry consoleLoggingIntegration)
+    // ya server-log grep isi line ko pakdega.
+    console.error(`[sitemap] FAILED query group "${label}" — partial sitemap served:`, error);
+    return null;
+  }
+}
+
 export async function GET(request?: NextRequest) {
   const requestedPage = Number(request?.nextUrl?.searchParams.get("page") || "1");
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const offset = (page - 1) * SITEMAP_ARTICLE_LIMIT;
 
-  let articles: { slug: string; updatedAt: Date | null }[] = [];
-  let categories: { slug: string }[] = [];
-  let authors: { slug: string }[] = [];
-  let tags: { slug: string }[] = [];
-
-  try {
-    [articles, categories, authors, tags] = await Promise.all([
+  const [articles, categories, authors, tags] = await Promise.all([
+    safely(
+      "articles",
       dbRead.query.article.findMany({
         where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
         columns: { slug: true, updatedAt: true },
@@ -62,8 +79,11 @@ export async function GET(request?: NextRequest) {
         offset,
         limit: SITEMAP_ARTICLE_LIMIT,
       }),
-      page === 1
-        ? dbRead
+    ),
+    page === 1
+      ? safely(
+          "categories",
+          dbRead
             .select({ slug: categoryTable.slug })
             .from(categoryTable)
             .where(
@@ -71,38 +91,50 @@ export async function GET(request?: NextRequest) {
                 SELECT 1 FROM "Article" a WHERE a."categoryId" = "Category"."id" AND a."status" = 'PUBLISHED'
                 UNION ALL
                 SELECT 1 FROM "Article" a JOIN "Category" sub ON a."categoryId" = sub."id" WHERE sub."parentId" = "Category"."id" AND a."status" = 'PUBLISHED'
-              )`
+              )`,
             )
-            .limit(1000)
-        : Promise.resolve([]),
-      page === 1
-        ? dbRead
+            .limit(1000),
+        )
+      : Promise.resolve([]),
+    page === 1
+      ? safely(
+          // FIX: legacy Prisma table "_ArticleToAuthor" ki jagah Article.authorId
+          // (Drizzle schema ki actual linkage).
+          "authors",
+          dbRead
             .select({ slug: authorTable.slug })
             .from(authorTable)
             .where(
               sql`EXISTS (
-                SELECT 1 FROM "_ArticleToAuthor" ata
-                JOIN "Article" a ON a."id" = ata."A"
-                WHERE ata."B" = "Author"."id" AND a."status" = 'PUBLISHED' AND a."isAnonymous" = false
-              )`
+                SELECT 1 FROM "Article" a
+                WHERE a."authorId" = "Author"."id"
+                  AND a."status" = 'PUBLISHED'
+                  AND a."isAnonymous" = false
+              )`,
             )
-            .limit(1000)
-        : Promise.resolve([]),
-      page === 1
-        ? dbRead
+            .limit(1000),
+        )
+      : Promise.resolve([]),
+    page === 1
+      ? safely(
+          "tags",
+          dbRead
             .select({ slug: tagTable.slug })
             .from(tagTable)
             .where(
               sql`(SELECT count(*) FROM "_ArticleToTag" JOIN "Article" ON "Article"."id" = "_ArticleToTag"."A" WHERE "_ArticleToTag"."B" = ${tagTable.id} AND "Article"."status" = 'PUBLISHED'::"ArticleStatus") >= 3 AND ${tagTable.slug} !~ '\\s'`,
             )
-            .limit(2000)
-        : Promise.resolve([]),
-    ]);
-  } catch (error) {
-    console.warn("[sitemap] Failed to fetch dynamic entries from DB:", error);
-  }
+            .limit(2000),
+        )
+      : Promise.resolve([]),
+  ]);
 
-  const latestUpdateIso = (articles[0]?.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString();
+  const articleRows = articles ?? [];
+  const categoryRows = categories ?? [];
+  const authorRows = authors ?? [];
+  const tagRows = tags ?? [];
+
+  const latestUpdateIso = (articleRows[0]?.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString();
   const urls: string[] = [
     ...(page === 1
       ? STATIC_PUBLIC_PATHS.map(
@@ -110,19 +142,19 @@ export async function GET(request?: NextRequest) {
             `<url><loc>${siteConfig.url}${item.path}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>${item.changefreq}</changefreq><priority>${item.priority}</priority></url>`,
         )
       : []),
-    ...articles.map(
+    ...articleRows.map(
       (a) =>
         `<url><loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc><lastmod>${(a.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`,
     ),
-    ...categories.map(
+    ...categoryRows.map(
       (c) =>
         `<url><loc>${siteConfig.url}/category/${escapeXml(c.slug)}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`,
     ),
-    ...tags.map(
+    ...tagRows.map(
       (t) =>
         `<url><loc>${siteConfig.url}/tag/${escapeXml(t.slug)}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>`,
     ),
-    ...authors.map(
+    ...authorRows.map(
       (a) =>
         `<url><loc>${siteConfig.url}/author/${escapeXml(a.slug)}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>weekly</changefreq><priority>0.5</priority></url>`,
     ),
