@@ -148,9 +148,9 @@ export default function AuthorProfileView({ author, articles, socials, totalView
       </div>
 
       {/* ── Body: About + Articles + Sidebar ─────────── */}
-      <div className="wrap ap-body min-w-0 max-w-full">
-        
-        <div className="ap-main-col min-w-0 max-w-full">
+      <div className="wrap">
+        <div className="ap-body min-w-0 w-full">
+          <div className="ap-main-col min-w-0 w-full">
           {/* About */}
           {author.bio && (
             <section className="ap-about min-w-0 max-w-full" aria-label="About">
@@ -264,6 +264,7 @@ export default function AuthorProfileView({ author, articles, socials, totalView
           </div>
         </div>
 
+        </div>
       </div>
     </div>
   );
