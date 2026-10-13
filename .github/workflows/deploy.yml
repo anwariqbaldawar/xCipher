@@ -69,8 +69,13 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             source ~/.profile || true
-            source ~/.bashrc || true
-            
+            # Source production environment if present
+            if [ -f .env.production ]; then
+              set -a
+              . .env.production
+              set +a
+            fi
+
             # Reproducible install (Audit BE-002: npm install on the host could
             # drift from the lockfile; npm ci fails loudly instead).
             npm ci --no-audit --no-fund

@@ -2,6 +2,16 @@ import postgres from "postgres";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
+if (!process.env.DATABASE_URL) {
+  try {
+    process.loadEnvFile(".env.production");
+  } catch {
+    try {
+      process.loadEnvFile(".env");
+    } catch {}
+  }
+}
+
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
