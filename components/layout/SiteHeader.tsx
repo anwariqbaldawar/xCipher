@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import ThemeToggle from "./ThemeToggle";
 import MobileDrawer from "./MobileDrawer";
@@ -30,6 +30,11 @@ import { useNavStore } from "@/lib/store/useNavStore";
 
 export default function SiteHeader() {
   const pathname = usePathname() || "";
+  const isArticlePage = Boolean(pathname && (pathname.startsWith("/article/") || pathname.includes("/article/")));
+  const [isHidden, setIsHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+  const accumulatedDeltaRef = useRef(0);
+  const lastDirectionRef = useRef<"up" | "down" | null>(null);
   const activeCategorySlug = useNavStore((state) => state.activeCategorySlug);
   
   const now = new Date();
@@ -72,14 +77,26 @@ export default function SiteHeader() {
     return () => clearInterval(interval);
   }, []);
 
+  // Reset isHidden on route change
   useEffect(() => {
+    setIsHidden(false);
+    lastScrollYRef.current = typeof window !== "undefined" ? window.scrollY : 0;
+    accumulatedDeltaRef.current = 0;
+    lastDirectionRef.current = null;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
 
     let ticking = false;
+    lastScrollYRef.current = window.scrollY;
 
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
           const y = window.scrollY;
+          const lastY = lastScrollYRef.current;
+          const diff = y - lastY;
           
           const navrow = document.getElementById("navrow");
           if (y > 140) {
@@ -93,7 +110,40 @@ export default function SiteHeader() {
           } else if (y < 20) {
             document.body.classList.remove("scrolled");
           }
+
+          // Smart Header (headroom): Only active on article pages and on mobile (< 768px).
+          // Desktop immunity is guaranteed via Tailwind 'md:translate-y-0 md:sticky' and CSS overrides.
+          if (isArticlePage) {
+            if (y <= 60) {
+              // Always reveal when near top of article
+              setIsHidden(false);
+              accumulatedDeltaRef.current = 0;
+              lastDirectionRef.current = null;
+            } else if (diff !== 0) {
+              const currentDirection = diff > 0 ? "down" : "up";
+
+              // Reset accumulated delta if scroll direction reversed
+              if (currentDirection !== lastDirectionRef.current) {
+                lastDirectionRef.current = currentDirection;
+                accumulatedDeltaRef.current = 0;
+              }
+
+              accumulatedDeltaRef.current += Math.abs(diff);
+
+              // Downward scroll past 100px with accumulated intent > 20px -> smoothly hide
+              if (currentDirection === "down" && y > 100 && accumulatedDeltaRef.current > 20) {
+                setIsHidden(true);
+              } 
+              // Upward scroll with accumulated intent > 15px -> smoothly reveal
+              else if (currentDirection === "up" && accumulatedDeltaRef.current > 15) {
+                setIsHidden(false);
+              }
+            }
+          } else {
+            setIsHidden(false);
+          }
           
+          lastScrollYRef.current = y;
           ticking = false;
         });
         ticking = true;
@@ -105,7 +155,7 @@ export default function SiteHeader() {
       window.removeEventListener("scroll", handleScroll);
       document.body.classList.remove("scrolled");
     };
-  }, []);
+  }, [isArticlePage]);
 
   // Mobile Auto-Slide logic
   useEffect(() => {
@@ -136,40 +186,51 @@ export default function SiteHeader() {
 
   return (
     <SearchProvider>
-      <header className="site-head">
-        <div className="utility border-b border-[var(--line)] text-[10px]">
-          <div className="wrap utility-in flex items-center justify-between w-full">
-            {/* Left: Date */}
-            <div className="flex-1 flex justify-start shrink-0">
-              <span id="todayDate" className="util-date !font-mono font-medium tracking-tight normal-case whitespace-nowrap">
-                <span className="date-full" suppressHydrationWarning>{currentDate ? currentDate.full : todayDateFull}</span>
-                <span className="date-compact" suppressHydrationWarning>{currentDate ? currentDate.compact : todayDateCompact}</span>
-              </span>
-            </div>
+      {/* Top Utility Bar (Date, Links, ThemeToggle) - Unaffected at absolute top-0 */}
+      <div className="utility border-b border-[var(--line)] text-[10px] w-full bg-[var(--paper)]">
+        <div className="wrap utility-in flex items-center justify-between w-full">
+          {/* Left: Date */}
+          <div className="flex-1 flex justify-start shrink-0">
+            <span id="todayDate" className="util-date !font-mono font-medium tracking-tight normal-case whitespace-nowrap">
+              <span className="date-full" suppressHydrationWarning>{currentDate ? currentDate.full : todayDateFull}</span>
+              <span className="date-compact" suppressHydrationWarning>{currentDate ? currentDate.compact : todayDateCompact}</span>
+            </span>
+          </div>
 
-            {/* Center: Quick Links with Separators */}
-            <div className="flex-1 flex items-center justify-center px-1 sm:px-2 text-[var(--muted)]">
-              <span className="text-[var(--line-2)] opacity-70 mr-2.5 sm:mr-6 text-xs">|</span>
-              <div className="flex items-center justify-center gap-2 sm:gap-3">
-                <Link href="/" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Home">
-                  <Home className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-                </Link>
-                <Link href="/page/about" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="About">
-                  <Info className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-                </Link>
-                <Link href="/page/contact" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Contact">
-                  <Mail className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-                </Link>
-              </div>
-              <span className="text-[var(--line-2)] opacity-70 ml-2.5 sm:ml-6 text-xs">|</span>
+          {/* Center: Quick Links with Separators */}
+          <div className="flex-1 flex items-center justify-center px-1 sm:px-2 text-[var(--muted)]">
+            <span className="text-[var(--line-2)] opacity-70 mr-2.5 sm:mr-6 text-xs">|</span>
+            <div className="flex items-center justify-center gap-2 sm:gap-3">
+              <Link href="/" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Home">
+                <Home className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+              </Link>
+              <Link href="/page/about" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="About">
+                <Info className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+              </Link>
+              <Link href="/page/contact" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Contact">
+                <Mail className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+              </Link>
             </div>
+            <span className="text-[var(--line-2)] opacity-70 ml-2.5 sm:ml-6 text-xs">|</span>
+          </div>
 
-            {/* Right: Dark Mode Toggle */}
-            <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2.5">
-              <ThemeToggle />
-            </div>
+          {/* Right: Dark Mode Toggle */}
+          <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2.5">
+            <ThemeToggle />
           </div>
         </div>
+      </div>
+
+      {/* Main Header with Professional Smart Headroom Animation */}
+      <header
+        className={`site-head sticky top-0 z-40 headroom-nav md:sticky md:top-0 md:translate-y-0 ${
+          isArticlePage
+            ? (isHidden
+                ? "is-hidden -translate-y-full"
+                : "is-visible translate-y-0")
+            : "translate-y-0"
+        }`}
+      >
         <div className="wrap masthead relative">
           <MobileDrawer />
           <Link className="logo" href="/" aria-label="xSypher — home">
