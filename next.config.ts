@@ -192,6 +192,15 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: "/:all*(svg|jpg|jpeg|png|webp|avif|ico|woff|woff2)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
         // The console and preview subdomains are working surfaces, not public
         // content. A few public routes still resolve there (the homepage, static
         // pages) because routing lets real pages win over the catch-all
@@ -243,6 +252,7 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "5mb",
       allowedOrigins: ["admin.xsypher.com", "xsypher.com", "www.xsypher.com", "localhost:3000", "admin.localhost:3000"],
     },
+    optimizePackageImports: ["lucide-react", "date-fns"],
     workerThreads: false,
     cpus: 1,
   },

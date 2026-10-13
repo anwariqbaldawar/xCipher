@@ -42,8 +42,9 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
 
 # Set permissions for the cache directory
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN mkdir -p .next/cache
+RUN chown -R nextjs:nodejs .next
+VOLUME ["/app/.next/cache"]
 
 # Copy the standalone output and static files
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

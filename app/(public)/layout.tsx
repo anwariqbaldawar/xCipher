@@ -19,6 +19,8 @@ export default async function PublicLayout({
   return (
     <>
       <link rel="preconnect" href="https://res.cloudinary.com" />
+      <link rel="preconnect" href="https://pub-cb79a088effc4ad3a3636de153e20b63.r2.dev" />
+      <link rel="dns-prefetch" href="https://pub-cb79a088effc4ad3a3636de153e20b63.r2.dev" />
       <script
         type="application/ld+json"
         nonce={nonce}
