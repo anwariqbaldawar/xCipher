@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  Bing Webmaster Tools verification file (MON-002).
+
+  HOW TO USE
+  1. Bing Webmaster Tools -> Add site -> xsypher.com -> "XML file" verification.
+  2. Bing gives you a token (looks like 30F4A7...). Replace REPLACE_WITH_BING_TOKEN below
+     with that exact token - no spaces, nothing else changed.
+  3. Commit + redeploy (this file is copied into the image at build time).
+  4. Verify at https://xsypher.com/BingSiteAuth.xml -> then click "Verify" in Bing.
+
+  WHY A FILE (not a meta tag): NEXT_PUBLIC_* verification tags are inlined at
+  build time, but this project's Docker build excludes .env.* from the build
+  context, so a host-side env var would never reach the HTML. The file method
+  has no env dependency at all. Alternative: a DNS TXT record with the same
+  token value (Bing -> "DNS" verification) - see fixes/bing-verification.md.
+-->
+<users>
+	<user>REPLACE_WITH_BING_TOKEN</user>
+</users>

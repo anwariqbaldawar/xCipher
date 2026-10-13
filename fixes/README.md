@@ -18,6 +18,7 @@
 | `caddy-headers.conf` | Caddy proxy security headers + health-coupling NOTE (BE-007) | SEC-005, BE-007 | S |
 | `dmarc-recommendation.txt` | DMARC/SPF upgrade steps | SEC-003 | S |
 | `indexnow-key.sh` | IndexNow key generate + env set | CRW-005 | S |
+| `bing-verification.md` | Bing verification file/DNS method + build-arg recipe (env/meta path is build-time only) | MON-002 | S |
 | `jsonld-templates.md` | Ready JSON-LD (Organization/@id publisher, Breadcrumb for categories, Person sameAs) | SCH-001 | S |
 | `ci-gate.yml` | CI mein lint + build gate snippet | BE-001 | S |
 | `deploy-health-gate.sh` | Deploy ke baad health check + rollback snippet | BE-002 | M |
@@ -32,3 +33,16 @@ git apply fixes/article-metadata.diff   # ya manually review karke
 # robots.txt: ek option chuno
 cp fixes/robots-visibility-first.txt fixes/active-robots.txt
 ```
+
+## Already applied on branch `arena/80f1fb0b-xcipher`
+
+Yeh fixes **already code mein hain** (upar wali table sirf reference/rollback ke liye rakhi hai):
+
+`9ff83e4` key removal · `e385452` sitemap isolation · `3b3faf2` metadata wiring · `7eca1f1` og fail-open ·
+`675ad42` robots/IndexNow/tagline/404/Bing-prep · `41719cd` image sizes · `5a4ac71` test fixture ·
+`e3da25a` ads.txt · `a861b27` CI + deploy health gate + `/api/healthz` · `9456e7f` alt-text gate ·
+`1b7d8fa` CSP connect-src · `12fdbe9` prefer-const · `d9c2336` schema entity linkage · `3df3b23` .gitignore ·
+plus Bing file-method (`public/BingSiteAuth.xml`).
+
+**Baqi kaam sirf owner kar sakta hai** → `report.md` §12.7 "Owner actions" dekhein
+(key revoke/purge, real ads.txt ID, Bing token, `INDEXNOW_KEY`, DMARC, analytics, uptime monitor).

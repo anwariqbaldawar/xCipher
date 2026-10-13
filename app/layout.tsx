@@ -77,14 +77,16 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
+  // NOTE (MON-002): these meta tags are evaluated at BUILD time for the
+  // statically generated pages, and `.env.*` is excluded from the Docker build
+  // context (.dockerignore), so an env var set only in the host's
+  // `.env.production` will NOT reach the rendered HTML.
+  //   • Bing  → use public/BingSiteAuth.xml (file method) or a DNS TXT record.
+  //   • Google→ use a DNS TXT record (google-site-verification=...) OR pass the
+  //     value as a Docker build arg (see fixes/bing-verification.md).
+  // The meta-tag path below still works when the value is present at build.
   verification: {
     google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
-    // MON-002: Bing Webmaster Tools verification. Next's Verification type has
-    // no `bing` key, so it goes through `other` (msvalidate.01) and is only
-    // emitted when the env var is set.
-    ...(process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION
-      ? { other: { 'msvalidate.01': process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } }
-      : {}),
   },
 };
 

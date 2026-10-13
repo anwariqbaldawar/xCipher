@@ -379,7 +379,7 @@ Legend: **P** = Present · **PA** = Partial · **M** = Missing · **N/A**
 ### 5.12 Analytics, Monitoring & Operations
 
 - **MON-001 (High):** Analytics **bilkul nahi** (code grep + layout). Policies mein "Google Analytics/Plausible" ka zikr bhi inaccurate. Fix Section 4/#9.
-- **MON-002 (Low):** Bing Webmaster verification missing (IndexNow pings ✓, verification tag ✗).
+- **MON-002 (Low):** Bing Webmaster verification missing (IndexNow pings ✓, verification tag ✗). **Ab:** `public/BingSiteAuth.xml` file-method ready hai (env/meta path is Docker setup mein kaam nahi karta — neeche §12.7 note dekhein).
 - **MON-003 (Low):** `/api/health` ready; external monitor configure unknown → BetterStack/UptimeRobot + alerting.
 - **Backups:** DB managed (Neon/Supabase assumption — managed snapshots) + R2 versioning unknown `[Not verified]`; deploy rollback nahi (BE-002).
 - **KPI dashboard (recommend):** GSC (impressions/clicks/queries) + PSI field (CWV) + Plausible/GA4 (engagement) + AdSense RPM + uptime — Section 11 monitoring plan.
@@ -473,7 +473,7 @@ LOW EFFORT ─────────────┼─────────
 | D2 | TSEO-002/003 metadata wiring patch | Dev |
 | D3 | TSEO-001: og 500 log-grep → fix/fallback | Dev |
 | D4 | CRW-003 robots add + GEO-002 decision (robots option apply) | Owner+Dev |
-| D5 | MON-001 analytics install + GSC/Bing verify (MON-002) | Dev |
+| D5 | MON-001 analytics install + GSC/Bing verify (MON-002: `public/BingSiteAuth.xml` mein token paste) | Owner+Dev |
 | D5 | PERF-001 sizes fix | Dev |
 | D6 | SEC-003 DMARC quarantine + rua | Owner |
 | D7 | BE-001 CI lint+build gate; CON-002/003 polish pass | Dev |
@@ -617,7 +617,7 @@ Owner ne "DO everything" approve kiya; yeh sab **`arena/80f1fb0b-xcipher` branch
 | 2 | `e385452` | Sitemap: per-query isolation + `Article.authorId` authors query | CRW-001 |
 | 3 | `3b3faf2` | Editor ke primary meta fields + ogImage/canonical wire | TSEO-002, TSEO-003 |
 | 4 | `7eca1f1` | `/api/og` fail-open: fallback brand card (5-min TTL) + materialised render | TSEO-001 |
-| 5 | `675ad42` | robots (invite/unsubscribe + AI groups), IndexNow key, tagline centralisation, 404 metadata, internal links, Bing env, generic login error | CRW-003/004/005/006, GEO-002, CON-002, MON-002, SEC-004 |
+| 5 | `675ad42` | robots (invite/unsubscribe + AI groups), IndexNow key, tagline centralisation, 404 metadata, internal links, generic login error | CRW-003/004/005/006, GEO-002, CON-002, SEC-004 |
 | 6 | `41719cd` | Image `sizes` (StoryRow 118px + category feature), react-tweet client-only dynamic | PERF-001, PERF-002 |
 | 7 | `5a4ac71` | RSS test fixture siteConfig ke real shape par | (test) |
 | 8 | `e3da25a` | `public/ads.txt` serve (publisher ID placeholder) | AD-001 |
@@ -626,17 +626,20 @@ Owner ne "DO everything" approve kiya; yeh sab **`arena/80f1fb0b-xcipher` branch
 | 11 | `1b7d8fa` | CSP `connect-src` explicit allowlist (Google CSP guide ke mutabiq) | SEC-002 |
 | 12 | `12fdbe9` | Safe `eslint --fix` (3 × prefer-const) | BE-001 (partial) |
 | 13 | `d9c2336` | Publisher `@id` link, Person `worksFor`, Organization sameAs (GitHub) | SCH-001 |
+| 14 | *(is turn)* | Bing verification file-method (`public/BingSiteAuth.xml`) + env/meta path remove; build-time env caveat documented | MON-002 |
 
 **Verification (is sandbox mein chalaya):** `npx tsc --noEmit` PASS · `npm test` **557/557 PASS** · deploy.yml YAML valid · OG renderer ka local smoke test PASS (20KB PNG). **Note:** `npm run build` yahan sandbox ki egress limit (fonts.googleapis.com) ki wajah se nahi chali — CI (GitHub) par build gate ab isay cover karta hai.
 
 **Owner actions (jo sirf aap kar sakte hain):**
 1. **SEC-001:** agentrouter key **revoke** karein + git history purge (`git filter-repo`/BFG) — repo public hai.
 2. `public/ads.txt` mein real `pub-...` ID daalein.
-3. `NEXT_PUBLIC_BING_SITE_VERIFICATION` env set karein (Bing Webmaster token).
+3. **Bing verification (MON-002):** `public/BingSiteAuth.xml` mein apna Bing token paste karein (ya DNS TXT record use karein) — details `fixes/bing-verification.md`. **Env var wala rasta kaam nahi karta:** `NEXT_PUBLIC_*` build-time inline hota hai aur `.dockerignore` mein `.env.*` excluded hai, yani host ki `.env.production` build ke waqt nazar hi nahi aati. Bing ki `XML file` ya `DNS` verification chunein.
 4. `INDEXNOW_KEY` env set karein (`bash fixes/indexnow-key.sh`).
 5. DNS: DMARC `p=quarantine` → `p=reject` (fixes/dmarc-recommendation.txt).
 6. Analytics account (Plausible/GA4) + `/api/healthz` par uptime monitor.
 7. Deploy ke baad: browser console mein CSP violations check karein (SEC-002) + `/api/og?title=test` ka 200 verify karein.
+
+**Known limitation (build-time env):** `NEXT_PUBLIC_*` values build ke waqt inline hote hain. Docker build context se `.env.*` excluded hai aur `docker-compose.prod.yml` env sirf runtime par deta hai, is liye host ki `.env.production` build ko nahi milti. Iska asar: (a) Bing verification — file/DNS method use karein (fix applied); (b) Google verification meta tag aur (c) koi bhi `NEXT_PUBLIC_*` analytics ID — in ke liye ya DNS/hardcoded constant use karein, ya Docker build-args add karein (`fixes/bing-verification.md` section C).
 
 **Deferred (deliberately):** CRW-002 crawlable pagination (staging + real DB data ke saath test karna hai — `/latest` aur `/category` ka render model badalta hai).
 

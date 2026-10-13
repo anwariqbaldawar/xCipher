@@ -543,7 +543,7 @@
       "verification": "BWT dashboard verified tag dikhe.",
       "status": "fix-applied",
       "source": "code",
-      "implementation": "Applied: msvalidate.01 emitted when NEXT_PUBLIC_BING_SITE_VERIFICATION is set (commit 675ad42). OWNER: paste the token from Bing Webmaster Tools."
+      "implementation": "Applied: public/BingSiteAuth.xml (file method) added; the env-based msvalidate.01 meta path was removed because NEXT_PUBLIC_* is build-time only and .env.* is excluded from the Docker build context (branch arena/80f1fb0b-xcipher). OWNER: paste the Bing token into public/BingSiteAuth.xml or add a DNS TXT record (fixes/bing-verification.md); then submit sitemaps in BWT."
     },
     {
       "id": "CRW-004",
