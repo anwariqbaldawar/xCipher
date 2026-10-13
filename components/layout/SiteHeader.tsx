@@ -114,8 +114,8 @@ export default function SiteHeader() {
           // Smart Header (headroom): Only active on article pages and on mobile (< 768px).
           // Desktop immunity is guaranteed via Tailwind 'md:translate-y-0 md:sticky' and CSS overrides.
           if (isArticlePage) {
-            if (y <= 60) {
-              // Always reveal when near top of article
+            // Minimum scroll threshold (50px - 100px): below 70px, header never hides
+            if (y <= 70) {
               setIsHidden(false);
               accumulatedDeltaRef.current = 0;
               lastDirectionRef.current = null;
@@ -130,8 +130,8 @@ export default function SiteHeader() {
 
               accumulatedDeltaRef.current += Math.abs(diff);
 
-              // Downward scroll past 100px with accumulated intent > 20px -> smoothly hide
-              if (currentDirection === "down" && y > 100 && accumulatedDeltaRef.current > 20) {
+              // Downward scroll past 70px threshold with accumulated intent > 20px -> smoothly hide
+              if (currentDirection === "down" && y > 70 && accumulatedDeltaRef.current > 20) {
                 setIsHidden(true);
               } 
               // Upward scroll with accumulated intent > 15px -> smoothly reveal
@@ -186,7 +186,7 @@ export default function SiteHeader() {
 
   return (
     <SearchProvider>
-      {/* Top Utility Bar (Date, Links, ThemeToggle) - Unaffected at absolute top-0 */}
+      {/* Top Utility Bar (Date, Links, ThemeToggle) - Strictly absolute top-0 and excluded from headroom translate wrapper */}
       <div className="utility border-b border-[var(--line)] text-[10px] w-full bg-[var(--paper)]">
         <div className="wrap utility-in flex items-center justify-between w-full">
           {/* Left: Date */}
@@ -221,13 +221,11 @@ export default function SiteHeader() {
         </div>
       </div>
 
-      {/* Main Header with Professional Smart Headroom Animation */}
+      {/* Main Header with Premium Smart Headroom Animation */}
       <header
-        className={`site-head sticky top-0 z-40 headroom-nav md:sticky md:top-0 md:translate-y-0 ${
-          isArticlePage
-            ? (isHidden
-                ? "is-hidden -translate-y-full"
-                : "is-visible translate-y-0")
+        className={`site-head sticky top-0 z-40 transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:sticky md:top-0 md:translate-y-0 ${
+          isArticlePage && isHidden
+            ? "-translate-y-full pointer-events-none md:pointer-events-auto"
             : "translate-y-0"
         }`}
       >

@@ -28,7 +28,8 @@ export function resolveHeadroomState({
     return { isHidden: false, newAccumulatedDelta: 0, newDirection: null };
   }
 
-  if (scrollY <= 60) {
+  // Minimum scroll threshold (50px - 100px): below 70px, header never hides
+  if (scrollY <= 70) {
     return { isHidden: false, newAccumulatedDelta: 0, newDirection: null };
   }
 
@@ -45,7 +46,7 @@ export function resolveHeadroomState({
   }
   newDelta += Math.abs(diff);
 
-  if (currentDirection === "down" && scrollY > 100 && newDelta > 20) {
+  if (currentDirection === "down" && scrollY > 70 && newDelta > 20) {
     return { isHidden: true, newAccumulatedDelta: newDelta, newDirection: currentDirection };
   } else if (currentDirection === "up" && newDelta > 15) {
     return { isHidden: false, newAccumulatedDelta: newDelta, newDirection: currentDirection };
@@ -62,12 +63,11 @@ export function getHeaderTailwindClasses({
   isHidden: boolean;
 }): string {
   const baseClasses =
-    "site-head sticky top-0 z-40 headroom-nav md:sticky md:top-0 md:translate-y-0";
-  const dynamicTransform = isArticlePage
-    ? isHidden
-      ? "is-hidden -translate-y-full"
-      : "is-visible translate-y-0"
-    : "translate-y-0";
+    "site-head sticky top-0 z-40 transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:sticky md:top-0 md:translate-y-0";
+  const dynamicTransform =
+    isArticlePage && isHidden
+      ? "-translate-y-full pointer-events-none md:pointer-events-auto"
+      : "translate-y-0";
   return `${baseClasses} ${dynamicTransform}`;
 }
 
@@ -129,11 +129,11 @@ describe("SiteHeader Smart Headroom Logic", () => {
   });
 
   describe("Scroll Direction & Accumulated Intent Thresholds", () => {
-    it("hides when scrolling down past 100px with accumulated delta > 20px on article", () => {
+    it("hides when scrolling down past 70px threshold with accumulated delta > 20px on article", () => {
       const step1 = resolveHeadroomState({
         pathname: "/article/test-slug",
-        scrollY: 110,
-        lastScrollY: 100,
+        scrollY: 80,
+        lastScrollY: 70,
         currentState: false,
         accumulatedDelta: 0,
         lastDirection: null,
@@ -143,8 +143,8 @@ describe("SiteHeader Smart Headroom Logic", () => {
 
       const step2 = resolveHeadroomState({
         pathname: "/article/test-slug",
-        scrollY: 125,
-        lastScrollY: 110,
+        scrollY: 95,
+        lastScrollY: 80,
         currentState: step1.isHidden,
         accumulatedDelta: step1.newAccumulatedDelta,
         lastDirection: step1.newDirection,
@@ -166,11 +166,11 @@ describe("SiteHeader Smart Headroom Logic", () => {
       expect(result.isHidden).toBe(false);
     });
 
-    it("always shows header when near top of the page (<= 60px)", () => {
+    it("always shows header when near top of the page (<= 70px safe zone)", () => {
       const result = resolveHeadroomState({
         pathname: "/article/test-slug",
-        scrollY: 40,
-        lastScrollY: 30,
+        scrollY: 50,
+        lastScrollY: 40,
         currentState: true,
       });
       expect(result.isHidden).toBe(false);
@@ -201,28 +201,28 @@ describe("SiteHeader Smart Headroom Logic", () => {
   });
 
   describe("Responsive CSS Class Verification", () => {
-    it("applies headroom-nav and -translate-y-full on mobile when hidden, with md:translate-y-0", () => {
+    it("applies premium easing Tailwind classes and -translate-y-full on mobile when hidden, with md:translate-y-0", () => {
       const classes = getHeaderTailwindClasses({ isArticlePage: true, isHidden: true });
-      expect(classes).toContain("headroom-nav");
-      expect(classes).toContain("is-hidden");
+      expect(classes).toContain("transition-transform");
+      expect(classes).toContain("duration-[400ms]");
+      expect(classes).toContain("ease-[cubic-bezier(0.22,1,0.36,1)]");
       expect(classes).toContain("-translate-y-full");
       expect(classes).toContain("md:translate-y-0");
       expect(classes).toContain("md:sticky");
     });
 
-    it("applies is-visible translate-y-0 when visible on article pages", () => {
+    it("applies translate-y-0 when visible on article pages with custom easing", () => {
       const classes = getHeaderTailwindClasses({ isArticlePage: true, isHidden: false });
-      expect(classes).toContain("headroom-nav");
-      expect(classes).toContain("is-visible");
+      expect(classes).toContain("duration-[400ms]");
+      expect(classes).toContain("ease-[cubic-bezier(0.22,1,0.36,1)]");
       expect(classes).toContain("translate-y-0");
       expect(classes).not.toContain("-translate-y-full");
       expect(classes).toContain("md:translate-y-0");
     });
 
-    it("applies normal translate-y-0 without headroom state classes on non-article pages", () => {
+    it("applies normal translate-y-0 without hiding on non-article pages", () => {
       const homeClasses = getHeaderTailwindClasses({ isArticlePage: false, isHidden: true });
       expect(homeClasses).toContain("translate-y-0");
-      expect(homeClasses).not.toContain("is-hidden");
       expect(homeClasses).not.toContain("-translate-y-full");
     });
   });

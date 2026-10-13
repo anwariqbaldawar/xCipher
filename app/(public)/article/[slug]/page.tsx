@@ -233,7 +233,7 @@ export default async function ArticlePage({ params }: Props) {
           
           {/* HEADER ROW */}
           <header className="mb-4 flex flex-col min-w-0 lg:col-start-2 lg:col-span-10 xl:col-start-2 xl:col-span-8">
-              <nav className="crumb mb-6" aria-label="Breadcrumb">
+              <nav className="crumb mb-6 hidden md:flex" aria-label="Breadcrumb">
                 <Link href="/">Home</Link>
                 <span className="sep">/</span>
                 <Link href={`/category/${catSlug}`}>{catName}</Link>
@@ -243,8 +243,6 @@ export default async function ArticlePage({ params }: Props) {
                     <Link href={`/category/${catSlug}?sub=${subCat.slug}`}>{subCat.name}</Link>
                   </>
                 )}
-                <span className="sep">/</span>
-                <span aria-current="page">{article.title.length > 44 ? article.title.slice(0, 44) + "…" : article.title}</span>
               </nav>
               <Link className="kicker art-kicker" href={`/category/${catSlug}`}>
                 {catName} {subCat && `/ ${subCat.name}`}
