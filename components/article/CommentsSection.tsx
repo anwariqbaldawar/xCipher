@@ -69,15 +69,19 @@ export default function CommentsSection({ articleSlug }: CommentsSectionProps) {
     <section id="comments" className="comments scroll-mt-28" aria-labelledby="cmtH">
       <h2 id="cmtH">Discussion ({isLoading ? "…" : comments.length})</h2>
 
-      <div id="cmtList" role="list" aria-live="polite" aria-busy={isLoading}>
-        {isLoading ? (
+      {isLoading ? (
+        <div id="cmtList-loading" aria-live="polite" aria-busy="true">
           <p style={{ color: "var(--ink-muted)", fontSize: "14px" }}>Loading discussion…</p>
-        ) : comments.length === 0 ? (
+        </div>
+      ) : comments.length === 0 ? (
+        <div id="cmtList-empty">
           <p style={{ color: "var(--ink-muted)", fontSize: "14px" }}>
             No comments yet — be the first to join the discussion.
           </p>
-        ) : (
-          comments.map((c) => (
+        </div>
+      ) : (
+        <div id="cmtList" role="list" aria-live="polite">
+          {comments.map((c) => (
             <div key={c.id} className="cmt" role="listitem">
               {/* Gravatar via email hash */}
               <Image
@@ -98,9 +102,9 @@ export default function CommentsSection({ articleSlug }: CommentsSectionProps) {
                 <p>{c.body}</p>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Pending state notification */}
       {submitResult?.success && (

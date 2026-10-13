@@ -9,9 +9,18 @@ interface SingleImageViewerProps {
   alt?: string;
   caption?: string;
   credit?: string;
+  width?: number | string;
+  height?: number | string;
 }
 
-export default function SingleImageViewer({ src, alt = "", caption, credit }: SingleImageViewerProps) {
+export default function SingleImageViewer({
+  src,
+  alt = "",
+  caption,
+  credit,
+  width = 1200,
+  height = 675,
+}: SingleImageViewerProps) {
   const [open, setOpen] = useState(false);
   const summary: MediaSummary[] = [
     { label: "Caption", value: caption || "—" },
@@ -29,7 +38,16 @@ export default function SingleImageViewer({ src, alt = "", caption, credit }: Si
           aria-label={`View image full screen: ${alt || "image"}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={src} alt={alt} title={caption} loading="lazy" className="h-auto w-full" />
+          <img
+            src={src}
+            alt={alt}
+            title={caption}
+            width={width || 1200}
+            height={height || 675}
+            loading="lazy"
+            decoding="async"
+            className="h-auto w-full"
+          />
           <span className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white opacity-100 shadow transition md:opacity-0 md:group-hover:opacity-100">
             <Maximize size={18} />
           </span>
@@ -51,7 +69,13 @@ export default function SingleImageViewer({ src, alt = "", caption, credit }: Si
         title={caption || alt || "Image full view"}
         media={
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={src} alt={alt} className="max-h-[calc(50vh-2rem)] max-w-full object-contain md:max-h-[calc(100vh-4rem)]" />
+          <img
+            src={src}
+            alt={alt}
+            width={width || 1200}
+            height={height || 675}
+            className="max-h-[calc(50vh-2rem)] max-w-full object-contain md:max-h-[calc(100vh-4rem)]"
+          />
         }
         summary={summary}
       />

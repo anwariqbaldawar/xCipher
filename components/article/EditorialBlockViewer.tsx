@@ -27,7 +27,7 @@ function GalleryViewer({ block }: { block: Gallery }) {
       {block.images.map((image, i) => <figure key={i}>
         <button type="button" onClick={() => { setIndex(i); dialog.current?.showModal(); }} aria-label={`Enlarge: ${image.alt}`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image.src} alt={image.alt} loading="lazy" />
+          <img src={image.src} alt={image.alt} width={800} height={600} loading="lazy" decoding="async" />
           <span className="gallery-zoom"><ZoomIn size={18} /></span>
         </button>
         {(image.caption || image.credit) && <figcaption>{image.caption}{image.credit && <small>Photo: {image.credit}</small>}</figcaption>}
@@ -41,7 +41,7 @@ function GalleryViewer({ block }: { block: Gallery }) {
       <button type="button" onClick={() => move(-1)} aria-label="Previous image"><ChevronLeft /></button>
       <figure>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={photo.src} alt={photo.alt} />
+        <img src={photo.src} alt={photo.alt} width={1200} height={900} />
         <figcaption aria-live="polite">{index + 1} / {block.images.length} · {photo.caption || photo.alt}{photo.credit && ` — ${photo.credit}`}</figcaption>
       </figure>
       <button type="button" onClick={() => move(1)} aria-label="Next image"><ChevronRight /></button>
@@ -55,9 +55,9 @@ function ImageSlider({ block }: { block: Extract<EditorialBlock, { kind: 'slider
     <div className="publication-block-heading">{block.title}</div>
     <div className="publication-slider">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={block.after.src} alt={block.after.alt} loading="lazy" />
+      <img src={block.after.src} alt={block.after.alt} width={800} height={500} loading="lazy" decoding="async" />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="slider-before" src={block.before.src} alt={block.before.alt} loading="lazy" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }} />
+      <img className="slider-before" src={block.before.src} alt={block.before.alt} width={800} height={500} loading="lazy" decoding="async" style={{ clipPath: `inset(0 ${100 - position}% 0 0)` }} />
       <span className="slider-label before">{block.beforeLabel}</span><span className="slider-label after">{block.afterLabel}</span>
       <span className="slider-handle" style={{ left: `${position}%` }} aria-hidden="true">↔</span>
       <input type="range" min="0" max="100" value={position} onChange={e => setPosition(Number(e.target.value))} aria-label={`Compare ${block.beforeLabel} with ${block.afterLabel}`} aria-valuetext={`${position}% ${block.beforeLabel}`} />
@@ -110,7 +110,7 @@ export default function EditorialBlockViewer({ block, preview = false }: { block
       {block.offers.map((offer, i) => <div className="buying-offer" key={i}>
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          {offer.logo ? <img src={optimizeImageUrl(offer.logo, 320)} alt="" loading="lazy" /> : null}
+          {offer.logo ? <img src={optimizeImageUrl(offer.logo, 320)} alt="" width={120} height={40} loading="lazy" decoding="async" /> : null}
           <strong>{offer.retailer}</strong>
         </div>
         <span>{offer.price}</span><a className="publication-button" href={offer.url} target="_blank" rel="sponsored noopener noreferrer">View deal <ArrowUpRight size={16} /></a>
@@ -125,7 +125,7 @@ export default function EditorialBlockViewer({ block, preview = false }: { block
           {block.first && <h3 className="text-xl font-bold mb-4 text-center">{block.first}</h3>}
           {block.firstImage?.src && (
             <figure className="mb-4">
-              <img src={optimizeImageUrl(block.firstImage.src, 800)} alt={block.firstImage.alt} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
+              <img src={optimizeImageUrl(block.firstImage.src, 800)} alt={block.firstImage.alt} width={800} height={600} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
               {block.firstImage.caption && <figcaption className="text-sm mt-2 text-[var(--muted)] text-center">{block.firstImage.caption}</figcaption>}
             </figure>
           )}
@@ -139,7 +139,7 @@ export default function EditorialBlockViewer({ block, preview = false }: { block
           {block.second && <h3 className="text-xl font-bold mb-4 text-center">{block.second}</h3>}
           {block.secondImage?.src && (
             <figure className="mb-4">
-              <img src={optimizeImageUrl(block.secondImage.src, 800)} alt={block.secondImage.alt} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
+              <img src={optimizeImageUrl(block.secondImage.src, 800)} alt={block.secondImage.alt} width={800} height={600} loading="lazy" decoding="async" className="w-full rounded-xl object-cover" />
               {block.secondImage.caption && <figcaption className="text-sm mt-2 text-[var(--muted)] text-center">{block.secondImage.caption}</figcaption>}
             </figure>
           )}

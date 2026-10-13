@@ -2,11 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 
-export default function ArticleByline({ article, size = 24, showRole = false, children }: {
+export default function ArticleByline({ article, size = 24, showRole = false, children, priority = false }: {
   article: ArticleAuthorSource;
   size?: number;
   showRole?: boolean;
   children?: React.ReactNode;
+  priority?: boolean;
 }) {
   const author = getArticleAuthor(article);
   const isLarge = size >= 64;
@@ -24,7 +25,7 @@ export default function ArticleByline({ article, size = 24, showRole = false, ch
 
   const avatar = author.avatar ? (
     <span style={{ width: size, height: size }} className={avatarWrapperClasses}>
-      <Image src={author.avatar} alt={author.name} width={size} height={size} sizes={`${size}px`} className={imgClasses} />
+      <Image src={author.avatar} alt={author.name} width={size} height={size} sizes={`${size}px`} className={imgClasses} priority={priority} />
     </span>
   ) : (
     <span style={{ width: size, height: size }} className={fallbackClasses}>{author.name.charAt(0)}</span>
@@ -32,7 +33,7 @@ export default function ArticleByline({ article, size = 24, showRole = false, ch
 
   return (
     <span className={`inline-flex items-center ${isLarge ? 'gap-4' : 'gap-2'} align-middle`} itemProp="author" itemScope itemType={`https://schema.org/${article.isAnonymous ? "Organization" : "Person"}`}>
-      {author.slug ? <Link href={`/author/${author.slug}`} className="shrink-0">{avatar}</Link> : avatar}
+      {author.slug ? <Link href={`/author/${author.slug}`} className="shrink-0" tabIndex={-1} aria-hidden="true">{avatar}</Link> : avatar}
       <span className={`inline-flex flex-col ${isLarge ? 'gap-1' : ''}`}>
         {author.slug ? (
           <Link href={`/author/${author.slug}`} className={`font-bold hover:text-[var(--accent)] transition-colors ${isLarge ? 'text-xl' : ''}`} itemProp="name">{author.name}</Link>

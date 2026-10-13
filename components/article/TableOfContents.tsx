@@ -35,54 +35,86 @@ export default function TableOfContents({ containerSelector = '.prose', title = 
   useEffect(() => {
     if (items.length === 0) return;
 
+    const container = root.current?.closest(containerSelector) || document.querySelector(containerSelector);
+    if (!container) return;
+
+    const headingElements = Array.from(container.querySelectorAll('h2, h3, h4')).filter(
+      el => !el.closest('[data-toc], [contenteditable="false"]')
+    );
+    if (headingElements.length === 0) return;
+
+    // Use IntersectionObserver with negative rootMargin to detect active heading
+    // without layout thrashing on scroll.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting);
+        if (visible.length > 0) {
+          const topEntry = visible.reduce((prev, curr) =>
+            curr.boundingClientRect.top < prev.boundingClientRect.top ? curr : prev
+          );
+          if (topEntry.target.id) {
+            setActiveId(topEntry.target.id);
+          }
+        }
+      },
+      {
+        rootMargin: "-100px 0px -60% 0px",
+        threshold: 0
+      }
+    );
+
+    headingElements.forEach(el => observer.observe(el));
+
+    // Throttled rAF listener ensures zero forced synchronous reflows
+    let rafId = 0;
     const handleScroll = () => {
-      const container = root.current?.closest(containerSelector) || document.querySelector(containerSelector);
-      if (!container) return;
-
-      const headingElements = Array.from(container.querySelectorAll('h2, h3, h4')).filter(el => !el.closest('[data-toc], [contenteditable="false"]'));
-      let currentActiveId = '';
-
-      for (const heading of headingElements) {
-        const rect = heading.getBoundingClientRect();
-        // 120px offset to account for sticky header or padding
-        if (rect.top <= 150) {
-          currentActiveId = heading.id;
-        } else {
-          break;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        let currentActiveId = '';
+        for (const heading of headingElements) {
+          const rect = heading.getBoundingClientRect();
+          if (rect.top <= 150) {
+            currentActiveId = heading.id;
+          } else {
+            break;
+          }
         }
-      }
-
-      if (!currentActiveId && headingElements.length > 0) {
-        const firstRect = headingElements[0].getBoundingClientRect();
-        if (firstRect.top > 150 && firstRect.top < window.innerHeight) {
-          currentActiveId = headingElements[0].id;
+        if (!currentActiveId && headingElements[0]) {
+          const firstRect = headingElements[0].getBoundingClientRect();
+          if (firstRect.top > 150 && firstRect.top < window.innerHeight) {
+            currentActiveId = headingElements[0].id;
+          }
         }
-      }
-
-      if (currentActiveId !== activeId) {
-        setActiveId(currentActiveId);
-      }
+        if (currentActiveId && currentActiveId !== activeId) {
+          setActiveId(currentActiveId);
+        }
+      });
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
 
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+      cancelAnimationFrame(rafId);
+    };
   }, [items, containerSelector, activeId]);
+
   const navRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    if (activeId && navRef.current) {
-      const activeElement = navRef.current.querySelector(`a[href="#${activeId}"]`) as HTMLElement;
+    if (!activeId || !navRef.current) return;
+    let rafId = 0;
+    rafId = requestAnimationFrame(() => {
+      const nav = navRef.current;
+      if (!nav) return;
+      const activeElement = nav.querySelector(`a[href="#${activeId}"]`) as HTMLElement;
       if (activeElement) {
-        const nav = navRef.current;
         const navTop = nav.scrollTop;
         const navBottom = navTop + nav.clientHeight;
-        // offsetTop is relative to the nav container because we'll add 'relative' to it
         const elTop = activeElement.offsetTop;
         const elBottom = elTop + activeElement.clientHeight;
 
-        // If the element is outside the visible area of the scroller, scroll it into view (center it)
         if (elTop < navTop || elBottom > navBottom) {
           nav.scrollTo({
             top: elTop - nav.clientHeight / 2 + activeElement.clientHeight / 2,
@@ -90,7 +122,8 @@ export default function TableOfContents({ containerSelector = '.prose', title = 
           });
         }
       }
-    }
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [activeId]);
 
   return <div ref={root} data-toc className="article-toc bg-[var(--surface-2)] border border-[var(--line)] p-4 rounded-xl my-4">

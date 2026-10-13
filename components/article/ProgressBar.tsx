@@ -8,16 +8,23 @@ export default function ProgressBar() {
   useEffect(() => {
     document.body.classList.add("is-article");
 
-    const handleScroll = () => {
+    let rafId = 0;
+    const updateProgress = () => {
       const h = document.documentElement.scrollHeight - window.innerHeight;
       const progress = h > 0 ? Math.min(1, Math.max(0, window.scrollY / h)) : 0;
       setScrollProgress(progress);
     };
 
+    const handleScroll = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(updateProgress);
+    };
+
     window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
+    updateProgress();
 
     return () => {
+      cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", handleScroll);
       document.body.classList.remove("is-article");
     };

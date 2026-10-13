@@ -20,13 +20,17 @@ export default function ScrollReveal() {
     // with no styles behind it.
     if (!isReduced) {
       // Mark what is already on screen as revealed *before* arming the gate.
-      // Otherwise the hidden state applies for a frame and everything above the
-      // fold — the lead story included — visibly blinks out and fades back in.
+      // Separate reads from writes to avoid forced synchronous layout reflow.
+      const toReveal: Element[] = [];
+      const vh = window.innerHeight;
       document.querySelectorAll("[data-reveal]").forEach((el) => {
         const box = el.getBoundingClientRect();
-        if (box.top < window.innerHeight && box.bottom > 0) {
-          el.setAttribute("data-revealed", "");
+        if (box.top < vh && box.bottom > 0) {
+          toReveal.push(el);
         }
+      });
+      toReveal.forEach((el) => {
+        el.setAttribute("data-revealed", "");
       });
       root.setAttribute("data-reveal-ready", "");
     }

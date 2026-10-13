@@ -28,6 +28,7 @@ export default function ShareRow({ title, slug, deck }: { title: string; slug: s
           href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Share on X"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
           <SocialIcon platform="x" /> <span className="hidden sm:inline">X</span>
@@ -36,6 +37,7 @@ export default function ShareRow({ title, slug, deck }: { title: string; slug: s
           href={`https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Share on WhatsApp"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
           <SocialIcon platform="whatsapp" /> <span className="hidden sm:inline">WhatsApp</span>
@@ -44,6 +46,7 @@ export default function ShareRow({ title, slug, deck }: { title: string; slug: s
           href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Share on Facebook"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
           <SocialIcon platform="facebook" /> <span className="hidden sm:inline">Facebook</span>
@@ -52,15 +55,17 @@ export default function ShareRow({ title, slug, deck }: { title: string; slug: s
           href={`https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label="Share on LinkedIn"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
           <SocialIcon platform="linkedin" /> <span className="hidden sm:inline">LinkedIn</span>
         </a>
         <button 
           onClick={copyLink}
+          aria-label="Copy link to clipboard"
           className="w-10 h-10 p-0 sm:w-auto sm:h-auto sm:px-5 sm:py-2.5 flex-shrink-0 whitespace-nowrap flex justify-center items-center sm:gap-2 rounded-full border border-neutral-200 dark:border-neutral-800 font-medium text-sm hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
         >
-          <Link2 size={16} /> <span className="hidden sm:inline">Copy Link</span>
+          <Link2 size={16} aria-hidden="true" /> <span className="hidden sm:inline">Copy Link</span>
         </button>
       </div>
     </div>

@@ -244,7 +244,7 @@ export default async function ArticlePage({ params }: Props) {
               <p className="art-deck" itemProp="description">{article.deck}</p>
               
               <div className="py-4 my-6 border-t border-b border-[var(--line)]">
-                <div className="flex items-center gap-3 mb-4"><ArticleByline article={article} size={40} showRole /></div>
+                <div className="flex items-center gap-3 mb-4"><ArticleByline article={article} size={40} showRole priority={true} /></div>
                 <div className="font-mono text-[11px] text-[var(--muted)] tracking-tight flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>Published <b><time itemProp="datePublished" className="text-[var(--ink)]">{(article.publishedAt || article.createdAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</time></b></span>
                   <span className="hidden sm:inline">·</span>
@@ -261,7 +261,7 @@ export default async function ArticlePage({ params }: Props) {
                   className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold !text-white bg-red-600 hover:bg-red-700 active:scale-95 transition-all shadow-sm shrink-0"
                   aria-label="Jump to comments section"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 !text-white"/>
+                  <MessageSquare className="w-3.5 h-3.5 !text-white" aria-hidden="true" />
                   <span>Comments</span>
                 </a>
               </div>
@@ -272,7 +272,7 @@ export default async function ArticlePage({ params }: Props) {
                     src={getImgSrc(article.img || "", 1400, 788)} 
                     alt={article.featuredImageAlt || article.title}
                     fill 
-                    sizes="(max-width: 640px) 100vw, (max-width: 1023px) 100vw, (max-width: 1279px) 83vw, 900px"
+                    sizes="(max-width: 1024px) 100vw, 50vw"
                     priority={true} 
                     className="object-cover"
                   />
