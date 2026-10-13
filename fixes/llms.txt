@@ -1,0 +1,28 @@
+# xSypher — llms.txt  (Finding GEO-003 | STATUS: EXPERIMENTAL)
+# llms.ai convention: LLM crawlers ke liye site ka human-readable map.
+# Major engines ke liye proven impact NAHI hai (honestly: experimental).
+# Place at: public/llms.txt → https://xsypher.com/llms.txt
+
+# Optional (experimental)
+> xSypher: independent technology news, analysis and reviews (English)
+
+## About
+- [About xSypher](https://xsypher.com/page/about): Mission, team, editorial standards
+- [Editorial policy](https://xsypher.com/page/editorial-policy): How stories are sourced and reviewed
+- [Corrections](https://xsypher.com/page/corrections): Past corrections and updates
+
+## Sections
+- [Latest](https://xsypher.com/latest): All stories, newest first
+- [AI](https://xsypher.com/category/ai): Artificial intelligence news and analysis
+- [Cybersecurity](https://xsypher.com/category/cybersecurity): Security research, threat intel, compliance
+- [Software](https://xsypher.com/category/software): Apps, OS, developer tooling
+- [Gadgets & Devices](https://xsypher.com/category/gadgets): Hardware reviews and teardowns
+
+## Featured guides (examples — naye articles ke saath update karein)
+- [Windows 10 ESU Year 2: Pay, Upgrade or Replace](https://xsypher.com/article/windows-10-esu-year-2-pay-upgrade-or-replace): Per-device cost model for ESU vs upgrade vs replace
+- [Local AI vs Cloud AI: Which One Fits Your Work?](https://xsypher.com/article/local-ai-vs-cloud-ai-which-one-fits-your-work): When local models pay off and when they cost more
+- [EDR vs MDR: When Is 24/7 Security Worth Paying For?](https://xsypher.com/article/edr-vs-mdr-when-is-247-security-worth-paying-for): Buying framework for managed detection
+
+## Optional
+- [RSS feed](https://xsypher.com/feed.xml): Latest 20 articles
+- [Sitemap](https://xsypher.com/sitemap.xml): All indexable URLs

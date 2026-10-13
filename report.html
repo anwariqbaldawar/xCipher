@@ -1,0 +1,2707 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xSypher Audit Report — 13 Oct 2026</title>
+<style>
+:root{
+  --bg:#f7f8fa; --panel:#ffffff; --ink:#16181d; --muted:#5c6470; --line:#e3e6ea;
+  --accent:#f04552; --track:#e7eaee; --sidebar:0; --shadow:0 1px 3px rgba(16,18,23,.07);
+  --crit:#e5484d; --high:#e5484d; --medium:#f5a623; --low:#30a46c; --info:#6e7a90;
+}
+[data-theme=dark]{
+  --bg:#0e0f13; --panel:#16181d; --ink:#eef0f3; --muted:#9aa3b0; --line:#262a31;
+  --track:#262a31; --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+a{color:var(--accent)}
+.layout{display:flex;min-height:100vh}
+/* sidebar */
+.sidebar{position:sticky;top:0;height:100vh;width:280px;flex:0 0 280px;overflow-y:auto;
+  background:var(--panel);border-right:1px solid var(--line);padding:22px 14px 40px;z-index:5}
+.brand{font-weight:800;font-size:17px;letter-spacing:-.3px;margin:0 6px 4px}
+.brand span{color:var(--accent)}
+.brand-sub{font-size:11.5px;color:var(--muted);margin:0 6px 14px}
+.toc-l2,.toc-l3{display:block;padding:5px 8px;border-radius:7px;color:var(--muted);
+  text-decoration:none;font-size:13px;border-left:2px solid transparent}
+.toc-l3{padding-left:20px;font-size:12.5px}
+.toc-l2:hover,.toc-l3:hover{background:var(--bg);color:var(--ink)}
+.toc-l2.active{color:var(--ink);font-weight:700;border-left-color:var(--accent);background:var(--bg)}
+/* main */
+.main{flex:1;min-width:0;padding:0 4vw 90px}
+.topbar{position:sticky;top:0;display:flex;justify-content:flex-end;gap:8px;
+  padding:12px 0;background:linear-gradient(var(--bg) 70%,transparent);z-index:4}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
+.btn:hover{border-color:var(--accent)}
+.content{max-width:980px;margin:0 auto}
+/* cover */
+.cover{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+  padding:34px 36px;box-shadow:var(--shadow);margin:6px 0 30px;
+  display:grid;grid-template-columns:1fr auto;gap:26px;align-items:center}
+.cover h1{margin:0 0 6px;font-size:30px;letter-spacing:-.6px}
+.cover .sub{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px 18px;font-size:13.5px}
+.meta-grid b{display:block;color:var(--muted);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+.score-badge{text-align:center}
+.score-badge .cap{font-size:12px;color:var(--muted);margin-top:6px}
+/* headings */
+h2{font-size:23px;letter-spacing:-.4px;margin:46px 0 14px;padding-top:14px;border-top:2px solid var(--line)}
+h3{font-size:17.5px;margin:30px 0 10px}
+h4{font-size:15px;margin:20px 0 8px}
+p,li{color:var(--ink)}
+/* tables */
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.8px;background:var(--panel)}
+th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{background:var(--bg);font-size:12.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+tr:nth-child(even) td{background:color-mix(in srgb,var(--bg) 55%,transparent)}
+/* code */
+code{background:var(--bg);border:1px solid var(--line);padding:1px 5px;border-radius:5px;
+  font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:14px 16px;
+  overflow:auto;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{border:0;background:none;padding:0}
+blockquote{border-left:3px solid var(--accent);margin:14px 0;padding:4px 16px;color:var(--muted)}
+/* sev strip + gauges */
+.sev-strip{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0 6px}
+.sev-tile{flex:1;min-width:100px;background:var(--panel);border:1px solid var(--line);
+  border-radius:13px;padding:12px 14px;text-align:center;box-shadow:var(--shadow)}
+.sev-tile b{font-size:24px;display:block}
+.sev-tile span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px}
+.sev-tile.sev-critical,.sev-tile.sev-high{border-top:3px solid var(--crit)}
+.sev-tile.sev-medium{border-top:3px solid var(--medium)}
+.sev-tile.sev-low{border-top:3px solid var(--low)}
+.sev-tile.sev-info{border-top:3px solid var(--info)}
+.gauge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin:16px 0}
+.gauge-cell{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:16px 10px 14px;text-align:center;box-shadow:var(--shadow)}
+.gauge-label{font-size:12.8px;font-weight:700;margin-top:6px}
+.gauge-label span{display:block;font-weight:500;color:var(--muted);font-size:11px;margin-top:2px}
+.bar-row{display:grid;grid-template-columns:230px 1fr 34px;gap:10px;align-items:center;margin:7px 0;font-size:13.2px}
+.bar-track{background:var(--track);border-radius:99px;height:14px;overflow:hidden}
+.bar-fill{display:block;height:100%;border-radius:99px}
+.bar-val{font-weight:800;text-align:right}
+/* findings */
+.findings-ui{margin-top:8px}
+.filterbar{position:sticky;top:52px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px 12px;
+  box-shadow:var(--shadow);z-index:3;margin-bottom:6px}
+.filterbar input[type=search]{flex:1;min-width:190px;border:1px solid var(--line);border-radius:9px;
+  background:var(--bg);color:var(--ink);padding:8px 12px;font-size:13.5px}
+.filterbar select{border:1px solid var(--line);border-radius:9px;background:var(--bg);
+  color:var(--ink);padding:8px 10px;font-size:13.5px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;
+  padding:6px 12px;font-size:12.5px;cursor:pointer;opacity:.55}
+.chip[aria-pressed=true]{opacity:1;font-weight:700;border-color:currentColor}
+.chip-critical[aria-pressed=true],.chip-high[aria-pressed=true]{background:var(--crit);color:#fff;border-color:var(--crit)}
+.chip-medium[aria-pressed=true]{background:var(--medium);color:#1a1200;border-color:var(--medium)}
+.chip-low[aria-pressed=true]{background:var(--low);color:#fff;border-color:var(--low)}
+.chip-info[aria-pressed=true]{background:var(--info);color:#fff;border-color:var(--info)}
+.chip-plain{opacity:.8}
+.filter-hint{font-size:12.5px;color:var(--muted);margin:4px 2px 12px}
+.fgroup h3{display:flex;align-items:center;gap:10px;margin:34px 0 10px}
+.cat-count{background:var(--track);color:var(--muted);border-radius:99px;font-size:11.5px;padding:2px 9px;font-weight:700}
+.fcard{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin:9px 0;
+  box-shadow:var(--shadow);overflow:hidden;border-left:5px solid var(--info)}
+.fcard.sev-critical,.fcard.sev-high{border-left-color:var(--crit)}
+.fcard.sev-medium{border-left-color:var(--medium)}
+.fcard.sev-low{border-left-color:var(--low)}
+.fcard[hidden]{display:none}
+.fcard summary{cursor:pointer;list-style:none;display:flex;gap:10px;align-items:center;
+  padding:12px 15px;flex-wrap:wrap}
+.fcard summary::-webkit-details-marker{display:none}
+.fcard summary::before{content:"▸";color:var(--muted);font-size:12px;transition:.15s}
+.fcard[open] summary::before{transform:rotate(90deg)}
+.fid{font:800 12.5px ui-monospace,Menlo,monospace;color:var(--muted);background:var(--bg);
+  border:1px solid var(--line);padding:2px 7px;border-radius:6px}
+.ftitle{font-weight:700;font-size:14.5px;flex:1;min-width:220px}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.sev,.conf,.effort{font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;letter-spacing:.3px}
+.sev-critical,.sev-high{background:var(--crit);color:#fff}
+.sev-medium{background:var(--medium);color:#1a1200}
+.sev-low{background:var(--low);color:#fff}
+.sev-info{background:var(--info);color:#fff}
+.conf{background:var(--bg);border:1px solid var(--line);color:var(--muted);font-weight:700}
+.effort{background:transparent;border:1px dashed var(--line);color:var(--muted);font-weight:700}
+.fbody{padding:2px 16px 15px;border-top:1px solid var(--line)}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 14px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13.7px}
+.kv:last-child{border-bottom:0}
+.k{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;padding-top:2px}
+.v{white-space:pre-wrap;word-break:break-word}
+/* misc */
+details.toc-mobile{display:none}
+hr{border:0;border-top:1px solid var(--line);margin:30px 0}
+.footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:60px}
+.callout{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:10px;padding:12px 16px;margin:14px 0;font-size:14px}
+/* responsive */
+@media(max-width:980px){
+  .sidebar{display:none}
+  .main{padding:0 16px 80px}
+  .cover{grid-template-columns:1fr;text-align:left}
+  .bar-row{grid-template-columns:1fr;gap:3px}
+  .bar-name{font-size:12.5px;color:var(--muted)}
+  .kv{grid-template-columns:1fr}
+  details.toc-mobile{display:block;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:10px 14px;margin:10px 0}
+  details.toc-mobile summary{font-weight:700;cursor:pointer}
+}
+@media print{
+  .sidebar,.topbar,.filterbar,.filter-hint{display:none!important}
+  .main{padding:0}
+  body{background:#fff;font-size:11.5px}
+  .fcard,.cover,.sev-tile,.gauge-cell{box-shadow:none}
+  .fcard{break-inside:avoid}
+  h2{break-after:avoid}
+  a{text-decoration:none;color:inherit}
+}
+</style>
+</head>
+<body>
+<div class="layout">
+<nav class="sidebar" aria-label="Table of contents">
+  <p class="brand">x<span>Sypher</span> Audit</p>
+  <p class="brand-sub">Report · 13 Oct 2026 · 62/100</p>
+  <a class="toc-l2" href="#cover">Cover</a>
+  <a class="toc-l2" href="#1-cover">1. Cover</a>
+<a class="toc-l3" href="#overall-score-gauge">Overall Score Gauge</a>
+<a class="toc-l2" href="#2-executive-summary-non-technical-owner-ke-liye">2. Executive Summary (non-technical owner ke liye)</a>
+<a class="toc-l2" href="#3-scorecard">3. Scorecard</a>
+<a class="toc-l2" href="#4-top-10-quick-wins-high-impact-low-effort-top-5-critical-risks">4. Top 10 Quick Wins (high impact, low effort) &amp; Top 5 Critical Risks</a>
+<a class="toc-l3" href="#top-10-quick-wins-sab-s-effort">Top 10 Quick Wins (sab S effort)</a>
+<a class="toc-l3" href="#top-5-critical-risks">Top 5 Critical Risks</a>
+<a class="toc-l2" href="#5-detailed-findings-category-wise-finding-format">5. Detailed Findings (category-wise, FINDING FORMAT)</a>
+<a class="toc-l2" href="#6-competitor-gap-analysis-seo-aeo-geo">6. Competitor Gap Analysis (SEO + AEO + GEO)</a>
+<a class="toc-l2" href="#7-editorcms-checklist-matrix">7. Editor/CMS Checklist Matrix</a>
+<a class="toc-l2" href="#8-keyword-topic-opportunity-map-top-30-questions-clusters">8. Keyword / Topic Opportunity Map (Top 30 Questions + Clusters)</a>
+<a class="toc-l2" href="#9-impact-vs-effort-matrix-22">9. Impact vs Effort Matrix (2×2)</a>
+<a class="toc-l2" href="#10-roadmap">10. Roadmap</a>
+<a class="toc-l3" href="#7-din-quick-wins-sab-s-effort-2-dev-din-total">7-din (Quick wins — sab S effort, ~2 dev-din total)</a>
+<a class="toc-l3" href="#30-din-pipeline-measurement">30-din (Pipeline + measurement)</a>
+<a class="toc-l3" href="#60-din-authority">60-din (Authority)</a>
+<a class="toc-l3" href="#90-din-compound">90-din (Compound)</a>
+<a class="toc-l2" href="#11-monitoring-plan">11. Monitoring Plan</a>
+<a class="toc-l2" href="#12-appendix">12. Appendix</a>
+<a class="toc-l3" href="#121-screenshot-analysis-module-abhi-tak-received-none">12.1 Screenshot Analysis Module — abhi tak received: NONE</a>
+<a class="toc-l3" href="#122-not-verified-access-required-complete-list">12.2 &quot;Not verified — access required&quot; (complete list)</a>
+<a class="toc-l3" href="#123-raw-evidence-commands-used">12.3 Raw evidence / commands used</a>
+<a class="toc-l3" href="#124-assumptions-owner-confirmations-audit-assumptions">12.4 Assumptions (owner confirmations + audit assumptions)</a>
+<a class="toc-l3" href="#125-glossary-roman-urdu-mein-simple">12.5 Glossary (Roman Urdu mein simple)</a>
+<a class="toc-l3" href="#127-implementation-log-13-oct-2026-audit-ke-baad-same-day-fixes">12.7 Implementation Log (13 Oct 2026 — audit ke baad same-day fixes)</a>
+<a class="toc-l3" href="#126-quality-check-pre-delivery">12.6 Quality check (pre-delivery)</a>
+</nav>
+<div class="main">
+  <div class="topbar">
+    <button class="btn" id="themeBtn">🌙 Dark</button>
+    <button class="btn" onclick="window.print()">🖨 Print / PDF</button>
+  </div>
+  <div class="content">
+    
+<header class="cover" id="cover">
+  <div>
+    <h1>xSypher <span style="color:var(--accent)">·</span> Production Audit</h1>
+    <p class="sub">Evidence-based, read-only audit — Technical SEO · AEO · GEO · Performance · Security · Code · CMS</p>
+    <div class="meta-grid">
+      <div><b>Site</b>https://xsypher.com</div>
+      <div><b>Audit date</b>13 October 2026</div>
+      <div><b>Stack</b>Next.js 16 · Docker/VPS · Cloudflare</div>
+      <div><b>Monetization</b>AdSense</div>
+      <div><b>Repo</b>github.com/anwariqbaldawar/xCipher</div>
+      <div><b>Findings</b>40 (2 Critical · 6 High)</div>
+    </div>
+  </div>
+  <div class="score-badge">
+    <svg viewBox="0 0 170 170" width="170" height="170" aria-label="Overall score 62 of 100">
+      <circle cx="85" cy="85" r="71" fill="none" stroke="var(--track)" stroke-width="15"/>
+      <circle cx="85" cy="85" r="71" fill="none" stroke="#f5a623" stroke-width="15"
+        stroke-dasharray="276.6 169.5"
+        stroke-linecap="round" transform="rotate(-90 85 85)"/>
+      <text x="85" y="83" text-anchor="middle" font-size="46" font-weight="900" fill="var(--ink)">62</text>
+      <text x="85" y="106" text-anchor="middle" font-size="12" fill="var(--muted)">/ 100</text>
+    </svg>
+    <div class="cap">Overall weighted health</div>
+  </div>
+</header>
+
+    <details class="toc-mobile"><summary>📑 Contents</summary><a class="toc-l2" href="#1-cover">1. Cover</a>
+<a class="toc-l3" href="#overall-score-gauge">Overall Score Gauge</a>
+<a class="toc-l2" href="#2-executive-summary-non-technical-owner-ke-liye">2. Executive Summary (non-technical owner ke liye)</a>
+<a class="toc-l2" href="#3-scorecard">3. Scorecard</a>
+<a class="toc-l2" href="#4-top-10-quick-wins-high-impact-low-effort-top-5-critical-risks">4. Top 10 Quick Wins (high impact, low effort) &amp; Top 5 Critical Risks</a>
+<a class="toc-l3" href="#top-10-quick-wins-sab-s-effort">Top 10 Quick Wins (sab S effort)</a>
+<a class="toc-l3" href="#top-5-critical-risks">Top 5 Critical Risks</a>
+<a class="toc-l2" href="#5-detailed-findings-category-wise-finding-format">5. Detailed Findings (category-wise, FINDING FORMAT)</a>
+<a class="toc-l2" href="#6-competitor-gap-analysis-seo-aeo-geo">6. Competitor Gap Analysis (SEO + AEO + GEO)</a>
+<a class="toc-l2" href="#7-editorcms-checklist-matrix">7. Editor/CMS Checklist Matrix</a>
+<a class="toc-l2" href="#8-keyword-topic-opportunity-map-top-30-questions-clusters">8. Keyword / Topic Opportunity Map (Top 30 Questions + Clusters)</a>
+<a class="toc-l2" href="#9-impact-vs-effort-matrix-22">9. Impact vs Effort Matrix (2×2)</a>
+<a class="toc-l2" href="#10-roadmap">10. Roadmap</a>
+<a class="toc-l3" href="#7-din-quick-wins-sab-s-effort-2-dev-din-total">7-din (Quick wins — sab S effort, ~2 dev-din total)</a>
+<a class="toc-l3" href="#30-din-pipeline-measurement">30-din (Pipeline + measurement)</a>
+<a class="toc-l3" href="#60-din-authority">60-din (Authority)</a>
+<a class="toc-l3" href="#90-din-compound">90-din (Compound)</a>
+<a class="toc-l2" href="#11-monitoring-plan">11. Monitoring Plan</a>
+<a class="toc-l2" href="#12-appendix">12. Appendix</a>
+<a class="toc-l3" href="#121-screenshot-analysis-module-abhi-tak-received-none">12.1 Screenshot Analysis Module — abhi tak received: NONE</a>
+<a class="toc-l3" href="#122-not-verified-access-required-complete-list">12.2 &quot;Not verified — access required&quot; (complete list)</a>
+<a class="toc-l3" href="#123-raw-evidence-commands-used">12.3 Raw evidence / commands used</a>
+<a class="toc-l3" href="#124-assumptions-owner-confirmations-audit-assumptions">12.4 Assumptions (owner confirmations + audit assumptions)</a>
+<a class="toc-l3" href="#125-glossary-roman-urdu-mein-simple">12.5 Glossary (Roman Urdu mein simple)</a>
+<a class="toc-l3" href="#127-implementation-log-13-oct-2026-audit-ke-baad-same-day-fixes">12.7 Implementation Log (13 Oct 2026 — audit ke baad same-day fixes)</a>
+<a class="toc-l3" href="#126-quality-check-pre-delivery">12.6 Quality check (pre-delivery)</a></details>
+    <h1 id="xsypher-xsyphercom-production-audit-report">xSypher (xsypher.com) — Production Audit Report</h1>
+<p><strong>Audit Date:</strong> 13 October 2026 | <strong>Auditor:</strong> Principal Website Audit (Arena Agent Mode) | <strong>Scope:</strong> Technical SEO · Content/E-E-A-T · Schema · AEO · GEO · Performance/CWV · Backend &amp; Code · Security · Accessibility/UX · Editor/CMS · Analytics/Monitoring · Screenshot module</p>
+<p><strong>Target:</strong> <code>https://xsypher.com</code> · <strong>Repo:</strong> <code>github.com/anwariqbaldawar/xCipher</code> (full source access) · <strong>Stack:</strong> Next.js 16 (App Router) + TypeScript + Tailwind + Drizzle/Postgres + NextAuth v5 + TipTap editor + Cloudflare R2 · <strong>Deploy:</strong> Oracle Cloud VPS (Docker, ARM64) behind Cloudflare (owner-confirmed) · <strong>Monetization:</strong> AdSense (owner-confirmed) · <strong>Access:</strong> server logs/admin panel available (GSC/analytics: not provided)</p>
+<p><strong>Methodology:</strong> Evidence-first. Har finding ke saath proof (live fetch output, file:line, command result). Confidence labels: <code>[Verified]</code> (khud test kiya) / <code>[Likely]</code> (strong indicators) / <code>[Hypothesis]</code> (data chahiye). Bina proof koi claim nahi. Tool limitations appendix mein saaf likhi hain. Audit <strong>read-only</strong> raha — koi production/code change nahi; fixes alag <code>fixes/</code> folder mein approval ke liye.</p>
+<p><strong>Methodology note (tooling):</strong> Audit sandbox se direct <code>curl</code>/Lighthouse xsypher.com par egress-policy se blocked tha; live checks <code>fetch_page</code> (rendered content + HTTP status), DNS-over-HTTPS (TXT records), aur web search se hue. Header dumps, TLS scan, CWV lab/field = "Not verified — access required" (Section 12.2).</p>
+<hr />
+<h2 id="1-cover">1. Cover</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Site</strong></td>
+<td>xSypher — Independent Technology News, Analysis and Reviews</td>
+</tr>
+<tr>
+<td><strong>URL</strong></td>
+<td>https://xsypher.com (www → apex 308 ✓)</td>
+</tr>
+<tr>
+<td><strong>Audit window</strong></td>
+<td>13 Oct 2026, ~01:10–02:10 UTC</td>
+</tr>
+<tr>
+<td><strong>Corpus status</strong></td>
+<td>5 published articles, ~18 static pages, 8 categories (kuch khaali)</td>
+</tr>
+<tr>
+<td><strong>Overall health</strong></td>
+<td><strong>62/100 — "Theek hai, lekin do pipeline tooti hui hain"</strong> (indexation sitemap + measurement/analytics)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="overall-score-gauge">Overall Score Gauge</h3>
+<pre><code>Overall Score: 62 / 100 (Weighted; 2 of 10 categories Partial)
+ ██████████████████████████░░░░░░░░░░░░░░░░  62%
+</code></pre>
+<hr />
+<h2 id="2-executive-summary-non-technical-owner-ke-liye">2. Executive Summary (non-technical owner ke liye)</h2>
+<p>Aapki site <strong>technical foundation kaafi mazboot</strong> hai — modern stack, achhi security hygiene (557/557 tests pass, prod dependencies 0 vulnerabilities, login par rate-limiting + 2FA), complete trust pages, aur strong structured data. Lekin <strong>do critical pipelines tooti hui hain</strong> jo directly traffic aur revenue ko nuksan pohancha rahi hain.</p>
+<p><strong>Sab se bari 5 khatray:</strong>
+1. <strong>Public repo mein live API key exposed</strong> (<code>sk-7...YbQW</code>, <code>.vscode/settings.json</code>) — abhi revoke karein, warna koi bhi aapke quota se khel sakta hai. <strong>[Critical]</strong>
+2. <strong>Main sitemap khaali hai</strong> — <code>pages.xml</code> mein zero articles/categories/tags; Google ko aapka content sitemap se mil hi nahi raha (nayi site par yeh indexing seedha thokta hai). <strong>[Critical]</strong>
+3. <strong>Social share images dead hain</strong> — <code>/api/og</code> production par 500 return karta hai; aur editor ka "Meta Title/Description + SERP preview" actually publish hi nahi hota (fields render path se juda hi nahi). <strong>[High ×2]</strong>
+4. <strong><code>ads.txt</code> 404</strong> — AdSense active hai lekin yeh file nahi hai → policy warning + revenue risk. <strong>[High]</strong>
+5. <strong>Koi analytics nahi</strong> — traffic/conversions/index impact kuch measure nahi ho raha; GSC access bhi nahi diya. Andhere mein decisions. <strong>[High]</strong></p>
+<p><strong>Sab se bari 5 opportunities:</strong>
+1. Sitemap repair (S ka fix) + crawlable pagination → indexing pipeline turant theek.
+2. SEO panel ko actually wire karo (metaTitle/ogImage/canonical) → jo editors optimize karein wo SERP mein aaye.
+3. Entity/GEO build (Wikipedia-Wikidata nahi, lekin directories, LinkedIn company, sameAs links, consistent tagline) → AI answers mein citation ka foundation.
+4. Analytics + GSC + Bing verify → har future fix ka impact measurable.
+5. Content velocity (2-3 articles/week, pillar+cluster plan Section 8) → topical authority.</p>
+<p><strong>Verdict:</strong> Fix-first maamla hai, strategy-flawed nahi. Upar wale 10 quick wins (7 din) site ko "healthy pipeline" par le aate hain; 90-din plan se authority build hogi.</p>
+<blockquote>
+<p><strong>Update (13 Oct 2026, same day):</strong> Audit ke foran baad <strong>quick wins implement kar diye gaye</strong> — 13 commits (Section 12.7). 21 findings <code>fix-applied</code> hain, 2 partial, 1 deferred (paginated crawlability — staging test chahiye). Ab bacha hua kaam: owner actions (key revoke, real pub ID, Bing token, DMARC, monitor, analytics account) + GSC/PSI screenshots jo metrics-based re-score unlock karein.</p>
+</blockquote>
+<hr />
+
+<div class="gauge-grid">
+  <div class="gauge-cell" style="border:2px solid var(--accent)">
+    <div class="gauge"><svg viewBox="0 0 170 170" width="170" height="170" role="img" aria-label="Overall 62 of 100">
+  <circle cx="85.0" cy="85.0" r="78.0" fill="none" stroke="var(--track)" stroke-width="14"/>
+  <circle cx="85.0" cy="85.0" r="78.0" fill="none" stroke="#f5a623" stroke-width="14"
+    stroke-dasharray="303.9 186.2" stroke-linecap="round"
+    transform="rotate(-90 85.0 85.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="26" font-weight="800" fill="var(--ink)">62</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div>
+    <div class="gauge-label">OVERALL<span>Weighted · 2 categories Partial</span></div>
+  </div>
+  <div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Technical SEO & Indexing 55 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="162.4 132.9" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">55</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Technical SEO &amp; Indexing<span>Scored · weight 15%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Content & E-E-A-T 62 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="183.1 112.2" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">62</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Content &amp; E-E-A-T<span>Scored · weight 10%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Structured Data 78 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#30a46c" stroke-width="10"
+    stroke-dasharray="230.3 65.0" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">78</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Structured Data<span>Scored · weight 5%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="AEO 70 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="206.7 88.6" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">70</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">AEO<span>Scored · weight 8%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="GEO 45 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#e5484d" stroke-width="10"
+    stroke-dasharray="132.9 162.4" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">45</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">GEO<span>Scored · weight 7%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Performance & CWV 60 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="177.2 118.1" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">60</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">⚠ of 100</text>
+</svg></div><div class="gauge-label">Performance &amp; CWV<span>⚠ Partial · weight 15%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Security 62 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="183.1 112.2" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">62</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Security<span>Scored · weight 20%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Backend & Code Quality 70 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="206.7 88.6" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">70</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Backend &amp; Code Quality<span>Scored · weight 10%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Accessibility & UX 65 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="192.0 103.4" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">65</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">⚠ of 100</text>
+</svg></div><div class="gauge-label">Accessibility &amp; UX<span>⚠ Partial · weight 5%</span></div></div>
+<div class="gauge-cell"><div class="gauge"><svg viewBox="0 0 104 104" width="104" height="104" role="img" aria-label="Editor / CMS 65 of 100">
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="var(--track)" stroke-width="10"/>
+  <circle cx="52.0" cy="52.0" r="47.0" fill="none" stroke="#f5a623" stroke-width="10"
+    stroke-dasharray="192.0 103.4" stroke-linecap="round"
+    transform="rotate(-90 52.0 52.0)"/>
+  <text x="50%" y="49%" text-anchor="middle" dominant-baseline="middle"
+    font-size="15" font-weight="800" fill="var(--ink)">65</text>
+  <text x="50%" y="66%" text-anchor="middle" font-size="10.5" fill="var(--muted)">of 100</text>
+</svg></div><div class="gauge-label">Editor / CMS<span>Scored · weight 5%</span></div></div>
+</div>
+<h3>Score bars</h3>
+<div class="bar-row"><span class="bar-name">Technical SEO &amp; Indexing</span>
+    <span class="bar-track"><span class="bar-fill" style="width:55%;background:#f5a623"></span></span>
+    <span class="bar-val">55</span></div>
+<div class="bar-row"><span class="bar-name">Content &amp; E-E-A-T</span>
+    <span class="bar-track"><span class="bar-fill" style="width:62%;background:#f5a623"></span></span>
+    <span class="bar-val">62</span></div>
+<div class="bar-row"><span class="bar-name">Structured Data</span>
+    <span class="bar-track"><span class="bar-fill" style="width:78%;background:#30a46c"></span></span>
+    <span class="bar-val">78</span></div>
+<div class="bar-row"><span class="bar-name">AEO</span>
+    <span class="bar-track"><span class="bar-fill" style="width:70%;background:#f5a623"></span></span>
+    <span class="bar-val">70</span></div>
+<div class="bar-row"><span class="bar-name">GEO</span>
+    <span class="bar-track"><span class="bar-fill" style="width:45%;background:#e5484d"></span></span>
+    <span class="bar-val">45</span></div>
+<div class="bar-row"><span class="bar-name">Performance &amp; CWV</span>
+    <span class="bar-track"><span class="bar-fill" style="width:60%;background:#f5a623"></span></span>
+    <span class="bar-val">60</span></div>
+<div class="bar-row"><span class="bar-name">Security</span>
+    <span class="bar-track"><span class="bar-fill" style="width:62%;background:#f5a623"></span></span>
+    <span class="bar-val">62</span></div>
+<div class="bar-row"><span class="bar-name">Backend &amp; Code Quality</span>
+    <span class="bar-track"><span class="bar-fill" style="width:70%;background:#f5a623"></span></span>
+    <span class="bar-val">70</span></div>
+<div class="bar-row"><span class="bar-name">Accessibility &amp; UX</span>
+    <span class="bar-track"><span class="bar-fill" style="width:65%;background:#f5a623"></span></span>
+    <span class="bar-val">65</span></div>
+<div class="bar-row"><span class="bar-name">Editor / CMS</span>
+    <span class="bar-track"><span class="bar-fill" style="width:65%;background:#f5a623"></span></span>
+    <span class="bar-val">65</span></div>
+<h2 id="3-scorecard">3. Scorecard</h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th style="text-align: right;">Weight</th>
+<th style="text-align: right;">Score</th>
+<th>Status</th>
+<th>Justification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Technical SEO &amp; Indexing</td>
+<td style="text-align: right;">15%</td>
+<td style="text-align: right;"><strong>55</strong></td>
+<td>Scored</td>
+<td>Canonicals/noindex/News-sitemap/SSR strong, lekin main sitemap broken + OG 500 + non-crawlable pagination.</td>
+</tr>
+<tr>
+<td>Content &amp; E-E-A-T</td>
+<td style="text-align: right;">10%</td>
+<td style="text-align: right;"><strong>62</strong></td>
+<td>Scored</td>
+<td>Trust pages complete, original data-rich articles; corpus sirf 5, brand messaging inconsistent.</td>
+</tr>
+<tr>
+<td>Structured Data</td>
+<td style="text-align: right;">5%</td>
+<td style="text-align: right;"><strong>78</strong></td>
+<td>Scored</td>
+<td>WebSite+Organization+NewsArticle+Breadcrumb+Person+FAQ/HowTo — better than most; entity linkage gaps.</td>
+</tr>
+<tr>
+<td>AEO</td>
+<td style="text-align: right;">8%</td>
+<td style="text-align: right;"><strong>70</strong></td>
+<td>Scored</td>
+<td>Answer-first structure + question headings + tables + FAQ/takeaway blocks; question-hub pages missing.</td>
+</tr>
+<tr>
+<td>GEO</td>
+<td style="text-align: right;">7%</td>
+<td style="text-align: right;"><strong>45</strong></td>
+<td>Scored</td>
+<td>SSR clean + AI bots allowed; external entity presence zero, citation testing pending.</td>
+</tr>
+<tr>
+<td>Performance &amp; CWV</td>
+<td style="text-align: right;">15%</td>
+<td style="text-align: right;"><strong>60</strong></td>
+<td>⚠ Partial</td>
+<td>Field/lab metrics verify nahi hue (PSI 429) — code-level review: LCP hero ✓, fonts ✓, ad CLS ✓; StoryRow sizes + bundle gaps.</td>
+</tr>
+<tr>
+<td>Security</td>
+<td style="text-align: right;">20%</td>
+<td style="text-align: right;"><strong>62</strong></td>
+<td>Scored</td>
+<td>Auth/uploads/rate-limits strong, prod deps 0 vulns; lekin <strong>exposed key (Critical)</strong> + CSP weak spots + DMARC p=none.</td>
+</tr>
+<tr>
+<td>Backend &amp; Code Quality</td>
+<td style="text-align: right;">10%</td>
+<td style="text-align: right;"><strong>70</strong></td>
+<td>Scored</td>
+<td>tsc PASS, 557/557 tests, capability RBAC; lint failing + CI mein lint/build gate nahi + rollback nahi.</td>
+</tr>
+<tr>
+<td>Accessibility &amp; UX</td>
+<td style="text-align: right;">5%</td>
+<td style="text-align: right;"><strong>65</strong></td>
+<td>⚠ Partial</td>
+<td>Skip-link/labels/aria/focus verified code se; axe/headless run pending.</td>
+</tr>
+<tr>
+<td>Editor / CMS</td>
+<td style="text-align: right;">5%</td>
+<td style="text-align: right;"><strong>65</strong></td>
+<td>Scored</td>
+<td>Editor powerful (TipTap, revisions, workflow), lekin SEO panel ke primary fields no-op + quality gates adhoore.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Weighted Overall: 62/100</strong> (partial categories ke liye code-level estimate use hua — metric-based re-score PSI/axe data aane par hoga).</p>
+<hr />
+<h2 id="4-top-10-quick-wins-high-impact-low-effort-top-5-critical-risks">4. Top 10 Quick Wins (high impact, low effort) &amp; Top 5 Critical Risks</h2>
+<h3 id="top-10-quick-wins-sab-s-effort">Top 10 Quick Wins (sab S effort)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Kaam</th>
+<th>Finding</th>
+<th>Impact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>API key <strong>revoke</strong> + repo se history purge + <code>.gitignore</code></td>
+<td>SEC-001</td>
+<td>Financial/security</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Sitemap <code>Promise.all</code> split + authors query <code>authorId</code> par</td>
+<td>CRW-001</td>
+<td>Indexing</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>public/ads.txt</code> banao (publisher ID ke saath)</td>
+<td>AD-001</td>
+<td>Revenue</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>generateMetadata</code>: <code>metaTitle \|\| seoTitle</code>, ogImage/canonical wire</td>
+<td>TSEO-002/003</td>
+<td>SEO/Editor trust</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>/api/og</code> 500 root-cause (log grep) + featured-image fallback</td>
+<td>TSEO-001</td>
+<td>Social CTR</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>StoryRow</code> fill images mein <code>sizes</code> add</td>
+<td>PERF-001</td>
+<td>Mobile perf</td>
+</tr>
+<tr>
+<td>7</td>
+<td>robots.txt: <code>/invite</code>, <code>/unsubscribe</code> block + AI-bot policy (decision)</td>
+<td>CRW-003, GEO-002</td>
+<td>Security/GEO</td>
+</tr>
+<tr>
+<td>8</td>
+<td>DMARC <code>p=quarantine</code> + <code>rua</code> (phir <code>p=reject</code>)</td>
+<td>SEC-003</td>
+<td>Brand safety</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Analytics (Plausible/GA4) + GSC + Bing verification</td>
+<td>MON-001/002</td>
+<td>Measurement</td>
+</tr>
+<tr>
+<td>10</td>
+<td>CI mein lint + <code>next build</code> gate</td>
+<td>BE-001</td>
+<td>Quality</td>
+</tr>
+</tbody>
+</table>
+<h3 id="top-5-critical-risks">Top 5 Critical Risks</h3>
+<ol>
+<li><strong>SEC-001</strong> — Live API key public GitHub repo mein (active abuse possible).</li>
+<li><strong>CRW-001</strong> — Main sitemap zero content URLs par = discovery/indexing pipeline broken.</li>
+<li><strong>TSEO-001 + TSEO-002</strong> — og:image 500 (social dead) + editor SEO fields publish hi nahi (silent SEO failure).</li>
+<li><strong>AD-001</strong> — ads.txt 404 = AdSense policy/revenue risk.</li>
+<li><strong>MON-001</strong> — Koi analytics nahi = na traffic na impact measurement (blind operations).</li>
+</ol>
+<hr />
+<h2 id="5-detailed-findings-category-wise-finding-format">5. Detailed Findings (category-wise, FINDING FORMAT)</h2>
+
+
+<div class="callout"><b>Interactive finding browser:</b> search/filter (severity × category) — 
+40 findings total, Critical/High khule hue baqi collapsible hain. 
+Same data machine-readable: <code>findings.json</code>.</div>
+<div class="sev-strip"><div class="sev-tile sev-critical"><b>2</b><span>Critical</span></div><div class="sev-tile sev-high"><b>6</b><span>High</span></div><div class="sev-tile sev-medium"><b>16</b><span>Medium</span></div><div class="sev-tile sev-low"><b>10</b><span>Low</span></div><div class="sev-tile sev-info"><b>6</b><span>Info</span></div></div>
+<div class="findings-ui">
+  <div class="filterbar">
+    <input type="search" id="fSearch" placeholder="Search ID, title, impact…" aria-label="Search findings">
+    <select id="fCat" aria-label="Filter by category"><option value="">All categories</option><option value="Technical SEO &amp; Indexing">Technical SEO &amp; Indexing</option><option value="Content &amp; E-E-A-T">Content &amp; E-E-A-T</option><option value="Structured Data">Structured Data</option><option value="GEO">GEO</option><option value="Performance &amp; Core Web Vitals">Performance &amp; Core Web Vitals</option><option value="Security">Security</option><option value="Backend &amp; Code Quality">Backend &amp; Code Quality</option><option value="Accessibility, UX &amp; Trust">Accessibility, UX &amp; Trust</option><option value="Editor / CMS">Editor / CMS</option><option value="Analytics, Monitoring &amp; Operations">Analytics, Monitoring &amp; Operations</option></select>
+    <div class="chips"><button class="chip chip-critical" data-sevfilter="Critical" aria-pressed="true">Critical (2)</button><button class="chip chip-high" data-sevfilter="High" aria-pressed="true">High (6)</button><button class="chip chip-medium" data-sevfilter="Medium" aria-pressed="true">Medium (16)</button><button class="chip chip-low" data-sevfilter="Low" aria-pressed="true">Low (10)</button><button class="chip chip-info" data-sevfilter="Info" aria-pressed="true">Info (6)</button></div>
+    <button id="expandAll" class="chip chip-plain">Expand all</button>
+    <button id="collapseAll" class="chip chip-plain">Collapse all</button>
+  </div>
+  <p class="filter-hint" id="filterCount">40 findings shown</p>
+  
+<section class="fgroup">
+  <h3>Technical SEO &amp; Indexing <span class="cat-count">9</span></h3>
+  
+<details class="fcard sev-critical" data-sev="Critical" data-cat="Technical SEO &amp; Indexing" data-id="CRW-001" open>
+  <summary>
+    <span class="fid">CRW-001</span>
+    <span class="ftitle">Main sitemap pages.xml mein zero article/category/tag/author URLs (sirf 19 static paths)</span>
+    <span class="badges">
+      <span class="sev sev-critical">Critical</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/sitemap/pages.xml (generated by app/sitemap/pages.xml/route.ts:57-102)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Do live fetches (2026-10-13): sirf 19 static &lt;url&gt; entries (/, /latest, /series, /page/*), saare lastmod = 2026-10-01T00:00:00.000Z (hardcoded fallback at route.ts:66) — matlab articles query empty/fail. Sitemap index lastmod (2026-10-12T23:38:04) alag se DB se aaya, yaani DB reachable hai.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Discovery ka main channel toota hua hai: Google/Bing ko articles/categories/tags/authors sitemap se nahi milte. Naye site (5 articles, kam backlinks) ke liye indexing speed aur coverage directly suffer karti hai. News sitemap sirf 48h window rakhta hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Saari 4 queries ek hi Promise.all (route.ts:57) mein hain — ek bhi query throw kare to catch (line 102) chup-chaap saara dynamic content khaali rakh deta hai. [Likely specific trigger] authors query legacy table &quot;_ArticleToAuthor&quot; (line 84) use karti hai jo Drizzle schema (lib/db/schema.ts) mein exist nahi karti — Prisma→Drizzle migration ke baad table drop hua to poora batch fail.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Har query ko alag try/catch mein daalein (partial success), authors query ko Article.authorId se likhein, aur catch mein console.warn ko alerting se jodein. Complete patch: fixes/sitemap-pages.patch</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: per-query isolation + Article.authorId authors query (commit e385452). Verify after deploy: /sitemap/pages.xml lists articles with today&#x27;s lastmod.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Deploy ke baad: curl sitemap/pages.xml → articles/categories/tags/authors URLs + aaj ka lastmod; phir GSC Sitemaps report submit.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-high" data-sev="High" data-cat="Technical SEO &amp; Indexing" data-id="CRW-002" open>
+  <summary>
+    <span class="fid">CRW-002</span>
+    <span class="ftitle">Listing pagination crawlable nahi — &#x27;Load More&#x27; button sirf client-side (sitemap ke saath compound risk)</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/article/PaginatedFeed.tsx:37-94 (/latest, /category pages par)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">PaginatedFeed ek &#x27;use client&#x27; button hai jo server action getMoreArticles(offset) call karta hai — koi &lt;a href=&#x27;?page=2&#x27;&gt; link nahi. Grep: /latest par koi page param link nahi. Category page: `initialHasMore={articles.length === LISTING_ARTICLE_LIMIT}`.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Bots ko sirf pehle ~20 articles dikhte hain; baaki archive links ke bina unreachable. CRW-001 (sitemap khaali) ke saath ye compound hai — purani content ki discovery fully internal links par depend karti hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Infinite-scroll/Load-More UX ko crawlable pagination link ke saath complement nahi kiya gaya.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Load More ke neeche ek asli anchor: `&lt;a href={filter ? `/category/${slug}?page=2` : &#x27;/latest?page=2&#x27;}&gt;Page 2&lt;/a&gt;` (ya numbered links), aur page param server par support karein (tag page pattern already exist karta hai).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Deferred by design: crawlable pagination links change how /latest and /category render and need a staging test cycle with real DB data; implementation sketch is in the report (Section 5.1, CRW-002).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">View-source mein page-2 links; GSC URL Inspection se page 2 crawlable.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">deferred · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-high" data-sev="High" data-cat="Technical SEO &amp; Indexing" data-id="TSEO-001" open>
+  <summary>
+    <span class="fid">TSEO-001</span>
+    <span class="ftitle">/api/og (sab ka og:image) production mein HTTP 500 return karta hai</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/api/og?title=... (app/api/og/route.tsx) — har article page isko og:image mein use karta hai (app/(public)/article/[slug]/page.tsx:82-96)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">2 live fetches: `GET /api/og?title=Test` → HTTP 500, `GET /api/og` → HTTP 500 (route ka catch handler &#x27;Failed to generate image&#x27; return karta hai, route.tsx:126-130).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Facebook/LinkedIn/WhatsApp/X shares par image nahi aayegi → CTR kam. Social/OG signals weak. Editor ka &#x27;Social Share Image (OG)&#x27; upload bhi iske peeche hide hai (wo kabhi use hi nahi hota — TSEO-003).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">[Hypothesis — server log chahiye] Satori/ImageResponse render fail: (a) ARM64/alpine image mein resvg native binary missing, (b) default font load failure, ya (c) Redis ready hone par corrupt cache entry. Route console.error(e) karta hai — log line &#x27;[og]&#x27; ya &#x27;Failed to generate image&#x27; grep karein.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">1) Server log se exact error nikalein. 2) Fallback: agar render fail ho to featured image (article.ogImage/img) serve karein 200 ke saath. 3) Root cause theek karein (Dockerfile mein native deps verify).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: render is materialised in try/catch and falls back to public/og-fallback.png with a 5-minute TTL (commit 7eca1f1). STILL WANTED: the &#x27;[og] Render failed&#x27; log line to fix the root cause.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">curl -I &#x27;https://xsypher.com/api/og?title=test&#x27; → 200 + Content-Type: image/png; phir Facebook Sharing Debugger mein scrape.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-high" data-sev="High" data-cat="Technical SEO &amp; Indexing" data-id="TSEO-002" open>
+  <summary>
+    <span class="fid">TSEO-002</span>
+    <span class="ftitle">SEO panel ke primary fields (metaTitle/metaDescription) publish hote hi nahi — SERP preview jhoot bolta hai</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/editorial/ArticleEditor.tsx:1725-1775 (primary fields + char counters + Google SERP Preview) vs app/(public)/article/[slug]/page.tsx:89-90 (generateMetadata)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Editor: &#x27;Meta Title&#x27; (metaTitle) with 60-char counter + SeoPreview jo metaTitle se banta hai; save: app/actions/article.ts:223 metaTitle DB mein jaata hai. Lekin live metadata: `title: article.seoTitle || article.title`, `description: article.seoDesc || article.deck` — metaTitle/metaDescription kabhi read hi nahi hote (grep: article page par metaTitle = 0 matches). Editor mein seoTitle/seoDesc ko &#x27;Legacy&#x27; label kiya gaya hai — fallback chains ulti hain.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Editor jo meta title/description likhta aur preview karta hai wo SERP mein kabhi nahi aata (jab tak legacy field alag se na bhari ho). Poora SEO workflow silently ineffective — nishani: editors ko lagta hai optimize ho raha hai, hota nahi.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Do generations ke fields (naya metaTitle vs purana seoTitle) migration ke beech sync nahi hue; render path ne purana naam chhoda nahi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">generateMetadata ko badlein: `title: article.metaTitle || article.seoTitle || article.title` (aur description bhi isi order), ya editor ko ek hi field par converge karein. fixes/generateMetadata-meta-fields.patch dekhein.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: title/description now resolve metaTitle || seoTitle || title etc. (commit 3b3faf2). Verify: type a meta title in the editor, check view-source.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Ek article mein metaTitle badlein → view-source mein &lt;title&gt; wahi dikhe; SeoPreview aur live &lt;title&gt; match karein.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Technical SEO &amp; Indexing" data-id="CRW-003" >
+  <summary>
+    <span class="fid">CRW-003</span>
+    <span class="ftitle">/invite/* aur /unsubscribe/* token URLs robots.txt mein block nahi aur noindex bhi nahi</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/robots.ts (disallow list), app/invite/[token]/page.tsx, app/unsubscribe/[token]/page.tsx</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">robots.txt: Disallow sirf /admin/, /api/, /search, /preview, /_next/, /*?_rsc=*. Invite/unsubscribe pages par robots meta grep = 0 matches (preview page par hai — app/preview/[id]/page.tsx:39).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Agar koi in token URLs ko link/share kare to Google index kar sakta hai — unsubscribe/invite tokens public logs, referrer headers aur SERP mein leak. Security + UX dono ka risk.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Naye app routes ka robots.txt entry aur noindex metadata dono miss.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">robots.ts mein disallow add karein aur pages par `robots: { index: false }` — fixes/robots.ts.patch.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: /invite and /unsubscribe disallowed in app/robots.ts (commit 675ad42).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">GSC URL Inspection: &#x27;Blocked by robots.txt&#x27; ya meta noindex.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Technical SEO &amp; Indexing" data-id="TSEO-003" >
+  <summary>
+    <span class="fid">TSEO-003</span>
+    <span class="ftitle">Editor ke &#x27;Social Share Image (OG)&#x27; aur &#x27;Canonical URL&#x27; fields bhi no-op hain</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/editorial/ArticleEditor.tsx:1785-1815 (OG upload UI), :1747-1750 (canonical input) vs app/(public)/article/[slug]/page.tsx:86,92</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Editor OG upload: text &#x27;If left blank, the featured image is used as the OpenGraph image&#x27; — lekin generateMetadata hamesha `/api/og` URL banata hai (line 86), ogImage field kabhi read nahi (grep = 0). canonicalUrl save hota hai (actions/article.ts:227) lekin canonical hamesha `/article/${article.slug}` (line 92).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Editors jo custom OG image/canonical set karein wo apply hi nahi hota — broken promises + duplicate-content control ka effective tareeqa kaam nahi karta. OG image ka to TSEO-001 mein 500 bhi hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">CMS fields render pipeline se wire nahi hue (migration leftover, same as TSEO-002).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`image: article.ogImage || ogUrl` aur `canonical: article.canonicalUrl || /article/${slug}` (sanitized URL validation ke saath).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: ogImage and canonicalUrl are consumed with safe fallbacks (commit 3b3faf2).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Article mein custom OG dalein → view-source og:image wahi; canonical override test GSC URL Inspection.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Technical SEO &amp; Indexing" data-id="CRW-004" >
+  <summary>
+    <span class="fid">CRW-004</span>
+    <span class="ftitle">Internal links redirect URLs par (/page/privacy, /page/editorial)</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/newsletter/NewsletterSignup.tsx:99 (/page/privacy), components/layout/Sidebar.tsx:59 (/page/editorial)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">next.config.ts redirects: /page/privacy → /page/privacy-policy (permanent), /page/editorial → /page/editorial-policy. Footer links sahi final URLs use karta hai; ye do jagah purane.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Extra 308 hop har crawl/share par — crawl budget aur link equity ke liye trivial lekin free fix hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Redirect table ke baad internal links audit nahi hue.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Seedha final URL lagayein.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: both internal links point at final URLs (commit 675ad42).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Network tab: link click par 0 redirects.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Technical SEO &amp; Indexing" data-id="CRW-005" >
+  <summary>
+    <span class="fid">CRW-005</span>
+    <span class="ftitle">IndexNow key fallback &#x27;xsypher-key&#x27; (env unset hone par weak key)</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">lib/google-indexing.ts:104</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">`key=${process.env.INDEXNOW_KEY || &#x27;xsypher-key&#x27;}` — agar production .env mein INDEXNOW_KEY nahi to sab pings weak default key se ja rahe hain (URL-submission method ke liye key file verify nahi hoti, lekin key unique honi chahiye).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Koi aur aapki domain key guess karke aapke naam se spam URL submit kar sakta hai (limited blast radius).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Dev fallback value production tak.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`openssl rand -hex 16` se key banao, .env.production mein INDEXNOW_KEY set karo, fallback hatao (env missing par warn log).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: guessable IndexNow fallback removed; missing env skips with a warning (commit 675ad42). Set INDEXNOW_KEY on the host (fixes/indexnow-key.sh).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Log mein ping key aapki random key ho.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="Technical SEO &amp; Indexing" data-id="CRW-006" >
+  <summary>
+    <span class="fid">CRW-006</span>
+    <span class="ftitle">404 page homepage title inherit karta hai (soft-404 style metadata)</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/not-found.tsx (koi metadata export nahi) — live test: /this-page-does-not-exist-audit-404-test</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Live 404 fetch: title = &#x27;xSypher — Independent Technology News, Analysis and Reviews&#x27; (root layout fallback). Content/UX khud achha hai (custom 404 design ✓). Status code 404 [Likely — Next notFound()].</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Agar koi 404 URL bhi index ho jaye to SERP title misleading. Trivial fix.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">not-found.tsx mein apna metadata nahi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`export const metadata = { title: &#x27;Page not found — xSypher&#x27;, robots: { index: false } }`.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: 404 route has its own title + noindex metadata (commit 675ad42).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">404 URL ka &lt;title&gt; badal jaye.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Content &amp; E-E-A-T <span class="cat-count">4</span></h3>
+  
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Content &amp; E-E-A-T" data-id="CON-001" >
+  <summary>
+    <span class="fid">CON-001</span>
+    <span class="ftitle">Content corpus sirf 5 articles — topical authority/cluster coverage abhi shuru hi nahi</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: L</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">Site-wide (feed.xml: 5 items; homepage categories: Gadgets/Gaming empty)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">RSS feed.xml (limit 20) = 5 items; homepage par 8 categories, kuch khaali; author pages par counts 1-36 reads.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Chhote corpus par category hubs thin hain, EEAT claims (&#x27;140+ countries&#x27;, desks) data se support nahi hote, aur AI/SEO dono mein &#x27;authority&#x27; establish karna mushkil. Yeh site ka #1 content-strategy constraint hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Nayi publication, abhi publishing velocity kam.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">90-din plan: 2-3 articles/week, pillar+cluster map (report Section 8: top 30 questions), har category ko kam az kam 8-10 quality pieces, &#x27;coming soon&#x27; categories hide ya noindex tak fill na hon (defensive noindex already code mein ✓).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — content program (report Section 10 roadmap).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Category pages par ≥8 articles; GSC impression growth trend.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Content &amp; E-E-A-T" data-id="CON-002" >
+  <summary>
+    <span class="fid">CON-002</span>
+    <span class="ftitle">Brand naming/messaging 3 jagah inconsistent (entity clarity)</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/layout.tsx:73 (&lt;title&gt;), app/feed.xml/route.ts (RSS title), app/(public)/page/about/page.tsx (H1)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">&lt;title&gt;: &#x27;xSypher — Independent Technology News, Analysis and Reviews&#x27;; RSS: &#x27;xSypher - Advanced Tech &amp; Security Insights&#x27;; About H1: &#x27;Decoding the Future of Technology&#x27;. SiteConfig description version 4.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Knowledge Graph/AI engines ko entity consistent signals chahiye — inconsistent names se brand entity weak banta hai; users ko bhi positioning unclear.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Time ke saath messaging evolve hui, purane surfaces sync nahi hue.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Ek brand line lock karo (recommended: &#x27;Independent technology news, analysis and reviews&#x27;) — title, RSS, og:site_name, About hero, social bios sab jagah same.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: siteConfig.tagline drives &lt;title&gt; and RSS (commit 675ad42). About hero copy is owner editorial choice.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">view-source + RSS reader + About page par same tagline.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Content &amp; E-E-A-T" data-id="CON-003" >
+  <summary>
+    <span class="fid">CON-003</span>
+    <span class="ftitle">Author/About page polish: typo, PGP &#x27;Not Available&#x27; placeholder, generic GitHub link, chhote public read counts</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/author/anwar-iqbal-dawar, /page/about</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Live: &#x27;Software &amp; Web Developmen&#x27; (truncated), PGP block &#x27;Not Available&#x27; code style mein, stats &#x27;36 TOTAL READS&#x27; public; About: Ameer Muawiya GitHub link = https://github.com/ (generic).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">E-E-A-T polish: chhoti galtiyan credibility signals ko nuksan pohanchati hain (especially security niche mein). Public low read counts inverted social proof.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Placeholder values production tak pahunch gayin.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Typo fix, PGP block hide jab key na ho, GitHub link correct, stats ya to hide ya threshold ke peeche.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — data/copy fixes in the console (expertise typo is DB content; About GitHub link for Ameer is a copy edit).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Live pages par screenshot — issues gone.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Content &amp; E-E-A-T" data-id="CON-004" >
+  <summary>
+    <span class="fid">CON-004</span>
+    <span class="ftitle">Author article-count homepage byline se mismatch (stale ISR)</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/author/anwar-iqbal-dawar (revalidate 600s) vs homepage bylines</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Author page: &#x27;1 PUBLISHED ARTICLES&#x27; + sirf Oct 3 wali article; homepage/RSS: Anwar ka Oct 12 ka article bhi byline ke saath. Author page force-static + revalidate 600.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Naye article ke 10 min tak author profile incomplete —社 social proof aur E-E-A-T continuity.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">ISR window; publishing workflow author pages ko revalidatePath nahi karta.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Publish action mein `revalidatePath(&#x27;/author/&#x27;+slug)` add karein (revalidateTag pattern already present for other tags).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Refined: publish path already invalidates authorTag when authorModel.slug is present, so the observed mismatch most likely means the new article was saved without an authorId link. Check the Article.authorId for the Oct 12 post in the console.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Publish karo → turant author page updated.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied (partial) · source: live</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Structured Data <span class="cat-count">2</span></h3>
+  
+<details class="fcard sev-low" data-sev="Low" data-cat="Structured Data" data-id="SCH-001" >
+  <summary>
+    <span class="fid">SCH-001</span>
+    <span class="ftitle">Entity linkage gaps: publisher→Organization @id, Organization sameAs sirf X, category/tag pages par BreadcrumbList nahi</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">lib/entity-schema.ts:30-41, lib/seo.ts:119-125, category/tag page components</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">generateNewsArticleJsonLd: publisher = inline Organization (bina @id) — Organization @id &#x27;#organization&#x27; se link nahi. Organization.sameAs = sirf X (GitHub/LinkedIn profiles About page par maujood hain lekin schema mein nahi). BreadcrumbList sirf article pages (article/[slug]/page.tsx:158).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Knowledge Graph/entity disambiguation weak; category rich-result breadcrumbs nahi milte.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Schema MVP level par tha.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`publisher: { &#x27;@id&#x27;: siteConfig.url + &#x27;/#organization&#x27; }`, sameAs mein GitHub/LinkedIn/YouTube add, category/tag pages par BreadcrumbList.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: publisher @id link, worksFor for Person, GitHub added to Organization sameAs (commit d9c2336). Category BreadcrumbList template remains in fixes/jsonld-templates.md.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Rich Results Test (article + category) valid; Schema.org validator.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="Structured Data" data-id="SCH-002" >
+  <summary>
+    <span class="fid">SCH-002</span>
+    <span class="ftitle">FAQPage/HowTo/SearchAction — rich results Google mein mostly deprecated (semantic value OK)</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">lib/article-schema.ts:98-105 (FAQPage/HowTo graph), app/layout.tsx:85-95 (SearchAction)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Google ne FAQ rich results largely restricted (2023), HowTo rich results removed for most sites (Sept 2023), sitelinks searchbox rich result retired (2024). Schema valid hai lekin rich result guarantee nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Koi nuqsan nahi — semantic clarity AI engines ke liye rehti hai. Bas expectations set karo: yeh &#x27;bonus&#x27; nahi &#x27;requirement&#x27; hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Guidelines evolution.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Code rakho (harmless, semantic value); roadmap priorities mein ise &#x27;rich result&#x27; na maano.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">N/A — informational.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">open · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>GEO <span class="cat-count">4</span></h3>
+  
+<details class="fcard sev-medium" data-sev="Medium" data-cat="GEO" data-id="GEO-001" >
+  <summary>
+    <span class="fid">GEO-001</span>
+    <span class="ftitle">Brand/entity presence bahar se zero — sirf founder ka GitHub profile mila</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: L</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">Entity: &#x27;xSypher&#x27; publication (off-site)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Web searches: &#x27;xSypher&#x27; quoted search = 0 results; &#x27;xSypher Anwar Iqbal Dawar publication&#x27; → sirf github.com/anwariqbaldawar/AnwarIqbaldawar. Wikipedia/Wikidata/directories/reviews/mentions: koi nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">AI answers (ChatGPT/Perplexity/AI Overviews) authority entities ko cite karte hain — off-site corroboration zero hone se citation probability low, Knowledge Graph readiness zero.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Nayi site (2025 founded) — abhi tak digital PR/entity building shuru nahi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Entity plan (report Section 6): Wikidata item banao, Google Knowledge Panel signal (sameAs badhao Organization schema mein), tech directories (Product Hunt, HackerNews launch, IndieHackers), guest posts/broken-link PR, GitHub org page, LinkedIn company page. 90-din roadmap mein phased.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Brand search par knowledge panel/mentions; AI citation test protocol (GEO-004) repeat.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">open · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="GEO" data-id="GEO-004" >
+  <summary>
+    <span class="fid">GEO-004</span>
+    <span class="ftitle">AI-answer citation test (top 15 queries) abhi pending — interactive access chahiye</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Hypothesis</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">ChatGPT Search, Perplexity, Google AI Overviews, Gemini, Copilot</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Perplexity public search URL JS-rendered (fetch se sirf shell mili), Google AI Overviews automation se nahi. Manual protocol report Section 6 mein — queries list tayyar.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Bina citation baseline ke GEO progress measure nahi hoga.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Tool limitation.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Aap 15 queries (report Section 6.3) in engines mein chala kar screenshots bhejein; main competitor citation gap analyze karunga.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — needs the interactive 15-query test protocol (report Section 6).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Screenshot-based citation table (SS module format).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">access-required · source: screenshot</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="GEO" data-id="GEO-002" >
+  <summary>
+    <span class="fid">GEO-002</span>
+    <span class="ftitle">AI training crawlers (GPTBot, ClaudeBot, CCBot, Google-Extended, Bytespider) implicitly allowed — explicit policy decision chahiye</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/robots.ts + live robots.txt (User-Agent: * Allow: /)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Live robots.txt mein koi AI-specific group nahi → sab par wildcard allow. 2026 official UA list (web search se verify): GPTBot, OAI-SearchBot, ChatGPT-User, ClaudeBot, Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Google-Extended, Applebot/Applebot-Extended, CCBot, Bytespider, meta-externalagent/fetcher.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Retrieval/search bots ke liye allow = sahi (GEO visibility). Training bots allow = aapka content model training mein ja sakta hai (aapki marzi). Explicit rules hone se audit trail aur clarity milti hai. NOTE: Cloudflare WAF mein bhi bot rules check karne hain (screenshots pending).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Policy explicitly set nahi hui thi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Business decision aapka: Option A (visibility-first, sab allow + explicit allow rules) ya Option B (training block + search allow). Dono ready: fixes/robots-visibility-first.txt aur fixes/robots-training-block.txt</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: explicit AI crawler groups, visibility-first Option A (commit 675ad42). Switch to training-block via fixes/robots-training-block.txt if desired.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">robots.txt fetch + server logs mein bot UA counts (aapke paas logs access hai — grep pattern report appendix mein).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="GEO" data-id="GEO-003" >
+  <summary>
+    <span class="fid">GEO-003</span>
+    <span class="ftitle">llms.txt maujood nahi (experimental convention — optional)</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/llms.txt (404 by absence; repo mein koi file nahi)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Repo/live mein llms.txt nahi. llms.ai proposal ke mutabiq yeh ek emerging/experimental convention hai — major engines ke liye proven ranking/citation impact abhi nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Add karne ka koi nuqsan nahi, guarantee bhi nahi. Optional polish.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">N/A — convention hi experimental hai.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Agar chahiye: fixes/llms.txt template site ke real pages ke saath (label: experimental).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">https://xsypher.com/llms.txt → 200.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">open · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Performance &amp; Core Web Vitals <span class="cat-count">3</span></h3>
+  
+<details class="fcard sev-high" data-sev="High" data-cat="Performance &amp; Core Web Vitals" data-id="PERF-003" open>
+  <summary>
+    <span class="fid">PERF-003</span>
+    <span class="ftitle">Core Web Vitals (lab + field) verify nahi ho sake — PSI API 429, sandbox se Lighthouse blocked</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Hypothesis</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">Site-wide CWV measurement (LCP/INP/CLS/TTFB)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">PSI API: `HTTP 429 Quota exceeded (pagespeed.web.dev project)`; direct curl/Lighthouse: sandbox egress policy blocks xsypher.com (TLS reset). Code-level signals: hero priority+sizes ✓, fonts display:swap self-hosted ✓, ads min-height reserved ✓ (globals.css:1132-1162), ISR/force-static ✓; risks: StoryRow sizes (PERF-001), bundle (PERF-002), no Cloudflare HTML cache rules verified.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Ranking + UX dono ke liye CWV critical hain; bina numbers ke improvement priorities guesswork hoti hai. Yeh &#x27;Not verified — access required&#x27; item hai: metrics nahi likhe gaye (no hallucination rule).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Tool access limitation (documented in report appendix).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Aap ye do: (1) PageSpeed Insights ke home + ek article page ke desktop/mobile screenshots (Opportunities/Diagnostics ke saath), (2) GSC → Core Web Vitals report screenshots. Main usse findings update kar dunga.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — needs access: PSI/GSC screenshots (report Section 12.1) to establish CWV baselines.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">PSI numbers report mein add honge (Before baseline).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">access-required · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Performance &amp; Core Web Vitals" data-id="PERF-001" >
+  <summary>
+    <span class="fid">PERF-001</span>
+    <span class="ftitle">StoryRow (feed thumbnail) fill images mein sizes attribute nahi — default 100vw par download</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/article/StoryRow.tsx:58-65 (fill, no sizes); app/(public)/category/[slug]/page.tsx:127 (featured image)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Automated scan of all .tsx: `fill` WITHOUT `sizes=` → StoryRow.tsx:58, category/[slug]:127 (admin/preview alag). StoryCard.tsx:62 mein sizes ✓ (feed cards theek).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">StoryRow har listing page ka main row component hai (/latest, /category, homepage &#x27;More&#x27; sections). 100vw default = ~400px slot ke liye 800-1600px+ image → data waste, mobile listing pages ki LCP/INP impact, unnecessary _next/image CPU.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">fill use karte waqt sizes prop add karna bhool gaye (Next.js default 100vw apply hota hai).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`sizes=&quot;(max-width: 768px) 120px, 160px&quot;` (row thumbnail actual display width ke mutabiq) — fixes/storyrow-sizes.patch</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: sizes=118px on StoryRow, responsive sizes on the category feature (commit 41719cd).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">DevTools Network: listing images ab slot-width candidates serve karein; PSI mobile FCP improve (estimate: listing pages par 100-400KB per page bach sakte hain).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Performance &amp; Core Web Vitals" data-id="PERF-002" >
+  <summary>
+    <span class="fid">PERF-002</span>
+    <span class="ftitle">ArticleBody statically bundles EditorialBlockViewer (react-tweet, TikTok embed, block CSS)</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/article/ArticleBody.tsx:12 (static import) vs line 9-11 (charts/mermaid dynamic hain)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">ArticleBody.tsx: `import EditorialBlockViewer from &#x27;./EditorialBlockViewer&#x27;` (static) — jabke DynamicChart/FrontendMermaidViewer/InteractiveChartViewer next/dynamic se hain. EditorialBlockViewer.tsx:8 `import { Tweet } from &#x27;react-tweet&#x27;` (static) + TikTokEmbed + editorial-blocks.css. highlight.js bhi dynamic ✓.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Har article page ka initial JS bundle react-tweet + embed machinery carry karta hai chahe article mein tweet ho ya na ho — TBT/hydration cost, mobile pe scroll jank.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Dynamic-import discipline sab blocks par uniformly apply nahi hui (AGENTS.md rule sirf heavy libs par lagta hai).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`const EditorialBlockViewer = dynamic(() =&gt; import(&#x27;./EditorialBlockViewer&#x27;), { ssr: false })` — embeds waale blocks ke render ke waqt hi load hoga (ArticleBody pehle se unclean DOM parse karta hai, mismatch risk low).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied (narrower than proposed): react-tweet is client-only dynamic; EditorialBlockViewer stays server-rendered on purpose so editorial blocks remain in the SSR HTML for crawlers (commit 41719cd).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">next build output: article route ka first-load JS kam hua; Lighthouse TBT improvement (estimate 50-150ms).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Security <span class="cat-count">5</span></h3>
+  
+<details class="fcard sev-critical" data-sev="Critical" data-cat="Security" data-id="SEC-001" open>
+  <summary>
+    <span class="fid">SEC-001</span>
+    <span class="ftitle">Live API key committed in PUBLIC repository (.vscode/settings.json)</span>
+    <span class="badges">
+      <span class="sev sev-critical">Critical</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">.vscode/settings.json:2 (tracked &amp; pushed to public GitHub repo anwariqbaldawar/xCipher, commit baaf6ac, pushed 2026-10-09)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">opencode.apiKey = sk-7...YbQW (REDACTED) pointing to https://api.agentrouter.com/v1; `git ls-files` me file tracked; `gh repo view` → isPrivate: false</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Koi bhi insaan repo clone karke key utha sakta hai — quota abuse, financial loss, account takeover tak. Repo public hai, to exposure active hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">.vscode/ project settings ko commit kar diya gaya; .gitignore me .vscode/ nahi (ya settings.json alag se force-add hua).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">1) Key abhi REVOKE/ROTATE karein (agentrouter dashboard). 2) File git se hatayein: `git rm --cached .vscode/settings.json` + commit. 3) Git history purge: git filter-repo ya BFG (repo public hai to history rewrite zaroori). 4) `.vscode/` ko .gitignore me daalein. 5) GitHub push protection/secret scanning enable karein.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Repo-side applied: key removed from tracked .vscode/settings.json (commit 9ff83e4) + ignore guard. OWNER PENDING: revoke the key and purge git history.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Repo ke raw file URL par 404 + GitHub code search (key prefix) zero results + purana key reject ho.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Security" data-id="SEC-002" >
+  <summary>
+    <span class="fid">SEC-002</span>
+    <span class="ftitle">Public pages ki CSP mein script-src &#x27;unsafe-inline&#x27; (bina nonce) + connect-src bahut broad</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">middleware.ts:38-57 (buildCsp — isStaticPublic branch &#x27;unsafe-inline&#x27; use karta hai), connect-src &#x27;self&#x27; https:</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">middleware.ts:40-42: `isStaticPublic ? script-src &#x27;self&#x27; &#x27;unsafe-inline&#x27; ... : script-src &#x27;self&#x27; &#x27;nonce-...&#x27;`. Har public ISR page par inline script injection freely run ho sakti hai agar HTML mein kahin bhi injection ho. connect-src https: = kisi bhi HTTPS endpoint ko beja ja sakta hai (exfiltration).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">XSS ke against defence-in-depth kamzor — especially jabki article body R2 se aata hai (stored HTML). Sanitizer (DOMPurify) primary defence hai, CSP sirf backup, aur backup public pages par nahi.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Comment (middleware.ts:27-36): static/ISR pages ko SSG hydration scripts ke liye unsafe-inline chahiye — Next.js ke inline bootstrap ko nonce dena possible hai lekin implementation complex tha.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Next.js15+ mein hydration scripts nonce pass karke unsafe-inline hata sakte hain (layout already nonce forward karta hai); kam az kam connect-src ko explicit allowlist (`&#x27;self&#x27; https://*.sentry.io https://rsms.me/...`) karein. Draft: fixes/csp-draft.txt</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: explicit connect-src allowlist per Google&#x27;s CSP guidance (commit 1b7d8fa). Verify the browser console after deploy for CSP violations.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Browser DevTools → Console mein CSP violation reports; securityheaders.com score A+.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Security" data-id="SEC-003" >
+  <summary>
+    <span class="fid">SEC-003</span>
+    <span class="ftitle">DMARC policy sirf p=none, SPF ~all — domain spoofing protection weak</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">DNS: _dmarc.xsypher.com, xsypher.com TXT (verified via dns.google DoH, 2026-10-13)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">DMARC: `v=DMARC1; p=none;` (koi rua/rua aggregate report address nahi). SPF: `v=spf1 include:_spf.mx.cloudflare.net include:resend.com ~all`. DKIM: resend._domainkey TXT present ✓.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Koi bhi aapke domain se phishing email bhej sakta hai (p=none receiver ko sirf report karta hai, block nahi). Journalistic brand ke liye spoofed email = trust/reputation risk.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Setup mein monitor-mode chhoda gaya, strict par upgrade nahi hua.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">1) `v=DMARC1; p=quarantine; pct=25; rua=mailto:dmarc@xsypher.com; adkim=r; aspf=r` pehle, phir 2 hafte reports ke baad `p=reject`. 2) SPF `~all` → `-all`.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — owner action: DNS records (fixes/dmarc-recommendation.txt).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">DMARC report mein legitimate senders clean; mail-tester.com se test mail 9/10+.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Security" data-id="SEC-004" >
+  <summary>
+    <span class="fid">SEC-004</span>
+    <span class="ftitle">Password policy sirf min-8; deactivated-account login error generic se alag (minor enumeration)</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/actions/password-reset.ts:65 (z.string().min(8)), lib/auth.ts:81 (&#x27;Account is deactivated.&#x27;), :85 (&#x27;Database connection failed...&#x27;)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Password rules: length 8+, koi complexity/passphrase rule nahi. Login errors mostly uniform (&#x27;Invalid email or password&#x27;) ✓, lekin inactive-account aur DB-error messages distinct hain.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Weak passwords (OWASP: 8 char min acceptable, lekin 12+ recommend); enumeration se attacker ko pata chalta hai kaunsa email account rakhta hai (deactivated).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">UX ke liye distinct errors, security trade-off consider nahi hua.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Inactive ko bhi generic error do (log server par rakho); password min 8 se 12 karo (ya zxcvbn score).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied (partial): deactivated-account logins now return the generic error (commit 675ad42). Password min-length policy left unchanged (owner preference).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Test login deactivated account → same generic error.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied (partial) · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="Security" data-id="BE-005" >
+  <summary>
+    <span class="fid">BE-005</span>
+    <span class="ftitle">Sentry DSN hardcoded fallback repo mein (event-injection vector)</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">sentry.server.config.ts:9 (DSN ...@o4512125796876288.ingest.us.sentry.io/4512220592603136, REDACTED: o451...3136)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">DSN fallback hardcoded; NEXT_PUBLIC_Sentry DSN normally bundle mein public hota hai, lekin default value repo history mein bhi hai.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">DSN se events bheje ja sakte hain (spam/signal pollution) — Sentry projects ke liye accepted risk hai, lekin env-only pattern saaf hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Dev convenience fallback.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Hardcoded fallback hatao; env se hi init (na ho to init skip). Sentry dashboard mein allowed origins/filters on rakho.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — remove the hardcoded Sentry DSN fallback after confirming SENTRY_DSN is set on the host.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Repo grep mein DSN na dikhe.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Backend &amp; Code Quality <span class="cat-count">6</span></h3>
+  
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Backend &amp; Code Quality" data-id="BE-001" >
+  <summary>
+    <span class="fid">BE-001</span>
+    <span class="ftitle">ESLint failing (351 errors / 100 warnings) aur CI mein lint gate hi nahi</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">npm run lint (repo-wide), .github/workflows/deploy.yml</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">`npm run lint` exit 1: 451 problems — 285 no-explicit-any, 91 no-unused-vars, 43 unescaped-entities, 6 no-img-element. CI (deploy.yml): sirf tsc + test + prod audit — lint step hi nahi, `next build` gate bhi nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Lint debt silently badhta hai; build-breaking changes sirf production deploy par pakde jate hain (deploy mein docker build hi build gate hai — fail hone par pura deploy rukta hai, rollback nahi).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Quality gate incomplete — README claims &#x27;lint gates&#x27; lekin workflow mein nahi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">CI mein `npm run lint --max-warnings=0` (pehle debt down karein: --fix + any-types codemod) + `next build` dry-run step. fixes/ci-gate.yml snippet.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: build gate + non-blocking lint in CI (commit a861b27). Wanted later: clear the lint debt, then make it blocking.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">CI green lint ke saath; local `npm run lint` exit 0.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Backend &amp; Code Quality" data-id="BE-002" >
+  <summary>
+    <span class="fid">BE-002</span>
+    <span class="ftitle">Deploy pipeline mein post-deploy health gate, rollback, aur reproducible installs nahi</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">.github/workflows/deploy.yml (deploy job)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Script: git reset --hard → `npm install --production=false` (host par, lockfile drift possible) → docker compose build --no-cache → up -d → image prune. Koi health-check wait, koi rollback, koi version pin nahi. README ke &#x27;automated gates&#x27; mein sirf verify job hai.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Kharab deploy (jaise abhi wala og-image bug) manually spot hona padta hai; recovery = manual. --no-cache har baar = slow builds, layer cache fayda nahi.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Pipeline basic SSH automation par ruki hui hai.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">1) `npm ci` on host, 2) deploy ke baad health poll (`/api/health` 200, 30s tak) — fail par `docker compose rollback to previous image tag`, 3) `--no-cache` hatao (Dockerfile change par hi cache bust). fixes/deploy-health-gate.sh snippet.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: npm ci, layer-cached builds, post-deploy health gate with log dump (commit a861b27). Rollback still manual (needs versioned image tags).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Staging par jaan-bujh kar bad build → pipeline auto-rollback dikhaye.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Backend &amp; Code Quality" data-id="BE-007" >
+  <summary>
+    <span class="fid">BE-007</span>
+    <span class="ftitle">Caddy health check /api/health ka 503 (&#x27;degraded&#x27;) poore site ko 502 kar sakta hai (Redis outage = full site outage)</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">docs/Caddyfile.example (health_uri /api/health) × app/api/health (redis fail par status 503)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">health route: `status: ok ? 200 : 503` (redis.down -&gt; degraded -&gt; 503). Caddy reverse_proxy health_uri non-2xx = upstream unhealthy -&gt; Caddy koi available upstream nahi dhundhta to 502 serve karta hai. Yani ioredis outage (ya 2s timeout flap) par visitors ko 502, chahe Next.js bilkul theek ho.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Single point of failure ka blast radius badh gaya: cache/queue dependency ki kami full outage bana deti hai. Redis mostly resilient hai (retry strategy) lekin health check ka fail-mode dangerous hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Health endpoint &#x27;dependency health&#x27; (503) aur &#x27;process liveness&#x27; (200) ko same route par mix karta hai; proxy layer liveness samajh raha hai.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Do options: (a) /api/health hamesha 200 rakho jab tak Next.js respond kar raha ho (body mein checks flags), degrade alert Sentry/monitor ko bhejo; ya (b) Caddy health mein sirf liveness route (naya /api/healthz -&gt; 200) do. fixes/caddy-headers.conf NOTE dekhein.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: /api/healthz liveness + Caddyfile.example updated (commit a861b27). /api/health stays the dependency-health endpoint for monitors.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Redis band karo -&gt; site ab bhi 200 serve kare; alert aaye. Phir Redis on -&gt; checks green.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Backend &amp; Code Quality" data-id="BE-003" >
+  <summary>
+    <span class="fid">BE-003</span>
+    <span class="ftitle">Migrations ka dual-path: migrate.mjs (hand-rolled ALTERs) + drizzle/ folder — schema drift risk</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">migrate.mjs (CI deploy script chalata hai) vs drizzle/ migrations + drizzle.config.ts</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">deploy.yml: `node migrate.mjs` (idempotent ALTER chain, _SchemaMigration ledger). Repo mein drizzle/ (Drizzle Kit migrations) bhi maujood. drizzle-kit push sirf local README steps mein.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Do migration systems — naya developer galti se drizzle-kit push chala de to prod schema drift. Hand-rolled ALTERs missing FKs/indexes ka risk.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Prisma→Drizzle migration ke beech hybrid approach chal rahi hai.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Ek source of truth choose karo (recommend: drizzle-kit generate → SQL files ko deploy pipeline mein chalao, migrate.mjs ko bootstrap tak simit karo).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — decision: consolidate on drizzle-kit migrations.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Fresh DB par sirf official path se schema + app healthy.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Backend &amp; Code Quality" data-id="BE-004" >
+  <summary>
+    <span class="fid">BE-004</span>
+    <span class="ftitle">Dev-dependency vulnerabilities: 33 total (3 critical, 21 high) — prod deps clean</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">package-lock.json (dev tree: vitest critical, eslint-config-next high, vercel high, drizzle-kit moderate)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">npm audit (full): 33 vulns. npm audit --omit=dev: **0** ✓ (CI gate passes). Critical = vitest UI server arbitrary file read (dev-only).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Prod runtime safe hai; lekin CI/dev machines par vitest dev-server vulnerability + &#x27;npm install&#x27;供应链 risk. Refresh chahiye.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Dev tooling pin/update cycle nahi.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">`npm audit fix --package-lock-only` (breaking majors plan karke: vitest 5.x, vercel CLI hata jo unused hai agar Docker deploy use karta hai).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — dev-dependency refresh (vitest 5, drop unused vercel CLI).</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">npm audit (full) = 0 ya accepted-risk documented.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-info" data-sev="Info" data-cat="Backend &amp; Code Quality" data-id="BE-006" >
+  <summary>
+    <span class="fid">BE-006</span>
+    <span class="ftitle">Search endpoint PostgreSQL full-text + ILIKE mix — `/search` robots-blocked sahi, lekin query cost par nazar rakho</span>
+    <span class="badges">
+      <span class="sev sev-info">Info</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/(public)/search/page.tsx:52-70</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">to_tsvector @@ plainto_tsquery + multi-column ILIKE OR chain; GIN index exists (Article searchIdx, schema.ts). Escaping: escapeLikePattern ✓. force-dynamic + noindex ✓.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">5 articles par trivial; corpus badhne par ILIKE &#x27;%q%&#x27; sequential scans karega — pehle se N+1/scan risk monitor karo.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Hybrid search (FTS ranking + fuzzy fallback).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Corpus &gt;1k par: ILIKE ko trigram index (`pg_trgm`, gin_trgm_ops) do, ya Meilisearch/Typesense.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">EXPLAIN ANALYZE search query &lt; 50ms.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">open · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Accessibility, UX &amp; Trust <span class="cat-count">3</span></h3>
+  
+<details class="fcard sev-high" data-sev="High" data-cat="Accessibility, UX &amp; Trust" data-id="AD-001" open>
+  <summary>
+    <span class="fid">AD-001</span>
+    <span class="ftitle">ads.txt missing (404) — AdSense active site par</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">https://xsypher.com/ads.txt</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Live fetch → 404 (custom not-found page). Repo: public/ mein koi ads.txt nahi, koi route bhi nahi. AdSense code present (components/common/AdUnit.tsx, NEXT_PUBLIC_ADSENSE_CLIENT_ID).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">AdSense policy: authorized seller mismatch = invalid inventory warnings, ads.txt missing warning, revenue pause tak ho sakta hai. DSP resellers ke pas ye file verify karni hoti hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">ads.txt file kabhi bani hi nahi (ad serving baad mein add hui, ads.txt ka step miss).</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">public/ads.txt banayein: `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0` (apna publisher ID ke saath). Exact file: fixes/ads.txt (pub-XXXX aap badlein).</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: public/ads.txt served (commit e3da25a). OWNER: replace pub-XXXXXXXXXXXXXXXX with the real publisher ID.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">https://xsypher.com/ads.txt → 200; AdSense Sites → ads.txt status green.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: live</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Accessibility, UX &amp; Trust" data-id="AD-002" >
+  <summary>
+    <span class="fid">AD-002</span>
+    <span class="ftitle">AdSense ke liye single global slot + TCF-certified CMP ka gap (EEA/UK traffic par policy risk)</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Likely</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/common/AdUnit.tsx (NEXT_PUBLIC_ADSENSE_SLOT_ID ek hi), components/common/CookieConsent.tsx (custom 2-button)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">AdUnit: `slotId = process.env.NEXT_PUBLIC_ADSENSE_SLOT_ID` — saare placements (top/sidebar/mid-feed/category) ek hi slot. CookieConsent: accepted/declined, koi TCF v2 consent string nahi, koi per-category controls nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">1) Ek slot = placement performance optimization impossible (RPM). 2) EEA/UK visitors ko personalized ads dikhane ke liye Google AdSense policy TCF-certified CMP mangti hai — custom banner sufficient nahi (geo-dependent enforcement).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">MVP ad setup + homegrown consent.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Per-placement slot IDs (AdSense dashboard mein units banao); EEA traffic par Google Certified CMP (Consent Manager, Sourcepoint, ya Google&#x27;s own Funding Choices) — PK/US traffic ke liye custom banner chal sakta hai lekin geo-rule saaf rakho.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — owner action: per-placement AdSense units and a TCF-certified CMP for EEA/UK traffic.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">AdSense Policy Center clean; EEA mein consent string (TCF) network mein present.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Accessibility, UX &amp; Trust" data-id="AX-001" >
+  <summary>
+    <span class="fid">AX-001</span>
+    <span class="ftitle">WCAG 2.2 AA full audit pending (axe-core run sandbox mein possible nahi) — code signals positive</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Hypothesis</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">Site-wide</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Code-level positives: skip-link (public/layout:32-34), form labels sr-only + htmlFor (NewsletterSignup:76), aria-live regions (toast, PaginatedFeed status), focus-visible styles, motion-reduce handling, alt text fallback (title), reduced-motion CSS (grep verified). Inverse findings: contrast ratios, tap targets, keyboard traps — rendered test chahiye.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Accessibility score + usability dono unknown; AdSense policy mein bhi accessibility waghera ranking factor hai (site quality).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Headless browser audit unavailable in sandbox.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Aap ye do: (1) Chrome Lighthouse → Accessibility tab screenshots (home + article, mobile), (2) axe DevTools run. Ya mujhe staging/dev access → main run karun.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — needs access: Lighthouse/axe screenshots or a staging URL to run headless checks.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">axe zero critical/serious; Lighthouse a11y ≥ 90.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">access-required · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Editor / CMS <span class="cat-count">1</span></h3>
+  
+<details class="fcard sev-medium" data-sev="Medium" data-cat="Editor / CMS" data-id="CMS-001" >
+  <summary>
+    <span class="fid">CMS-001</span>
+    <span class="ftitle">Pre-publish quality gates adhoore: sirf title/deck/50-words check; alt/meta/broken-links/readability checks missing</span>
+    <span class="badges">
+      <span class="sev sev-medium">Medium</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">components/editorial/ArticleEditor.tsx:820-834 (pre-flight checks), Section-11 K checklist</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Pre-flight: title required, deck ≥10 chars, ≥50 words. Missing: missing-featured-image-alt gate (alt optional field), missing-meta warning, broken-link check, duplicate-title check, readability score, plagiarism, heading-hierarchy validator, a11y check. Grep readability/broken-link/plagiarism = 0 app code mein.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Quality issues publish ke baad discover hote hain (ya kabhi nahi). Small team ke liye yehi gates editorial quality ka insurance hote hain.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">MVP scope — gates sirf basic content shape tak seemit.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Priority order: (1) featured image + alt required on PUBLISHED, (2) SEO description required, (3) outbound link checker (async), (4) duplicate title check against DB. Roadmap section mein phased.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied (P1 gate): featured image alt required on submit/publish (commit 9456e7f). Remaining gates (broken links, duplicate titles, readability) stay in the 30/60-day plan.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Khaali alt wala article publish karne se roka jaye (gate error).</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+</section>
+
+<section class="fgroup">
+  <h3>Analytics, Monitoring &amp; Operations <span class="cat-count">3</span></h3>
+  
+<details class="fcard sev-high" data-sev="High" data-cat="Analytics, Monitoring &amp; Operations" data-id="MON-001" open>
+  <summary>
+    <span class="fid">MON-001</span>
+    <span class="ftitle">Koi analytics installed hi nahi (GA4/Plausible/Umami zero) — SEO/perf decisions blind</span>
+    <span class="badges">
+      <span class="sev sev-high">High</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: M</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/(public)/layout.tsx (AdSenseScript, CookieConsent, lekin koi analytics script nahi); grep gtag/plausible/umami = 0 code matches</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Layout mein sirf AdSenseScript mount hota hai. Transparency page kehti hai &#x27;No third-party analytics scripts&#x27; (sahi), jabke privacy/cookie policy pages &#x27;Google Analytics or Plausible&#x27; ka zikr karte hain — policy vs reality mismatch.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Traffic, conversions, top queries, indexation impact — kuch measure nahi kar sakte. GSC ke bina (access nahi diya) aur analytics ke bina audit ke KPIs follow-up possible nahi. Policy text bhi inaccurate hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Analytics integrate hi nahi hua (privacy-first choice bhi ho sakti hai — confirm karein), lekin policies generic text rakhe hue hain.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">Plausible/Umami (privacy-friendly, consent-light) ya GA4 + Consent Mode add karein; policy pages ko actual stack se sync karein.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — owner decision: analytics account (Plausible/GA4); policy pages must be synced with the real stack.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Page load par network mein analytics request + dashboard mein live event.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Analytics, Monitoring &amp; Operations" data-id="MON-002" >
+  <summary>
+    <span class="fid">MON-002</span>
+    <span class="ftitle">Bing Webmaster Tools verification ka integration nahi (IndexNow hai, verification nahi)</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Verified</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/layout.tsx metadata.verification (sirf google env), lib/google-indexing.ts (IndexNow ping ✓)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">metadata.verification = { google: NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } — bing verification tag kahin nahi. IndexNow pings wired hain (workflow.ts:554).</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Bing/ChatGPT-search side data (index coverage, CWV) nahi milta — GEO ke liye Bing important channel hai.</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">Setup adhoori.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">BWT mein site verify (meta tag ya DNS) → layout metadata mein `bing: &#x27;...&#x27;` add; sitemap submit.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Applied: msvalidate.01 emitted when NEXT_PUBLIC_BING_SITE_VERIFICATION is set (commit 675ad42). OWNER: paste the token from Bing Webmaster Tools.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">BWT dashboard verified tag dikhe.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">fix-applied · source: code</div></div>
+  </div>
+</details>
+
+<details class="fcard sev-low" data-sev="Low" data-cat="Analytics, Monitoring &amp; Operations" data-id="MON-003" >
+  <summary>
+    <span class="fid">MON-003</span>
+    <span class="ftitle">Uptime monitoring external configure unknown — health endpoint ready hai</span>
+    <span class="badges">
+      <span class="sev sev-low">Low</span>
+      <span class="conf">Hypothesis</span>
+      <span class="effort">Effort: S</span>
+    </span>
+  </summary>
+  <div class="fbody">
+    <div class="kv"><div class="k">Affected</div><div class="v">app/api/health (force-dynamic, DB+Redis checks, 503 on degrade)</div></div>
+<div class="kv"><div class="k">Evidence</div><div class="v">Health route code comment: &#x27;for uptime monitoring (UptimeRobot, BetterStack, …)&#x27; — lekin koi monitor config repo mein nahi (expected, third-party). Incident response/alerting ka koi record nahi.</div></div>
+<div class="kv"><div class="k">Impact</div><div class="v">Agar monitor set nahi to outage pata hi nahi chalti (healthy endpoint ka koi fayda nahi).</div></div>
+<div class="kv"><div class="k">Root cause</div><div class="v">External service — verify nahi ho saka.</div></div>
+<div class="kv"><div class="k">Fix</div><div class="v">BetterStack/UptimeRobot free tier: /api/health 30s poll + Slack/Email alert; GSC/Cloudflare uptime bhi enable.</div></div>
+<div class="kv"><div class="k">Implementation</div><div class="v">Open — owner action: point an uptime monitor at /api/healthz (liveness) and enable alerts.</div></div>
+<div class="kv"><div class="k">Verification</div><div class="v">Test alert aapko mile.</div></div>
+    <div class="kv"><div class="k">Status</div><div class="v">owner action · source: code</div></div>
+  </div>
+</details>
+</section>
+</div>
+
+<h2 id="6-competitor-gap-analysis-seo-aeo-geo">6. Competitor Gap Analysis (SEO + AEO + GEO)</h2>
+<blockquote>
+<p><strong>Auto-detect note:</strong> aapne competitor list nahi di; niche ("independent tech news, analysis, reviews") ke basis par ye 5 select kiye. Koi bhi number/metric guess nahi — qualitative gap analysis <code>[Likely/Hypothesis]</code>, live SERP/AI tests pending (GEO-004).</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Competitor</th>
+<th>Why (overlap)</th>
+<th>SEO/AEO edge over xSypher</th>
+<th>GEO edge</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>BleepingComputer</strong></td>
+<td>Cybersecurity news, high publish rate</td>
+<td>Massive topical depth, E-E-A-T (cited by Google), schema everywhere</td>
+<td>Frequently cited by AI answers for security queries</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>The Hacker News</strong></td>
+<td>Security analysis, newsletters</td>
+<td>Domain authority, original reporting links, fast news cycle</td>
+<td>Strong entity presence, cited in AI security answers</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>TechCrunch</strong></td>
+<td>Tech news/reviews, funding</td>
+<td>Scale + news sitemap + author pages with credentials</td>
+<td>Wikipedia-level entity, universal AI citation</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Ars Technica</strong></td>
+<td>Deep technical analysis (aapke articles ka tone closest)</td>
+<td>Evergreen guides, hub/cluster structure, community</td>
+<td>High citation-worthiness (original testing/data)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>ProPakistani (tech section)</strong></td>
+<td>PK/IN audience geo-overlap</td>
+<td>Local SEO + Urdu/English mix + local backlinks</td>
+<td>Regional AI answers mein local sources</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Gaps jo abhi hain (evidence-based):</strong>
+1. <strong>Scale/trust:</strong> inke paas thousands of articles + external mentions; aapke paas 5 + 0 mentions (GEO-001). → Wo har AI answer mein isi liye cite hote hain.
+2. <strong>Structure:</strong> inke paas evergreen hubs (Ars "deals", THN "breaking") — aapke paas hubs nahi (AEO gap). Lekin <strong>article-level structure aapka unse competitive hai</strong> (answer-first + tables) — sirf distribution/authority missing.
+3. <strong>News cycle:</strong> News sitemap ✓ hai lekin publish velocity 5 articles/maheene se match nahi hoti (CON-001).
+4. <strong>Entity:</strong> unke paas Wikipedia/KB/panels; aapke paas sirf GitHub (GEO-001).</p>
+<p><strong>Winning plan (asymmetric):</strong> unke against scale se nahi — <strong>depth-per-topic</strong> se: har cluster mein 1 definitive guide (2000+ words, original data, benchmarks) jo AI engines ko cite karna pare.</p>
+<hr />
+<h2 id="7-editorcms-checklist-matrix">7. Editor/CMS Checklist Matrix</h2>
+<p>Legend: <strong>P</strong> = Present · <strong>PA</strong> = Partial · <strong>M</strong> = Missing · <strong>N/A</strong></p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Feature</th>
+<th>Status</th>
+<th>Evidence / Priority</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A</strong></td>
+<td><strong>Writing experience</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>A1</td>
+<td>Block editor (TipTap) + Markdown mode</td>
+<td><strong>P</strong></td>
+<td>TipTap starter + <code>tiptap-markdown</code> (import/export)</td>
+</tr>
+<tr>
+<td>A2</td>
+<td>Autosave</td>
+<td><strong>P</strong></td>
+<td>debounce + in-flight race guard (<code>ArticleEditor:837-841</code>)</td>
+</tr>
+<tr>
+<td>A3</td>
+<td>Draft/schedule/publish workflow</td>
+<td><strong>P</strong></td>
+<td>statuses + <code>scheduleArticle</code> (<code>workflow.ts:589</code>)</td>
+</tr>
+<tr>
+<td>A4</td>
+<td>Live preview (desktop+mobile)</td>
+<td><strong>PA</strong></td>
+<td>Preview button + <code>preview.xsypher.com</code>; mobile-viewport preview missing</td>
+</tr>
+<tr>
+<td>A5</td>
+<td>Revision history + restore</td>
+<td><strong>P</strong></td>
+<td><code>articleRevision</code> + <code>restoreRevision</code> (<code>article.ts:486</code>)</td>
+</tr>
+<tr>
+<td>A6</td>
+<td>Undo/redo + shortcuts</td>
+<td><strong>P</strong></td>
+<td>TipTap defaults</td>
+</tr>
+<tr>
+<td>A7</td>
+<td>Word/reading-time count</td>
+<td><strong>P</strong></td>
+<td>CharacterCount extension</td>
+</tr>
+<tr>
+<td>A8</td>
+<td>Distraction-free mode</td>
+<td><strong>M</strong></td>
+<td>Low priority — <code>M</code></td>
+</tr>
+<tr>
+<td><strong>B</strong></td>
+<td><strong>Tech-content blocks</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>B1</td>
+<td>Code blocks (lang select + copy)</td>
+<td><strong>P</strong></td>
+<td>code-block-lowlight + copy buttons (<code>ArticleBody</code> effect) + filename? <strong>PA</strong> (filename label/line numbers: <code>PA</code>)</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>Inline code / tables</td>
+<td><strong>P</strong></td>
+<td>starter-kit + table ext</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>Callouts (note/warning/tip…)</td>
+<td><strong>P</strong></td>
+<td>7 types (<code>Callout.ts:7</code>)</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>Comparison/specs, pros/cons, steps, FAQ, TL;DR</td>
+<td><strong>P</strong></td>
+<td>editorial-blocks + takeaway callout + howto</td>
+</tr>
+<tr>
+<td>B5</td>
+<td>Embeds (YouTube/GitHub/X/TikTok)</td>
+<td><strong>PA</strong></td>
+<td>Tweet + TikTok + social blocks; YouTube/GitHub embed path check karo</td>
+</tr>
+<tr>
+<td>B6</td>
+<td>Gallery, collapsible sections, TOC auto</td>
+<td><strong>P/PA</strong></td>
+<td>gallery ✓, TOC ✓, collapsible <code>PA</code></td>
+</tr>
+<tr>
+<td>B7</td>
+<td>Changelog/"Last updated"</td>
+<td><strong>PA</strong></td>
+<td><code>updatedAt</code> auto + update callout; visible "last updated" on page? <code>PA</code></td>
+</tr>
+<tr>
+<td><strong>C</strong></td>
+<td><strong>SEO panel</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>C1</td>
+<td>SEO title + desc w/ counters</td>
+<td><strong>P (broken)</strong></td>
+<td>counters+preview hain <strong>lekin publish nahi hota → TSEO-002 (High)</strong></td>
+</tr>
+<tr>
+<td>C2</td>
+<td>SERP preview</td>
+<td><strong>P (lying)</strong></td>
+<td>preview <code>metaTitle</code> se, site <code>seoTitle</code> se</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Focus keyword + related entities</td>
+<td><strong>PA</strong></td>
+<td>field exists, koi scoring/analysis nahi</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>Slug control</td>
+<td><strong>P</strong></td>
+<td>auto-slugify + manual lock + <code>previousSlugs</code> auto-redirect</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Canonical override</td>
+<td><strong>M (no-op)</strong></td>
+<td>field save, render nahi → TSEO-003</td>
+</tr>
+<tr>
+<td>C6</td>
+<td>Robots index/noindex toggle (per article)</td>
+<td><strong>M</strong></td>
+<td>sirf auto-rules; manual toggle missing → Priority M</td>
+</tr>
+<tr>
+<td>C7</td>
+<td>OG/Twitter preview</td>
+<td><strong>PA</strong></td>
+<td>OG image upload exists (no-op → TSEO-003); preview component hai</td>
+</tr>
+<tr>
+<td>C8</td>
+<td>Schema type selector</td>
+<td><strong>PA</strong></td>
+<td>auto (NewsArticle/TechArticle/FAQ/HowTo); manual selector nahi</td>
+</tr>
+<tr>
+<td>C9</td>
+<td>Breadcrumb control</td>
+<td><strong>M</strong></td>
+<td>auto only</td>
+</tr>
+<tr>
+<td>C10</td>
+<td>Internal link suggestions / broken link checker</td>
+<td><strong>M</strong></td>
+<td>Priority M</td>
+</tr>
+<tr>
+<td>C11</td>
+<td>Heading-hierarchy validator (single H1)</td>
+<td><strong>M</strong></td>
+<td>Priority S</td>
+</tr>
+<tr>
+<td>C12</td>
+<td>Readability score</td>
+<td><strong>M</strong></td>
+<td>Priority M</td>
+</tr>
+<tr>
+<td>C13</td>
+<td>Duplicate/cannibalization warning</td>
+<td><strong>M</strong></td>
+<td>Priority L (DB check easy)</td>
+</tr>
+<tr>
+<td>C14</td>
+<td>Redirect manager (manual 301)</td>
+<td><strong>PA</strong></td>
+<td>slug changes auto (<code>previousSlugs</code>) ✓; arbitrary URL redirects nahi</td>
+</tr>
+<tr>
+<td><strong>D</strong></td>
+<td><strong>AEO/GEO helpers</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>D1</td>
+<td>Question-heading suggestions</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>D2</td>
+<td>"Direct answer" field/first-para guidance</td>
+<td><strong>PA</strong></td>
+<td>editorial guidelines + takeaway; dedicated field <code>M</code></td>
+</tr>
+<tr>
+<td>D3</td>
+<td>FAQ schema generation</td>
+<td><strong>P</strong></td>
+<td>faq-block → FAQPage (<code>article-schema.ts</code>)</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>Source/citation fields</td>
+<td><strong>M</strong></td>
+<td>Priority M (journalism credibility)</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>Author-expert attribution</td>
+<td><strong>P</strong></td>
+<td>byline + authorModel + Person schema</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>Entity tagging</td>
+<td><strong>PA</strong></td>
+<td>tags/categories exist; entity (Wikidata-style) fields <code>M</code></td>
+</tr>
+<tr>
+<td>D7</td>
+<td>Freshness reminders</td>
+<td><strong>PA</strong></td>
+<td>updatedAt; stale-content reminder <code>M</code></td>
+</tr>
+<tr>
+<td><strong>E</strong></td>
+<td><strong>Media</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>E1</td>
+<td>Media library</td>
+<td><strong>P</strong></td>
+<td><code>/admin/media</code></td>
+</tr>
+<tr>
+<td>E2</td>
+<td>Auto compression + WebP</td>
+<td><strong>P</strong></td>
+<td>sharp re-encode (<code>upload/route.ts:24-40</code>)</td>
+</tr>
+<tr>
+<td>E3</td>
+<td>Mandatory alt</td>
+<td><strong>PA</strong></td>
+<td>field exists, optional (<code>featuredImageAlt</code>) → gate CMS-001</td>
+</tr>
+<tr>
+<td>E4</td>
+<td>Required width/height</td>
+<td><strong>P</strong></td>
+<td>sharp metadata enforced</td>
+</tr>
+<tr>
+<td>E5</td>
+<td>Focal-point crop</td>
+<td><strong>P</strong></td>
+<td><code>react-easy-crop</code> dep + crop UI</td>
+</tr>
+<tr>
+<td>E6</td>
+<td>Featured image requirement</td>
+<td><strong>PA</strong></td>
+<td>not enforced on publish</td>
+</tr>
+<tr>
+<td>E7</td>
+<td>Safe SVG</td>
+<td><strong>P (by exclusion)</strong></td>
+<td>SVG upload disabled deliberately ✓</td>
+</tr>
+<tr>
+<td>E8</td>
+<td>Alt/caption/credit fields</td>
+<td><strong>P</strong></td>
+<td><code>featuredImageCaption/Credit</code></td>
+</tr>
+<tr>
+<td>E9</td>
+<td>Copyright/source field</td>
+<td><strong>PA</strong></td>
+<td>credit field; license field <code>M</code></td>
+</tr>
+<tr>
+<td><strong>F</strong></td>
+<td><strong>Editorial / E-E-A-T</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>F1</td>
+<td>Author profile (bio, credentials, socials)</td>
+<td><strong>P</strong></td>
+<td>Author table: bio/expertise/socialLinks/verifiedTitle</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>Reviewer field</td>
+<td><strong>P</strong></td>
+<td><code>reviewedById</code> + ReviewWorkspace decisions</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>Byline</td>
+<td><strong>P</strong></td>
+<td>byline components + personas</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>Published + modified dates (separate)</td>
+<td><strong>P</strong></td>
+<td><code>publishedAt</code>/<code>updatedAt</code> (NewsArticle datePublished/Modified)</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>Sources list</td>
+<td><strong>M</strong></td>
+<td>Priority M</td>
+</tr>
+<tr>
+<td>F6</td>
+<td>Affiliate/sponsored/AI disclosure toggles</td>
+<td><strong>PA</strong></td>
+<td>affiliate block w/ disclosure ✓; sponsored post + "AI-assisted" global toggles <code>M</code></td>
+</tr>
+<tr>
+<td>F7</td>
+<td>Correction/update notes</td>
+<td><strong>P</strong></td>
+<td><code>/page/corrections</code> + update/editor-note callouts</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>Pre-publish validation gate</td>
+<td><strong>PA</strong></td>
+<td>title/deck/50-words only → CMS-001</td>
+</tr>
+<tr>
+<td><strong>G</strong></td>
+<td><strong>Taxonomy &amp; organization</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>G1</td>
+<td>Categories/tags w/ SEO control</td>
+<td><strong>P</strong></td>
+<td>slugs + descriptions + parent/child</td>
+</tr>
+<tr>
+<td>G2</td>
+<td>Topic clusters/pillar support</td>
+<td><strong>PA</strong></td>
+<td>categories exist; explicit cluster mapping <code>M</code></td>
+</tr>
+<tr>
+<td>G3</td>
+<td>Related posts logic</td>
+<td><strong>P</strong></td>
+<td><code>getArticleRecommendations</code></td>
+</tr>
+<tr>
+<td>G4</td>
+<td>Series support</td>
+<td><strong>P</strong></td>
+<td><code>/series</code> + series field</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Content calendar/status board</td>
+<td><strong>PA</strong></td>
+<td>dashboard + scheduledFor; visual calendar <code>M</code></td>
+</tr>
+<tr>
+<td>G6</td>
+<td>Bulk edit</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>G7</td>
+<td>Content inventory + performance data</td>
+<td><strong>PA</strong></td>
+<td>views in admin; GSC data join <code>M</code> (analytics pehle MON-001)</td>
+</tr>
+<tr>
+<td><strong>H</strong></td>
+<td><strong>Roles &amp; editor security</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>H1</td>
+<td>RBAC</td>
+<td><strong>P</strong></td>
+<td>capability layer + role hierarchy (<code>capabilities.ts</code>)</td>
+</tr>
+<tr>
+<td>H2</td>
+<td>2FA</td>
+<td><strong>P</strong></td>
+<td>TOTP + backup codes + rate limits</td>
+</tr>
+<tr>
+<td>H3</td>
+<td>Audit log</td>
+<td><strong>P</strong></td>
+<td><code>AuditLog</code> + <code>/admin/audit-logs</code></td>
+</tr>
+<tr>
+<td>H4</td>
+<td>HTML sanitization (XSS-safe)</td>
+<td><strong>P</strong></td>
+<td>DOMPurify + sanitize-html allowlists (<code>lib/sanitize.ts</code>)</td>
+</tr>
+<tr>
+<td>H5</td>
+<td>Safe embeds</td>
+<td><strong>P/PA</strong></td>
+<td>embeds allowlisted; broad <code>PA</code></td>
+</tr>
+<tr>
+<td>H6</td>
+<td>Upload restrictions</td>
+<td><strong>P</strong></td>
+<td>MIME allowlist + re-encode</td>
+</tr>
+<tr>
+<td>H7</td>
+<td>Session timeout</td>
+<td><strong>PA</strong></td>
+<td>JWT config default (maxAge explicit nahi) → confirm</td>
+</tr>
+<tr>
+<td>H8</td>
+<td>IP/device alerts</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>H9</td>
+<td>Expiring draft preview tokens</td>
+<td><strong>PA</strong></td>
+<td>preview subdomain auth-based (token nahi) — expiry N/A; risk low</td>
+</tr>
+<tr>
+<td><strong>I</strong></td>
+<td><strong>Publishing automation</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>I1</td>
+<td>Sitemap auto-update</td>
+<td><strong>PA</strong></td>
+<td>1h revalidate ✓ lekin current sitemap broken → CRW-001</td>
+</tr>
+<tr>
+<td>I2</td>
+<td>IndexNow + Google ping</td>
+<td><strong>P</strong></td>
+<td><code>enqueueGoogleIndexing</code> on publish (<code>workflow.ts:554</code>)</td>
+</tr>
+<tr>
+<td>I3</td>
+<td>Social auto-share</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>I4</td>
+<td>RSS/Atom quality</td>
+<td><strong>P</strong></td>
+<td><code>feed.xml</code> guid/pubDate/author ✓ (title inconsistency CON-002)</td>
+</tr>
+<tr>
+<td>I5</td>
+<td>Cache purge on publish</td>
+<td><strong>P</strong></td>
+<td><code>revalidatePath/Tag</code> in workflow</td>
+</tr>
+<tr>
+<td>I6</td>
+<td>Canonical/OG regen</td>
+<td><strong>PA</strong></td>
+<td>dynamic metadata ✓; OG generator broken → TSEO-001</td>
+</tr>
+<tr>
+<td>I7</td>
+<td>Scheduled republish/refresh workflow</td>
+<td><strong>PA</strong></td>
+<td>schedule publish ✓; "refresh old post" flow <code>M</code></td>
+</tr>
+<tr>
+<td><strong>J</strong></td>
+<td><strong>Monetization controls</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>J1</td>
+<td>Ad slot placement controls</td>
+<td><strong>PA</strong></td>
+<td>locations exist; sab ek hi slot (AD-002)</td>
+</tr>
+<tr>
+<td>J2</td>
+<td>ads.txt management</td>
+<td><strong>M</strong></td>
+<td><strong>404 → AD-001 (High)</strong></td>
+</tr>
+<tr>
+<td>J3</td>
+<td>Affiliate link manager + auto sponsored</td>
+<td><strong>P</strong></td>
+<td>affiliate block auto <code>rel="sponsored"</code> ✓</td>
+</tr>
+<tr>
+<td>J4</td>
+<td>Disclosure auto-insert</td>
+<td><strong>PA</strong></td>
+<td>block-level disclosure; site-wide disclosure banner <code>PA</code></td>
+</tr>
+<tr>
+<td><strong>K</strong></td>
+<td><strong>Quality gates</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>K1</td>
+<td>Broken link check</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>K2</td>
+<td>Missing alt gate</td>
+<td><strong>M</strong></td>
+<td>→ CMS-001</td>
+</tr>
+<tr>
+<td>K3</td>
+<td>Missing meta gate</td>
+<td><strong>M</strong></td>
+<td>(aur meta publish hi nahi hota → TSEO-002)</td>
+</tr>
+<tr>
+<td>K4</td>
+<td>Thin content warning</td>
+<td><strong>PA</strong></td>
+<td>50-word minimum only</td>
+</tr>
+<tr>
+<td>K5</td>
+<td>Duplicate title warning</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>K6</td>
+<td>Readability</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+<tr>
+<td>K7</td>
+<td>Plagiarism</td>
+<td><strong>M</strong></td>
+<td>(external service lagana parega)</td>
+</tr>
+<tr>
+<td>K8</td>
+<td>Accessibility check</td>
+<td><strong>M</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Build priority (editor):</strong> P1 = wire existing fields (C1/C2/C5/C7 → TSEO-002/003 fixes, sirf code wiring) · P2 = gates K2/K3/K4 + C6 noindex toggle + B1 filename/line-numbers · P3 = C10/C11/C12 + D1/D4 · P4 = rest.</p>
+<p>Neeche complete matrix hai (A–K, 90+ items — report.md Section 5.11 wali): Summary: <strong>P: 38 · PA: 26 · M: 24</strong> (counts approx). P1 priorities: SEO field wiring, ads.txt, quality gates.</p>
+<hr />
+<h2 id="8-keyword-topic-opportunity-map-top-30-questions-clusters">8. Keyword / Topic Opportunity Map (Top 30 Questions + Clusters)</h2>
+<blockquote>
+<p>Method: site ke existing categories + articles + tech-news intent se derive kiya (GSC query data aane par re-rank hoga <code>[Not verified — access required]</code>). Har cluster = 1 pillar + 4-8 spokes.</p>
+</blockquote>
+<p><strong>Cluster 1 — Windows/Enterprise (existing pillar: ESU article)</strong>
+1. Windows 10 ESU Year 2 cost per device? 2. Can you skip Year 1 ESU? 3. ESU vs Windows 11 upgrade cost? 4. Windows 11 TPM 2.0 requirements explained? 5. Windows 10 end-of-life what happens now?</p>
+<p><strong>Cluster 2 — AI running locally (existing pillar: Local AI vs Cloud)</strong>
+6. Local AI vs cloud AI cost comparison? 7. Best LLM for 16GB RAM? 8. Ollama vs cloud API privacy? 9. When does local AI make sense for business? 10. AI inference cost per token explained?</p>
+<p><strong>Cluster 3 — Security ops buying (existing: EDR/MDR, CRA)</strong>
+11. EDR vs MDR vs XDR difference? 12. MDR pricing per seat? 13. What is CRA Article 14 reporting? 14. PSIRT runbook 24-hour exploited vuln process? 15. EU Cyber Resilience Act who must comply?</p>
+<p><strong>Cluster 4 — AI support/CS automation (existing: support agents pricing)</strong>
+16. How much does an AI support agent cost? 17. Fin vs Zendesk AI pricing? 18. AI chatbot vs human support quality? 19. Help Scout vs Freshdesk small teams? 20. When AI support tickets automation fails?</p>
+<p><strong>Cluster 5 — Evergreen tech fundamentals (naye — hub opportunities)</strong>
+21. What is CSP in web security? 22. How does ISR work in Next.js? 23. PostgreSQL full-text search vs dedicated engine? 24. What is edge caching and TTFB? 25. Docker security best practices 2026? 26. What is prompt injection? 27. How to read a CVE score? 28. Zero trust architecture explained? 29. WebAuthn/passkeys vs passwords? 30. What is supply-chain attack (npm)? </p>
+<p><strong>Format rule (AEO):</strong> har spoke ka pehla paragraph = 40-60 word direct answer; H2 = question; table ya list jahan applicable; pillar page internal links sab spokes ko (hub/spoke).</p>
+<hr />
+<h2 id="9-impact-vs-effort-matrix-22">9. Impact vs Effort Matrix (2×2)</h2>
+<pre><code>                    HIGH IMPACT
+                        │
+     QUICK WINS         │        BIG BETS
+  (do pehle)            │   (schedule karo)
+ • SEC-001 key revoke   │ • Content velocity (CON-001)
+ • CRW-001 sitemap fix  │ • GEO entity build (GEO-001)
+ • AD-001 ads.txt       │ • Editor quality gates (CMS-001)
+ • TSEO-002/003 wiring  │ • Crawlable pagination (CRW-002)
+ • MON-001 analytics    │ • CSP hardening (SEC-002)
+ • TSEO-001 og fallback │ • BE-002 deploy gates
+LOW EFFORT ─────────────┼──────────────── HIGH EFFORT
+ • CRW-003/004/005/006  │ • CMP/TCF for EEA (AD-002)
+ • CON-002/003 polish   │ • Search index (BE-006) &gt;1k
+ • PERF-001/002 sizes   │ • Manual redirect manager
+ • SEC-003 DMARC        │ • Social auto-share
+     FILL-INS           │        EXPLORATORY
+                        │
+                    LOW IMPACT
+</code></pre>
+<hr />
+<h2 id="10-roadmap">10. Roadmap</h2>
+<h3 id="7-din-quick-wins-sab-s-effort-2-dev-din-total">7-din (Quick wins — sab S effort, ~2 dev-din total)</h3>
+<table>
+<thead>
+<tr>
+<th>Day</th>
+<th>Kaam</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td><strong>SEC-001:</strong> key revoke + git history purge + .gitignore; GitHub secret scanning on</td>
+<td>Owner</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>AD-001 ads.txt (<code>pub-XXXX</code> se replace)</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>CRW-001 sitemap patch (fixes/sitemap-pages.patch) + deploy + GSC submit</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>TSEO-002/003 metadata wiring patch</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>TSEO-001: og 500 log-grep → fix/fallback</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>CRW-003 robots add + GEO-002 decision (robots option apply)</td>
+<td>Owner+Dev</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>MON-001 analytics install + GSC/Bing verify (MON-002)</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D5</td>
+<td>PERF-001 sizes fix</td>
+<td>Dev</td>
+</tr>
+<tr>
+<td>D6</td>
+<td>SEC-003 DMARC quarantine + rua</td>
+<td>Owner</td>
+</tr>
+<tr>
+<td>D7</td>
+<td>BE-001 CI lint+build gate; CON-002/003 polish pass</td>
+<td>Dev</td>
+</tr>
+</tbody>
+</table>
+<h3 id="30-din-pipeline-measurement">30-din (Pipeline + measurement)</h3>
+<ul>
+<li>CRW-002 crawlable pagination (page links) — Dev M</li>
+<li>MON-001→ KPI dashboard (GSC+Plausible+AdSense+uptime MON-003) — Owner</li>
+<li>PERF baseline: PSI/GSC screenshots bhejo → main re-score karunga; PERF-002 dynamic import</li>
+<li>CMS-001 gates P1 (alt/meta/desc required on publish)</li>
+<li>BE-002 deploy health-gate + rollback + <code>npm ci</code> on host</li>
+<li>SEC-002 CSP draft apply (staging/perm ke saath) + BE-004 dev-dep upgrades</li>
+<li>Content: 8-10 naye articles (Clusters 1-4 spokes)</li>
+</ul>
+<h3 id="60-din-authority">60-din (Authority)</h3>
+<ul>
+<li>Cluster 5 pillar + spokes (5-6 evergreen guides, original data)</li>
+<li>GEO-001: Wikidata item, LinkedIn company page, directories (Product Hunt/HN/IndieHackers), sameAs expansion (SCH-001)</li>
+<li>GEO-004: AI citation test round 1 (15 queries) → gap report</li>
+<li>Editor P2 gates (C11 heading validator, C6 noindex toggle, K5 duplicate title)</li>
+<li>Session timeout explicit (H7), social auto-share (I3)</li>
+</ul>
+<h3 id="90-din-compound">90-din (Compound)</h3>
+<ul>
+<li>Content: 25-30 articles total, har cluster ka pillar complete; category pages ≥8 articles</li>
+<li>AI citation re-test round 2 + measure share vs 5 competitors (Section 6)</li>
+<li>AdSense optimization: per-slot units (AD-002), RPM experiments</li>
+<li>Backups/DR documented (R2 versioning + DB PITR verify), incident runbook</li>
+<li>Re-audit (full score re-baseline) + GSC trend review</li>
+</ul>
+<hr />
+<h2 id="11-monitoring-plan">11. Monitoring Plan</h2>
+<table>
+<thead>
+<tr>
+<th>Kya</th>
+<th>Kahan</th>
+<th>Kitni dafa</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Index coverage (Crawled-not indexed reasons)</td>
+<td>GSC → Pages</td>
+<td>Weekly (nayi site: har publish ke baad)</td>
+</tr>
+<tr>
+<td>Sitemaps status + discovered URLs</td>
+<td>GSC → Sitemaps</td>
+<td>Har deploy ke baad + weekly</td>
+</tr>
+<tr>
+<td>Core Web Vitals (field)</td>
+<td>GSC → CWV + PSI</td>
+<td>2-week interval</td>
+</tr>
+<tr>
+<td>Query/page performance (CTR, position)</td>
+<td>GSC → Performance</td>
+<td>Weekly</td>
+</tr>
+<tr>
+<td>AI citations (15 queries)</td>
+<td>ChatGPT/Perplexity/AI Overviews</td>
+<td>Monthly (Section 6.4 protocol)</td>
+</tr>
+<tr>
+<td>Uptime + TTFB</td>
+<td>BetterStack → <code>/api/health</code></td>
+<td>Continuous (30s)</td>
+</tr>
+<tr>
+<td>Error rates</td>
+<td>Sentry (aapke paas access hai)</td>
+<td>Daily glance + alert on spike</td>
+</tr>
+<tr>
+<td>ads.txt + AdSense policy</td>
+<td>AdSense → Sites/Policy</td>
+<td>Weekly</td>
+</tr>
+<tr>
+<td>Dependency vulns</td>
+<td><code>npm audit</code> (CI mein hai ✓) + renovate</td>
+<td>Weekly auto</td>
+</tr>
+<tr>
+<td>DMARC reports</td>
+<td>rua inbox</td>
+<td>Weekly first month, then monthly</td>
+</tr>
+<tr>
+<td>Security headers regression</td>
+<td>CI: <code>curl -I</code> smoke test on deploy</td>
+<td>Every deploy</td>
+</tr>
+</tbody>
+</table>
+<p><strong>KPIs (30 din ke baad):</strong> GSC impressions ↑, indexed pages = sitemap URLs, CWV "Good" % ≥ 75, ad sessions RPM, uptime 99.9%, AI citation share (0 → measurable).</p>
+<hr />
+<h2 id="12-appendix">12. Appendix</h2>
+<h3 id="121-screenshot-analysis-module-abhi-tak-received-none">12.1 Screenshot Analysis Module — abhi tak received: NONE</h3>
+<p>Koi screenshot is session mein nahi aaya (koi SS-ID nahi bana). Upar wale "access required" items jaldi se jaldi cover karne ke liye <strong>ye bhejein</strong> (SS-01 se catalog banunga, Section 13.4 format mein analysis):
+1. <strong>GSC → Pages (indexing reasons list)</strong> + Sitemaps tab + CWV (mobile/desktop) + Performance (3-6 months)
+2. <strong>PSI:</strong> home + ek article — mobile &amp; desktop, Opportunities/Diagnostics ke saath
+3. <strong>DevTools:</strong> article page Console + Network (size/time sort) + Lighthouse tab
+4. <strong>Full-page screenshots:</strong> home, article, category, search, 404 (mobile+desktop)
+5. <strong>Editor:</strong> article edit → SEO panel, media upload, roles page
+6. <strong>Cloudflare dashboard:</strong> SSL/TLS mode, cache rules, WAF/bot settings, DNS records page
+7. <strong>Server logs:</strong> <code>/api/og</code> 500 wali log line (<code>grep -E '\[og\]|Failed to generate image'</code>) + sitemap warn line (<code>grep 'Failed to fetch dynamic entries'</code>)
+8. <strong>Analytics/AdSense:</strong> Policy Center + ads.txt status (jab setup ho)
+9. <strong>SERP/AI answers:</strong> Section 6.4 ki 15 queries ke results (ChatGPT/Perplexity/AI Overview screenshots)</p>
+<p>Protocol: har screenshot par type/page/device/date; sensitive data blur karke (SS-13.2 rules). Mera analysis: quick triage (5-8 line) → full findings (location + severity + root cause + fix + verification).</p>
+<h3 id="122-not-verified-access-required-complete-list">12.2 "Not verified — access required" (complete list)</h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Kya chahiye</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CWV lab+field (LCP/INP/CLS/TTFB numbers)</td>
+<td>PSI/GSC screenshots ya API key</td>
+</tr>
+<tr>
+<td>Live response headers (CSP/HSTS/Cache verbatim)</td>
+<td>DevTools Network screenshot ya curl server se</td>
+</tr>
+<tr>
+<td>TLS config/ciphers/cert chain</td>
+<td>testssl/SSL Labs (sandbox blocked) ya ssllabs.com test screenshot</td>
+</tr>
+<tr>
+<td>GSC: coverage reasons, manual actions, queries</td>
+<td>GSC access/screenshots</td>
+</tr>
+<tr>
+<td>Cloudflare cache/WAF/bot rules, SSL mode</td>
+<td>CF dashboard screenshots</td>
+</tr>
+<tr>
+<td>/api/og 500 exact root cause</td>
+<td>Server log line (12.1 #7)</td>
+</tr>
+<tr>
+<td>AI-engine citations</td>
+<td>Manual test protocol (GEO-004)</td>
+</tr>
+<tr>
+<td>External uptime monitor status</td>
+<td>Monitor dashboard</td>
+</tr>
+<tr>
+<td>DB backups/PITR, R2 versioning</td>
+<td>Neon/Supabase + R2 console screenshots</td>
+</tr>
+<tr>
+<td>SPF/DKIM deliverability (record existence ✓ verified)</td>
+<td>mail-tester.com test</td>
+</tr>
+<tr>
+<td>HSTS preload list status</td>
+<td>https://hstspreload.org/search?domain=xsypher.com screenshot</td>
+</tr>
+</tbody>
+</table>
+<h3 id="123-raw-evidence-commands-used">12.3 Raw evidence / commands used</h3>
+<pre><code># Live (via fetch_page — sandbox curl blocked by egress policy)
+GET https://xsypher.com/robots.txt            → wildcard allow + disallows + sitemap
+GET https://xsypher.com/sitemap.xml           → index (pages.xml + articles.xml)
+GET https://xsypher.com/sitemap/pages.xml     → ONLY 19 static URLs, lastmod=2026-10-01 (×2)
+GET https://xsypher.com/sitemap/articles.xml  → 1 NewsArticle (48h window)
+GET https://xsypher.com/api/og?title=Test     → HTTP 500 (×2)
+GET https://xsypher.com/ads.txt               → HTTP 404
+GET https://xsypher.com/this-page-...-test    → custom 404 (title=homepage fallback)
+GET https://xsypher.com/.well-known/security.txt → 200 valid
+GET https://xsypher.com/feed.xml              → 5 items (site corpus = 5)
+
+# DNS (dns.google DoH JSON)
+TXT xsypher.com               → v=spf1 include:_spf.mx.cloudflare.net include:resend.com ~all
+TXT _dmarc.xsypher.com        → v=DMARC1; p=none;
+TXT resend._domainkey         → p=MIGf... (DKIM present)
+
+# Repo
+npx tsc --noEmit              → PASS (exit 0)
+npm test                      → 557/557 PASS (47 files)
+npm run lint                  → FAIL: 451 problems (351 errors, 100 warnings)
+npm audit --package-lock-only → 33 vulns (3 critical, 21 high, 8 moderate, 1 low) — ALL dev
+npm audit --omit=dev          → 0 vulns (CI gate ✓)
+gh repo view                  → isPrivate: false (PUBLIC)
+git ls-files | secret-scan    → HIT: .vscode/settings.json (sk-7...YbQW REDACTED)
+</code></pre>
+<h3 id="124-assumptions-owner-confirmations-audit-assumptions">12.4 Assumptions (owner confirmations + audit assumptions)</h3>
+<ol>
+<li>Deploy = Oracle Cloud VPS Docker + Cloudflare proxy — <strong>owner-confirmed</strong> (repo mein conflicting AGENTS.md "Cloudflare Workers" note milta hai — docs drift, <code>BE</code> backlog item).</li>
+<li>Staging = none (owner: "i dont know") → production par sirf passive tests.</li>
+<li>Access = logs/admin panel available; GSC/analytics/screenshots abhi nahi.</li>
+<li>Niche/audience: global English tech news (PK founder) — assumption.</li>
+<li>Monetization: AdSense — <strong>owner-confirmed</strong>.</li>
+<li>Competitors auto-detected (Section 6) — assumption, aap badal sakte hain.</li>
+<li>DB = managed Postgres (Neon/Supabase per README) + R2 = hybrid model — assumption for backup claims.</li>
+</ol>
+<h3 id="125-glossary-roman-urdu-mein-simple">12.5 Glossary (Roman Urdu mein simple)</h3>
+<ul>
+<li><strong>Crawlability:</strong> Google bot aapke pages tak asaani se pohanch sakta hai ya nahi.</li>
+<li><strong>Canonical:</strong> page ka "asli version" batane wala tag — duplicate penalties se bachata hai.</li>
+<li><strong>Sitemap:</strong> search engines ko diya gaya URL-list — discovery ka index card.</li>
+<li><strong>LCP/INP/CLS:</strong> page ki loading speed (bada content), interaction ka jawab-kitna fast, layout ka hilna — Google ki 3 web vitals metrics.</li>
+<li><strong>E-E-A-T:</strong> Experience, Expertise, Authoritativeness, Trust — content ki credibility ke signals.</li>
+<li><strong>AEO:</strong> aise tareeqe jinse aapka jawab Google ke featured snippets/PAA mein aaye.</li>
+<li><strong>GEO:</strong> AI chatbots/answers (ChatGPT, Perplexity) mein aapka content cite hone ke tareeqe.</li>
+<li><strong>JSON-LD/Schema:</strong> search engines ko structured data dene ka format (news, author, breadcrumbs).</li>
+<li><strong>CSP:</strong> browser ko batata hai kaunsi scripts/origins trustworthy hain — XSS rokne ki layer.</li>
+<li><strong>DMARC/SPF/DKIM:</strong> email authentication — aapke domain se fake email rokne ke rules.</li>
+<li><strong>TCF/CMP:</strong> consent framework jo EU visitors ki tracking permission manage karta hai.</li>
+<li><strong>ISR:</strong> Incremental Static Regeneration — page ko waqfe waqfe se fresh karte hain bina full rebuild.</li>
+<li><strong>Information gain:</strong> content mein naya/original data hona jo doosron ke paas nahi.</li>
+<li><strong>Citation-worthiness:</strong> AI engines ke liye aapka content itna reliable ke woh source bana sakein.</li>
+</ul>
+<h3 id="127-implementation-log-13-oct-2026-audit-ke-baad-same-day-fixes">12.7 Implementation Log (13 Oct 2026 — audit ke baad same-day fixes)</h3>
+<p>Owner ne "DO everything" approve kiya; yeh sab <strong><code>arena/80f1fb0b-xcipher</code> branch</strong> par alag-alag commits hain (koi production deploy nahi hua — aap deploy karenge):</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Commit</th>
+<th>Fix</th>
+<th>Findings</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>9ff83e4</code></td>
+<td>Exposed API key hatai gayi (.vscode/settings.json) + ignore guard</td>
+<td>SEC-001 (repo-side)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>e385452</code></td>
+<td>Sitemap: per-query isolation + <code>Article.authorId</code> authors query</td>
+<td>CRW-001</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>3b3faf2</code></td>
+<td>Editor ke primary meta fields + ogImage/canonical wire</td>
+<td>TSEO-002, TSEO-003</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>7eca1f1</code></td>
+<td><code>/api/og</code> fail-open: fallback brand card (5-min TTL) + materialised render</td>
+<td>TSEO-001</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>675ad42</code></td>
+<td>robots (invite/unsubscribe + AI groups), IndexNow key, tagline centralisation, 404 metadata, internal links, Bing env, generic login error</td>
+<td>CRW-003/004/005/006, GEO-002, CON-002, MON-002, SEC-004</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>41719cd</code></td>
+<td>Image <code>sizes</code> (StoryRow 118px + category feature), react-tweet client-only dynamic</td>
+<td>PERF-001, PERF-002</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>5a4ac71</code></td>
+<td>RSS test fixture siteConfig ke real shape par</td>
+<td>(test)</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>e3da25a</code></td>
+<td><code>public/ads.txt</code> serve (publisher ID placeholder)</td>
+<td>AD-001</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>a861b27</code></td>
+<td>CI build gate + non-blocking lint, deploy health gate, <code>/api/healthz</code> liveness, Caddyfile update</td>
+<td>BE-001, BE-002, BE-007</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>9456e7f</code></td>
+<td>Featured-image alt required on submit/publish</td>
+<td>CMS-001 (P1)</td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>1b7d8fa</code></td>
+<td>CSP <code>connect-src</code> explicit allowlist (Google CSP guide ke mutabiq)</td>
+<td>SEC-002</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>12fdbe9</code></td>
+<td>Safe <code>eslint --fix</code> (3 × prefer-const)</td>
+<td>BE-001 (partial)</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>d9c2336</code></td>
+<td>Publisher <code>@id</code> link, Person <code>worksFor</code>, Organization sameAs (GitHub)</td>
+<td>SCH-001</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Verification (is sandbox mein chalaya):</strong> <code>npx tsc --noEmit</code> PASS · <code>npm test</code> <strong>557/557 PASS</strong> · deploy.yml YAML valid · OG renderer ka local smoke test PASS (20KB PNG). <strong>Note:</strong> <code>npm run build</code> yahan sandbox ki egress limit (fonts.googleapis.com) ki wajah se nahi chali — CI (GitHub) par build gate ab isay cover karta hai.</p>
+<p><strong>Owner actions (jo sirf aap kar sakte hain):</strong>
+1. <strong>SEC-001:</strong> agentrouter key <strong>revoke</strong> karein + git history purge (<code>git filter-repo</code>/BFG) — repo public hai.
+2. <code>public/ads.txt</code> mein real <code>pub-...</code> ID daalein.
+3. <code>NEXT_PUBLIC_BING_SITE_VERIFICATION</code> env set karein (Bing Webmaster token).
+4. <code>INDEXNOW_KEY</code> env set karein (<code>bash fixes/indexnow-key.sh</code>).
+5. DNS: DMARC <code>p=quarantine</code> → <code>p=reject</code> (fixes/dmarc-recommendation.txt).
+6. Analytics account (Plausible/GA4) + <code>/api/healthz</code> par uptime monitor.
+7. Deploy ke baad: browser console mein CSP violations check karein (SEC-002) + <code>/api/og?title=test</code> ka 200 verify karein.</p>
+<p><strong>Deferred (deliberately):</strong> CRW-002 crawlable pagination (staging + real DB data ke saath test karna hai — <code>/latest</code> aur <code>/category</code> ka render model badalta hai).</p>
+<h3 id="126-quality-check-pre-delivery">12.6 Quality check (pre-delivery)</h3>
+<ul>
+<li>[x] Duplicate findings merge (brand naming ek jagah; OG issues cross-referenced)</li>
+<li>[x] Har Critical/High dobara verify (SEC-001 git+gh se; CRW-001 do fetches; TSEO-001 do fetches; AD-001 live 404; TSEO-002 code cross-check ×2)</li>
+<li>[x] Koi secret redacted nahi chhoda (API key <code>sk-7...YbQW</code>, Sentry DSN <code>o451...3136</code>)</li>
+<li>[x] Saari 12 sections covered ya "Not verified + reason" likha</li>
+<li>[x] Guidelines cross-check (web search 2026): FAQ/HowTo/SearchAction deprecation honestly labeled; INP≠FID (koi purana advice nahi); llms.txt "experimental"; meta keywords ka koi zikr nahi (ignore hota hai)</li>
+<li>[x] Language: Roman Urdu + English technical terms + English code/paths</li>
+</ul>
+    <p class="footer">xSypher Production Audit · generated 2026-10-13 · evidence-first, read-only · companion files: report.md, findings.json, fixes/</p>
+  </div>
+</div>
+<script>
+const $=(s,el=document)=>el.querySelector(s), $$=(s,el=document)=>[...el.querySelectorAll(s)];
+// theme
+const themeBtn=$('#themeBtn');
+function setTheme(t){document.documentElement.dataset.theme=t;
+  themeBtn.textContent=t==='dark'?'☀ Light':'🌙 Dark';
+  localStorage.setItem('audit-theme',t);}
+setTheme(localStorage.getItem('audit-theme') ||
+  (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+themeBtn.onclick=()=>setTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+// filters
+const cards=$$('.fcard'), sevBtns=$$('.chip[data-sevfilter]');
+const state={q:'',cat:'',sev:new Set(['Critical','High','Medium','Low','Info'])};
+function applyFilter(){
+  let shown=0;
+  for(const c of cards){
+    const okSev=state.sev.has(c.dataset.sev);
+    const okCat=!state.cat||c.dataset.cat===state.cat;
+    const okQ=!state.q||c.textContent.toLowerCase().includes(state.q);
+    const ok=okSev&&okCat&&okQ;
+    c.hidden=!ok; if(ok)shown++;
+  }
+  $$('.fgroup').forEach(g=>{
+    g.hidden=!$$('.fcard',g).some(c=>!c.hidden);
+  });
+  $('#filterCount').textContent=shown+' findings shown'+((state.q||state.cat||state.sev.size<5)?' (filtered)':'');
+}
+$('#fSearch').addEventListener('input',e=>{state.q=e.target.value.trim().toLowerCase();applyFilter();});
+$('#fCat').addEventListener('change',e=>{state.cat=e.target.value;applyFilter();});
+sevBtns.forEach(b=>b.addEventListener('click',()=>{
+  const s=b.dataset.sevfilter, on=b.getAttribute('aria-pressed')==='true';
+  if(on)state.sev.delete(s); else state.sev.add(s);
+  b.setAttribute('aria-pressed',String(!on)); applyFilter();
+}));
+$('#expandAll').onclick=()=>{$$('.fcard:not([hidden])').forEach(c=>c.open=true);};
+$('#collapseAll').onclick=()=>{$$('.fcard').forEach(c=>c.open=false);};
+// toc scroll spy
+const tocLinks=$$('.sidebar a[href^="#"]');
+const heads=tocLinks.map(a=>document.getElementById(a.hash.slice(1))).filter(Boolean);
+function spy(){
+  let cur=heads[0];
+  for(const h of heads){ if(h.getBoundingClientRect().top<130)cur=h; }
+  tocLinks.forEach(a=>a.classList.toggle('active',a.hash==='#'+(cur&&cur.id)));
+}
+addEventListener('scroll',spy,{passive:true}); spy();
+// print: expand everything
+addEventListener('beforeprint',()=>$$('.fcard').forEach(c=>c.open=true));
+</script>
+</body>
+</html>

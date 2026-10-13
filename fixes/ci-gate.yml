@@ -1,0 +1,14 @@
+# Finding BE-001 — .github/workflows/deploy.yml ke `verify` job mein yeh steps add karein
+# (existing: TypeScript check, unit test, prod audit — uske SAATH chalega)
+
+      - name: ESLint (fail on errors)
+        run: npm run lint
+        # Debt clear hone tak (351 errors): temporary `continue-on-error: true`
+        # + 30-din ka cleanup ticket; phir hata dein.
+
+      - name: Production build gate (catches build breaks pre-deploy)
+        run: npm run build
+        env:
+          # Build-time public vars (placeholder values sufficient for gate):
+          NEXT_PUBLIC_SITE_URL: https://xsypher.com
+          NEXT_PUBLIC_R2_PUBLIC_BASE: https://example.r2.dev

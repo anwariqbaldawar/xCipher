@@ -1,0 +1,20 @@
+# Finding SEC-003 — Email auth upgrade (DNS TXT records)
+# Current (verified 2026-10-13 via DNS-over-HTTPS):
+#   SPF:   v=spf1 include:_spf.mx.cloudflare.net include:resend.com ~all
+#   DKIM:  resend._domainkey.xsypher.com ✓ present
+#   DMARC: v=DMARC1; p=none;
+#
+# STEP 1 — abhi (monitoring mode + aggregate reports):
+#   Name: _dmarc.xsypher.com   Type: TXT   Value:
+v=DMARC1; p=none; rua=mailto:dmarc@xsypher.com; fo=1; adkim=r; aspf=r
+
+# STEP 2 — 2 hafte reports check karne ke baad (legit senders clean hain to):
+#   p=quarantine; pct=25; → phir pct=100
+v=DMARC1; p=quarantine; pct=25; rua=mailto:dmarc@xsypher.com; fo=1
+
+# STEP 3 — final (1 mahine clean reports ke baad):
+v=DMARC1; p=reject; rua=mailto:dmarc@xsypher.com; fo=1; adkim=s; aspf=s
+
+# SPF: `~all` → `-all` badlein (Cloudflare + Resend hi bhej sakte hain — verify
+# koi aur service (Brevo/transactional) use ho rahi ho warna wo fail hoga).
+# Verify: mail-tester.com par test mail → score; dmarcian.org/DMARC reports.

@@ -1,0 +1,58 @@
+# robots.txt — Option A: Visibility-first (sab AI bots explicitly allowed)
+# Finding GEO-002 | Business: maximum AI search + citation visibility
+# (apply as the body of app/robots.ts rules — see app-robots.ts.txt for the TS version)
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /search
+Disallow: /preview
+Disallow: /invite
+Disallow: /unsubscribe
+Disallow: /_next/
+Disallow: /*?_rsc=*
+
+# ── AI search / retrieval bots (ALLOW — yehi GEO visibility dete hain) ──
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# ── AI training crawlers (ALLOW — visibility-first policy) ──
+# Agar training opt-out chahiye to Option B: robots-training-block.txt dekhein.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+Sitemap: https://xsypher.com/sitemap.xml

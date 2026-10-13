@@ -1,0 +1,62 @@
+# robots.txt — Option B: Training block + Search allow (recommended hybrid)
+# Finding GEO-002 | Training crawlers block, AI search/retrieval allow.
+# NOTE: Google-Extended block = Gemini training/grounding opt-out (Googlebot se AI Overviews
+# alag hain — Googlebot BLOCK MAT karna, warna classic search + AI Overviews dono khatam).
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /search
+Disallow: /preview
+Disallow: /invite
+Disallow: /unsubscribe
+Disallow: /_next/
+Disallow: /*?_rsc=*
+
+# ── AI search / retrieval bots (ALLOW) ──
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+# ── AI training crawlers (BLOCK) ──
+User-agent: GPTBot
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: meta-externalagent
+Disallow: /
+
+User-agent: Applebot-Extended
+Disallow: /
+
+# Policy decision: Gemini training/grounding opt-out (Search+AI Overviews rehta hai)
+User-agent: Google-Extended
+Disallow: /
+
+Sitemap: https://xsypher.com/sitemap.xml
