@@ -59,6 +59,7 @@ export default function StoryRow({ article: a, showDeck = true }: Props) {
           src={getImgSrc(a.img || "", 300, 225)} 
           alt={a.title} 
           fill
+          sizes="118px"
           className="object-cover"
         />
       </Link>

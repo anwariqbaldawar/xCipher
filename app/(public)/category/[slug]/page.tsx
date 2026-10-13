@@ -128,6 +128,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                   src={getImgSrc(feat.img || "", 1100, 471)}
                   alt={feat.title}
                   fill
+                  sizes="(max-width: 1023px) 100vw, 66vw"
                   className="object-cover"
                 />
               </Link>
