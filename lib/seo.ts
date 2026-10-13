@@ -41,6 +41,12 @@ export function constructMetadata({
         : `${siteConfig.url}${canonical.startsWith("/") ? canonical : `/${canonical}`}`)
     : siteConfig.url;
 
+  const absoluteImageUrl = image
+    ? (image.startsWith("http://") || image.startsWith("https://")
+        ? image
+        : `${siteConfig.url}${image.startsWith("/") ? "" : "/"}${image}`)
+    : undefined;
+
   return {
     title,
     description,
@@ -52,7 +58,16 @@ export function constructMetadata({
       description,
       url,
       siteName: siteConfig.name,
-      images: image ? [{ url: image }] : undefined,
+      images: absoluteImageUrl
+        ? [
+            {
+              url: absoluteImageUrl,
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ]
+        : undefined,
       locale: siteConfig.locale,
       type,
       ...(type === "article" && {
@@ -65,7 +80,7 @@ export function constructMetadata({
       card: "summary_large_image",
       title,
       description,
-      images: image ? [image] : undefined,
+      images: absoluteImageUrl ? [absoluteImageUrl] : undefined,
       creator: siteConfig.twitter,
     },
     robots: {

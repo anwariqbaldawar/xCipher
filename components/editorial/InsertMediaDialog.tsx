@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { X, ImagePlus, MonitorPlay, AlertCircle, UploadCloud, Link2 } from "lucide-react";
+import { X, ImagePlus, MonitorPlay, AlertCircle, UploadCloud, Link2, Crop, Loader2 } from "lucide-react";
 import ImageDropzone from "./ImageDropzone";
+import ThumbnailCropper from "./ThumbnailCropper";
 
 import { getAllowedMediaDomains } from "@/lib/sanitize";
 import { parseYouTubeId, youTubeThumbnail } from "@/lib/embeds";
@@ -58,6 +59,38 @@ export function InsertMediaDialog({ kind, open, onClose, onInsertImage, onInsert
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSource, setCropSource] = useState<string | null>(null);
+  const [cropFileName, setCropFileName] = useState("inline-image.jpg");
+  const [isCroppingBusy, setIsCroppingBusy] = useState(false);
+
+  const handleInlineCropConfirm = async (croppedFile: File) => {
+    setIsCroppingBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", croppedFile);
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data?.error || `Upload failed with status ${res.status}`);
+      } else {
+        const data = await res.json();
+        if (data.url) {
+          setSrc(data.url);
+          setError(null);
+        }
+      }
+    } catch (e) {
+      setError("Failed to upload cropped image. Check your connection.");
+    } finally {
+      setIsCroppingBusy(false);
+      setCropOpen(false);
+      setCropSource(null);
+    }
+  };
 
   // Upload leads for images: it is the path most authors want, and the URL tab
   // remains for stock photography and anything already hosted elsewhere. A
@@ -337,15 +370,32 @@ export function InsertMediaDialog({ kind, open, onClose, onInsertImage, onInsert
               </div>
 
               {src && !imageError(src) && (
-                <div className="imd-preview">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={src}
-                    alt=""
-                    className="imd-preview-img"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                  />
-                  <span className="imd-preview-note">Preview</span>
+                <div className="imd-preview flex flex-col gap-2 mt-4 p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-2)]">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="imd-preview-note text-xs font-semibold text-[var(--muted)]">Image Preview</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCropSource(src);
+                        setCropFileName(src.split("/").pop() || "inline-image.jpg");
+                        setCropOpen(true);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-[var(--surface)] text-[var(--ink)] hover:text-[var(--accent)] border border-[var(--line)] shadow-xs transition-colors cursor-pointer"
+                      title="Crop and adjust aspect ratio"
+                    >
+                      <Crop className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      <span>Crop / Reframe Image</span>
+                    </button>
+                  </div>
+                  <div className="relative overflow-hidden rounded-lg bg-black/5 max-h-48 flex items-center justify-center border border-[var(--line)]/50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={src}
+                      alt=""
+                      className="max-h-48 w-auto object-contain rounded"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  </div>
                 </div>
               )}
             </>
@@ -354,11 +404,25 @@ export function InsertMediaDialog({ kind, open, onClose, onInsertImage, onInsert
 
         <div className="imd-foot">
           <button type="button" onClick={onClose} className="imd-btn">Cancel</button>
-          <button type="button" onClick={submit} className="imd-btn imd-btn-primary" disabled={isProcessing}>
-            {isProcessing ? "Processing..." : isImage ? (initialImage ? "Update Image" : "Insert image") : "Insert video"}
+          <button type="button" onClick={submit} className="imd-btn imd-btn-primary" disabled={isProcessing || isCroppingBusy}>
+            {isProcessing ? "Processing..." : isCroppingBusy ? "Saving Crop..." : isImage ? (initialImage ? "Update Image" : "Insert image") : "Insert video"}
           </button>
         </div>
       </div>
+
+      {cropOpen && cropSource && (
+        <ThumbnailCropper
+          open={cropOpen}
+          imageSrc={cropSource}
+          fileName={cropFileName}
+          busy={isCroppingBusy}
+          onCancel={() => {
+            setCropOpen(false);
+            setCropSource(null);
+          }}
+          onCropped={handleInlineCropConfirm}
+        />
+      )}
     </div>
   );
 }

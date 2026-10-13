@@ -10,7 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
-import { formatChartValue, calculateSeriesStats } from '@/lib/chart-format';
+import { formatChartValue, calculateSeriesStats, isChronologicalSeries } from '@/lib/chart-format';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface ChartDataItem {
@@ -43,6 +43,12 @@ export default function InteractiveChartViewer({ data, config }: Props) {
     const values = data.map(d => d[activeMetric]);
     return calculateSeriesStats(values);
   }, [data, activeMetric]);
+
+  const isTimeline = useMemo(() => {
+    if (!data || data.length < 2) return false;
+    const labels = data.map(d => d.name);
+    return isChronologicalSeries(labels);
+  }, [data]);
 
   const formatValue = (value: any, name: string) => {
     const keyConfig = config[name] || {};
@@ -147,7 +153,12 @@ export default function InteractiveChartViewer({ data, config }: Props) {
               <span className="font-medium text-[var(--ink)]">Avg:</span> {formatValue(activeStats.mean, activeMetric)}
             </span>
           )}
-          {activeStats.change !== null && (
+          {activeStats.median !== null && !isTimeline && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Median:</span> {formatValue(activeStats.median, activeMetric)}
+            </span>
+          )}
+          {isTimeline && activeStats.change !== null && (
             <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
               <span className="font-medium text-[var(--ink)]">Trend:</span>
               {activeStats.change > 0 ? (

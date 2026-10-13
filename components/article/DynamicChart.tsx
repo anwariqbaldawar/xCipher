@@ -23,7 +23,7 @@ import {
   LabelList
 } from 'recharts';
 import { motion } from 'framer-motion';
-import { formatChartValue, calculateSeriesStats } from '@/lib/chart-format';
+import { formatChartValue, calculateSeriesStats, isChronologicalSeries } from '@/lib/chart-format';
 import { Maximize, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import MediaModal, { type MediaSummary } from './MediaModal';
 
@@ -79,6 +79,12 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
     const values = config.map(d => d[keys[0]]);
     return calculateSeriesStats(values);
   }, [config, keys]);
+
+  const isTimeline = useMemo(() => {
+    if (!config || config.length < 2) return false;
+    const labels = config.map(d => d.name);
+    return isChronologicalSeries(labels);
+  }, [config]);
 
   const formatAxisTick = (val: unknown) => {
     const str = String(val ?? '');
@@ -461,7 +467,12 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
               <span className="font-medium text-[var(--ink)]">Avg:</span> {formatValue(primaryStats.mean, keys[0])}
             </span>
           )}
-          {primaryStats.change !== null && (
+          {primaryStats.median !== null && !isTimeline && (
+            <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
+              <span className="font-medium text-[var(--ink)]">Median:</span> {formatValue(primaryStats.median, keys[0])}
+            </span>
+          )}
+          {isTimeline && primaryStats.change !== null && (
             <span className="inline-flex items-center gap-1 rounded bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--line)]">
               <span className="font-medium text-[var(--ink)]">Trend:</span>
               {primaryStats.change > 0 ? (

@@ -137,6 +137,44 @@ export function calculateSeriesStats(values: (number | null | undefined)[]): Ser
 }
 
 /**
+ * Detects whether observation labels represent a chronological / time-series sequence
+ * (e.g. Years 2020-2026, Months Jan-Dec, Quarters Q1-Q4, Weeks, Dates).
+ * For categorical datasets (e.g. "Basic browsing", "Office work", "Gaming"),
+ * computing a "Trend" between row 1 and row N is statistically invalid and misleading.
+ */
+export function isChronologicalSeries(labels: (string | number | null | undefined)[]): boolean {
+  if (!labels || labels.length < 2) return false;
+
+  const validLabels = labels
+    .filter((l): l is string | number => l !== null && l !== undefined && String(l).trim() !== "")
+    .map(l => String(l).trim());
+
+  if (validLabels.length < 2) return false;
+
+  const yearRegex = /^(?:19|20)\d{2}(?:[/-]\d{2,4})?$/;
+  const monthRegex = /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)$/i;
+  const quarterRegex = /^q[1-4](?:[\s'/-]?\d{2,4})?$/i;
+  const weekRegex = /^(?:w(?:eek)?\s*\d{1,2}|wk\s*\d{1,2})$/i;
+  const timeRegex = /^\d{1,2}(?::\d{2})?(?:\s*(?:am|pm|hrs?|h))?$/i;
+
+  let temporalMatches = 0;
+  for (const label of validLabels) {
+    if (
+      yearRegex.test(label) ||
+      monthRegex.test(label) ||
+      quarterRegex.test(label) ||
+      weekRegex.test(label) ||
+      timeRegex.test(label) ||
+      (!isNaN(Date.parse(label)) && !/^\d+$/.test(label))
+    ) {
+      temporalMatches++;
+    }
+  }
+
+  return temporalMatches / validLabels.length >= 0.6;
+}
+
+/**
  * Aligns observations across multiple series keys, ensuring uniform records.
  */
 export function alignDatasetObservations(

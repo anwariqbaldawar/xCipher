@@ -109,6 +109,22 @@ export default function CodeBlockEnhancer() {
       const root = createRoot(mountPoint);
       root.render(<CodeBlockActions textToCopy={textToCopy} languageLabel={langLabel} />);
     });
+
+    // Make any unwrapped tables in prose / bio horizontally scrollable
+    const tables = container.querySelectorAll("table");
+    tables.forEach((table) => {
+      table.removeAttribute('border');
+      if (
+        table.parentElement &&
+        !table.parentElement.classList.contains('tableWrapper') &&
+        !table.parentElement.classList.contains('overflow-x-auto')
+      ) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tableWrapper overflow-x-auto my-6';
+        table.parentElement.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      }
+    });
   }, []);
 
   return null;

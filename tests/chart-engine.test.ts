@@ -5,6 +5,7 @@ import {
   alignDatasetObservations,
   formatChartValue,
   generateAccessibleTableHtml,
+  isChronologicalSeries,
 } from "@/lib/chart-format";
 
 describe("Chart Engine & Calculation Pipeline", () => {
@@ -149,6 +150,39 @@ describe("Chart Engine & Calculation Pipeline", () => {
       expect(html).toContain('<th scope="row">iPhone 16</th>');
       expect(html).toContain("<td>3,561 mAh</td>");
       expect(html).toContain("<td>$799</td>");
+    });
+  });
+
+  describe("isChronologicalSeries", () => {
+    it("detects years as chronological timeline", () => {
+      expect(isChronologicalSeries(["2020", "2021", "2022", "2023", "2024"])).toBe(true);
+      expect(isChronologicalSeries([2019, 2020, 2021])).toBe(true);
+    });
+
+    it("detects months and quarters as chronological timeline", () => {
+      expect(isChronologicalSeries(["Jan", "Feb", "Mar", "Apr", "May"])).toBe(true);
+      expect(isChronologicalSeries(["Q1", "Q2", "Q3", "Q4"])).toBe(true);
+    });
+
+    it("correctly identifies categorical data as non-chronological", () => {
+      const ramTasks = [
+        "Basic browsing, email, streaming",
+        "Office work, video calls, multitasking",
+        "Software development",
+        "Casual and indie gaming",
+        "Modern AAA gaming",
+        "Photo editing",
+        "Video editing (1080p)",
+        "Video editing (4K)",
+        "Running local AI models",
+      ];
+      expect(isChronologicalSeries(ramTasks)).toBe(false);
+    });
+
+    it("returns false for empty or single element lists", () => {
+      expect(isChronologicalSeries([])).toBe(false);
+      expect(isChronologicalSeries(["2024"])).toBe(false);
+      expect(isChronologicalSeries(null as any)).toBe(false);
     });
   });
 });

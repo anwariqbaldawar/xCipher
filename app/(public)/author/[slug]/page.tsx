@@ -45,7 +45,30 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${authorName} — ${siteConfig.name}`,
       description: author.overview || author.bio?.slice(0, 160) || "",
-      images: author.avatar ? [author.avatar] : [],
+      images: author.avatar
+        ? [
+            {
+              url: author.avatar.startsWith("http")
+                ? author.avatar
+                : `${siteConfig.url}${author.avatar.startsWith("/") ? "" : "/"}${author.avatar}`,
+              width: 400,
+              height: 400,
+              alt: authorName,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: "summary",
+      title: `${authorName} — ${siteConfig.name}`,
+      description: author.overview || author.bio?.slice(0, 160) || "",
+      images: author.avatar
+        ? [
+            author.avatar.startsWith("http")
+              ? author.avatar
+              : `${siteConfig.url}${author.avatar.startsWith("/") ? "" : "/"}${author.avatar}`,
+          ]
+        : undefined,
     },
   };
 }

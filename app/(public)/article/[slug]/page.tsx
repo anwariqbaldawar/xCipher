@@ -96,6 +96,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
   const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
 
+  // Prioritize the actual story featured image so shares on WhatsApp, Twitter,
+  // and social platforms show the article's real visual rather than a generic template card.
+  const articleVisual = article.img || article.ogImage;
+  const resolvedImage = articleVisual
+    ? (articleVisual.startsWith("http://") || articleVisual.startsWith("https://")
+        ? articleVisual
+        : `${baseUrl}${articleVisual.startsWith("/") ? "" : "/"}${articleVisual}`)
+    : ogUrl;
+
   return constructMetadata({
     // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription
     // (they drive the character counters and the Google SERP preview). This call
@@ -104,7 +113,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // ogImage and canonicalUrl were saved but never consumed — now wired too.
     title: article.metaTitle || article.seoTitle || article.title,
     description: article.metaDescription || article.seoDesc || article.deck || "",
-    image: article.ogImage || ogUrl,
+    image: resolvedImage,
     canonical: article.canonicalUrl || `/article/${article.slug}`,
     type: "article",
     publishedTime: article.publishedAt ? article.publishedAt.toISOString() : article.createdAt.toISOString(),

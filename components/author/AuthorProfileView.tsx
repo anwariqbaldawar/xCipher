@@ -12,6 +12,15 @@ import CodeBlockEnhancer from "@/components/article/CodeBlockEnhancer";
 import { SocialIcon } from "@/components/common/SocialIcon";
 export { SocialIcon };
 
+function prepareBioHtml(html: string | null | undefined): string {
+  const sanitized = sanitizeBioHtml(html);
+  if (!sanitized) return "";
+
+  // Wrap any table in a responsive scroll container so wide tables never blow out mobile screens
+  return sanitized.replace(/(<table(?:\s+[^>]*)?>[\s\S]*?<\/table>)/gi, (match) => {
+    return `<div class="tableWrapper overflow-x-auto my-6">${match}</div>`;
+  });
+}
 
 export default function AuthorProfileView({ author, articles, socials, totalViews, articleFeed }: { author: any, articles: any[], socials: any[], totalViews: number, articleFeed?: ReactNode }) {
   return (
@@ -144,7 +153,7 @@ export default function AuthorProfileView({ author, articles, socials, totalView
                   </div>
                 </div>
               )}
-              <div className="ap-bio prose art-body min-w-0 max-w-full break-words w-full" dangerouslySetInnerHTML={{ __html: sanitizeBioHtml(author.bio) }} />
+              <div className="ap-bio prose art-body min-w-0 max-w-full break-words w-full" dangerouslySetInnerHTML={{ __html: prepareBioHtml(author.bio) }} />
               <CodeBlockEnhancer />
               {author.disclosure && (
                 <div style={{ marginTop: "16px", padding: "12px", background: "var(--surface-2)", borderRadius: "var(--r-md)", fontSize: "13px", fontStyle: "italic", color: "var(--ink-muted)" }}>

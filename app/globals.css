@@ -4535,13 +4535,19 @@ select.ed-input {
            ════════════════════════════════════════════ */
 
 .ap-root {
-    min-height: 70vh
+    min-height: 70vh;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: clip;
 }
 
 /* Hero banner */
 .ap-hero {
     position: relative;
-    padding-bottom: 0
+    padding-bottom: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .ap-banner {
@@ -4818,25 +4824,97 @@ h1.ap-name {
 }
 
 .ap-about {
-    /* Removed card styling to display flush with background */
+    /* Flush with background, strictly contained */
     padding: 0 0;
     background: transparent;
+    min-width: 0;
+    max-width: 100%;
 }
 
 .ap-bio {
-    font: 400 18px/1.75 var(--f-body);
+    font: 400 17px/1.75 var(--f-body);
     color: var(--ink-2);
-    margin: 0
+    margin: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+/* Author biography table styling */
+.ap-bio .tableWrapper,
+.ap-bio .overflow-x-auto {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 1.5rem 0;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+}
+
+.ap-bio table,
+.ap-bio .tableWrapper > table {
+    width: 100% !important;
+    min-width: 480px;
+    border-collapse: collapse !important;
+    font-size: 13.5px;
+    line-height: 1.6;
+    text-align: left;
+    margin: 0 !important;
+}
+
+.ap-bio th {
+    background: var(--surface-2) !important;
+    color: var(--ink) !important;
+    font-weight: 600 !important;
+    font-size: 12px !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid var(--line) !important;
+    white-space: nowrap !important;
+}
+
+.ap-bio td {
+    padding: 12px 16px !important;
+    color: var(--ink-2) !important;
+    border-bottom: 1px solid var(--line-2) !important;
+    vertical-align: top !important;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+}
+
+.ap-bio tr:last-child td {
+    border-bottom: none !important;
+}
+
+.ap-bio tr:hover td {
+    background: var(--surface-2) !important;
 }
 
 .ap-body {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 40px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.ap-main-col {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 @media(min-width:900px) {
     .ap-body {
-        grid-template-columns: 1fr 340px;
+        grid-template-columns: minmax(0, 1fr) 340px;
         gap: 60px;
     }
 
@@ -7647,9 +7725,18 @@ body.is-article .prose pre {
 .tiptap-content table,
 .prose table {
   width: 100% !important;
-  min-width: 600px;
+  min-width: 480px;
   table-layout: auto !important;
   background: transparent !important;
+}
+
+/* Any direct unwrapped table in prose or tiptap content will scroll its own box instead of blowing out parent */
+.prose > table,
+.tiptap-content > table {
+  display: block !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tiptap-content table th,
