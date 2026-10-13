@@ -340,7 +340,7 @@ export default function ProfileForm({
     setIsPending(true);
 
     try {
-      let finalAvatarUrl = avatar;
+      const finalAvatarUrl = avatar;
 
       const validSocials = socials.filter((s) => s.url.trim() !== "");
       const res = await updateProfile({
