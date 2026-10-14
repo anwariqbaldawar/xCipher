@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ShieldCheck, SearchCheck, Bot, BadgeDollarSign, FileWarning } from "lucide-react";
+import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = constructMetadata({
   title: "Editorial Policy & Ethics — xSypher",
   description:
-    "Explore xSypher's commitment to accuracy, transparency, and strictly independent tech journalism.",
-};
+    "How xSypher handles independence, fact-checking, AI assistance, affiliate links and corrections — the rules behind every story we publish.",
+  canonical: `${siteConfig.url}/page/editorial-policy`,
+  image: brandBannerUrl(),
+  imageAlt: "xSypher editorial policy",
+});
 
 export default function EditorialPolicyPage() {
   return (
@@ -33,7 +37,7 @@ export default function EditorialPolicyPage() {
             Our Editorial Guidelines &amp; Ethics
           </h1>
           <p className="mt-6 text-base sm:text-lg text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-            At xSypher, we hold ourselves to the highest standards of accuracy, transparency, and independent tech journalism. Below is our unyielding commitment to our readers.
+            These are the rules behind every story on xSypher: how we stay independent, how technical claims are verified, where AI does and does not help, and how a correction gets made. Where a rule needs a longer explanation, it links to one.
           </p>
         </div>
       </section>
@@ -106,7 +110,7 @@ export default function EditorialPolicyPage() {
                     Because we cover artificial intelligence deeply, we must be completely transparent about how we use it. <strong>All xSypher articles are researched, written, and edited by human journalists.</strong>
                   </p>
                   <p>
-                    Our staff may use AI tools (like LLMs) as assistants for brainstorming, summarizing extensive technical whitepapers, or performing grammar checks. However, AI-generated articles or synthetic reporting are strictly prohibited on our platform without prominent, explicit disclosure. We believe human critical thinking is irreplaceable in evaluating technology.
+                    AI tools may assist with research organisation (clustering sources, summarising a long specification into an author’s notes), language mechanics, and generated illustration that is disclosed as such. They never produce the thesis, the analysis or a verdict, they never stand in for fact-checking, and they never write a quote or a patch note. Every article is researched, written and edited by named humans — the fuller breakdown of that boundary is on the transparency report.
                   </p>
                 </div>
               </div>
@@ -125,10 +129,10 @@ export default function EditorialPolicyPage() {
                 </h2>
                 <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
                   <p>
-                    xSypher is funded through a combination of reader subscriptions and carefully vetted advertising. We may occasionally earn commissions through affiliate links included in our hardware and gadget reviews.
+                    xSypher is funded by clearly labelled sponsorship and advertising, affiliate commissions where a story includes them, and reader support. It takes no venture capital and has no corporate parent — the full ownership and funding disclosure is in the transparency report.
                   </p>
                   <p>
-                    This affiliate revenue <strong>never</strong> impacts our editorial verdicts, scores, or product recommendations. If a product falls short of our standards, we say so, regardless of any potential commission. Sponsored content, when present, is visibly labeled at the top of the page.
+                    This affiliate revenue <strong>never</strong> impacts our editorial verdicts, scores, or product recommendations. If a product falls short of our standards, we say so, regardless of any potential commission. Sponsored content is visibly labelled before the first paragraph, and we do not sell do-follow backlinks or paid insertions into existing articles.
                   </p>
                 </div>
               </div>
@@ -152,12 +156,18 @@ export default function EditorialPolicyPage() {
                   <p>
                     Any material changes made to an article post-publication (such as correcting technical inaccuracies or updating factual claims) will be clearly noted with a timestamp at the bottom of the piece. Minor typo fixes may not always receive a log entry, but substantive edits will never be quietly swept under the rug.
                   </p>
-                  <p className="pt-2">
-                    <Link 
-                      href="/page/corrections" 
+                  <p className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <Link
+                      href="/page/corrections"
                       className="inline-flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline"
                     >
-                      Read our full Corrections Log &rarr;
+                      Report an error &rarr;
+                    </Link>
+                    <Link
+                      href="/page/transparency#corrections"
+                      className="inline-flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline"
+                    >
+                      Correction response times &rarr;
                     </Link>
                   </p>
                 </div>
@@ -173,7 +183,7 @@ export default function EditorialPolicyPage() {
           ───────────────────────────────────────────────────────────── */}
       <section className="w-full py-10 sm:py-12 border-t border-[var(--line)] bg-[var(--surface)] text-center">
         <p className="text-xs sm:text-sm text-[var(--faint)] font-[family:var(--f-ui)] max-w-lg mx-auto px-4">
-          If you have questions about our ethics policies or wish to report an editorial concern, please <Link href="/page/contact" className="text-[var(--accent)] hover:underline">contact the newsroom</Link>.
+          Questions about these rules, or a concern about something we published? <Link href="/page/contact" className="text-[var(--accent)] hover:underline">Contact the desk</Link> — or read the <Link href="/page/transparency" className="text-[var(--accent)] hover:underline">transparency report</Link> for how the publication is owned, funded and corrected.
         </p>
       </section>
     </div>

@@ -1,13 +1,18 @@
 import Image from 'next/image';
 import { Download, Palette, Type, ShieldCheck, User } from 'lucide-react';
 import type { Metadata } from 'next';
+import { brandBannerUrl, constructMetadata, siteConfig } from '@/lib/seo';
 import CopyButton from './CopyButton';
 import DownloadAssetCard from './DownloadAssetCard';
 
-export const metadata: Metadata = {
+export const metadata: Metadata = constructMetadata({
   title: 'Media Kit & Brand Assets | xSypher',
-  description: 'Download official xSypher logos, brand guidelines, and press assets.',
-};
+  description:
+    'Official xSypher logos, typography, brand colours and boilerplate copy for press, conference programmes and partners.',
+  canonical: `${siteConfig.url}/page/media-kit`,
+  image: brandBannerUrl(),
+  imageAlt: 'xSypher media kit',
+});
 
 export default function MediaKitPage() {
   return (
@@ -22,7 +27,7 @@ export default function MediaKitPage() {
               Media Kit
             </h1>
             <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              Official brand assets, typography guidelines, and corporate boilerplate for press, conference organizers, and syndication partners.
+              Official brand assets, typography and boilerplate copy for press, conference programmes and partners. Everything on this page is safe to reuse as published.
             </p>
           </div>
         </div>
@@ -34,23 +39,23 @@ export default function MediaKitPage() {
         <section className="mb-16">
           <h2 className="font-[family:var(--f-display)] text-2xl font-bold text-[var(--ink)] mb-6 border-b border-[var(--line)] pb-4 flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-[var(--accent)]" />
-            Corporate Boilerplate
+            Boilerplate copy
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-sm p-6 shadow-sm">
-              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">50-Word Standard</h3>
+              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">Short — 50 words</h3>
               <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed mb-4">
-                xSypher is an independent technology and cybersecurity publication dedicated to high-fidelity intelligence, zero-day research, and deep-dive technical analysis. Designed for engineers and security professionals, xSypher rejects surveillance capitalism in favor of a 100% reader-funded, privacy-first infrastructure that respects technical authority.
+                xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware. Written for people who build and operate systems, it funds itself through clearly labelled sponsorship and reader support — with no venture capital, no corporate parent and no paid verdicts.
               </p>
-              <CopyButton text="xSypher is an independent technology and cybersecurity publication dedicated to high-fidelity intelligence, zero-day research, and deep-dive technical analysis. Designed for engineers and security professionals, xSypher rejects surveillance capitalism in favor of a 100% reader-funded, privacy-first infrastructure that respects technical authority." />
+              <CopyButton text="xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware. Written for people who build and operate systems, it funds itself through clearly labelled sponsorship and reader support — with no venture capital, no corporate parent and no paid verdicts." />
             </div>
             <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-sm p-6 shadow-sm">
-              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">100-Word Expanded</h3>
+              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">Long — 100 words</h3>
               <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed mb-4">
-                xSypher is an independent technology and cybersecurity publication dedicated to high-fidelity intelligence, zero-day research, and deep-dive technical analysis. Built by engineers for engineers, xSypher provides uncompromising coverage of the software, hardware, and threat actors shaping modern digital infrastructure. <br/><br/>
-                Operating under a strict mandate of editorial independence, the publication rejects surveillance capitalism, programmatic advertising, and venture capital influence. Instead, xSypher relies on a 100% privacy-first, reader-funded model, ensuring our loyalty remains exclusively with the technical professionals who rely on our reporting.
+                xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware. <br/><br/>
+                Built by engineers for engineers, it favours primary sources, reproducible benchmarks and hands-on testing over press-release reporting. The publication takes no venture capital and has no corporate parent; it is funded by clearly labelled sponsorship, affiliate commissions and reader support, so a verdict is never for sale. Sponsored material is disclosed before the first paragraph, and every correction lives on the article it corrects, with a timestamp.
               </p>
-              <CopyButton text="xSypher is an independent technology and cybersecurity publication dedicated to high-fidelity intelligence, zero-day research, and deep-dive technical analysis. Built by engineers for engineers, xSypher provides uncompromising coverage of the software, hardware, and threat actors shaping modern digital infrastructure. Operating under a strict mandate of editorial independence, the publication rejects surveillance capitalism, programmatic advertising, and venture capital influence. Instead, xSypher relies on a 100% privacy-first, reader-funded model, ensuring our loyalty remains exclusively with the technical professionals who rely on our reporting." />
+              <CopyButton text="xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware. Built by engineers for engineers, it favours primary sources, reproducible benchmarks and hands-on testing over press-release reporting. The publication takes no venture capital and has no corporate parent; it is funded by clearly labelled sponsorship, affiliate commissions and reader support, so a verdict is never for sale. Sponsored material is disclosed before the first paragraph, and every correction lives on the article it corrects, with a timestamp." />
             </div>
           </div>
         </section>
@@ -59,7 +64,7 @@ export default function MediaKitPage() {
         <section className="mb-16">
           <h2 className="font-[family:var(--f-display)] text-2xl font-bold text-[var(--ink)] mb-6 border-b border-[var(--line)] pb-4 flex items-center gap-2">
             <User className="w-5 h-5 text-[var(--accent)]" />
-            Executive Profiles
+            About the founder
           </h2>
           <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-sm p-6 sm:p-8 flex flex-col md:flex-row gap-8 items-start shadow-sm">
             <div className="w-32 h-32 shrink-0 border-2 border-[var(--accent)] rounded-full overflow-hidden mt-2 bg-white p-1">
@@ -76,9 +81,9 @@ export default function MediaKitPage() {
               <h3 className="font-[family:var(--f-display)] text-2xl font-bold text-[var(--ink)] mb-1">Anwar Iqbal Dawar</h3>
               <p className="text-sm font-bold uppercase tracking-widest text-[var(--accent)] mb-4">Founder &amp; Lead Editor</p>
               <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm sm:text-base leading-relaxed mb-4">
-                Anwar Iqbal Dawar is the founder and Lead Editor of xSypher. As a Computer Engineering scholar with a deep focus on systems architecture and structural vulnerability research, Anwar established xSypher to bridge the gap between academic security research and frontline engineering application. Under his leadership, the publication delivers noise-free, rigorous intelligence across artificial intelligence and cybersecurity with unyielding technical independence.
+                Anwar Iqbal Dawar is the founder and Lead Editor of xSypher. A Computer Engineering scholar working across systems architecture, cloud infrastructure and security research, he started the publication to write the technical material he kept failing to find elsewhere: how a system actually behaves once it is running, and what the primary sources say rather than what the launch post claims. He sets the editorial standard — primary sources, reproducible tests, corrections on the article — and writes most of the deeper analysis himself.
               </p>
-              <a href="mailto:press@xsypher.com" className="text-sm font-bold text-[var(--ink)] hover:text-[var(--accent)] transition-colors">Request Interview &rarr;</a>
+              <a href="mailto:press@xsypher.com" className="text-sm font-bold text-[var(--ink)] hover:text-[var(--accent)] transition-colors">Request an interview &rarr;</a>
             </div>
           </div>
         </section>
@@ -102,7 +107,7 @@ export default function MediaKitPage() {
                 </ul>
               </div>
               <div className="border border-red-500/30 bg-red-500/5 rounded-sm p-6">
-                <h4 className="font-bold text-red-500 mb-2 uppercase text-sm tracking-wide">Don't:</h4>
+                <h4 className="font-bold text-red-500 mb-2 uppercase text-sm tracking-wide">Don&apos;t:</h4>
                 <ul className="text-sm space-y-2 text-[var(--ink)] list-disc pl-4">
                   <li>Do not apply drop shadows, glows, or gradients to the logo.</li>
                   <li>Do not skew, stretch, or compress the logo dimensions.</li>

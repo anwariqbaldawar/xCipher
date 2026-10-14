@@ -2,11 +2,16 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Globe, Laptop, HeartPulse, ArrowRight, Zap, Briefcase, Mail } from "lucide-react";
+import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "Careers | xSypher",
-  description: "Join the xSypher Desk and help us decode the future of technology.",
-};
+export const metadata: Metadata = constructMetadata({
+  title: "Write With xSypher — Contributor and Staff Roles",
+  description:
+    "Contributor, engineer and research roles at xSypher, an independent, founder-led engineering publication. Remote, asynchronous, and honest about what a small publication can offer.",
+  canonical: `${siteConfig.url}/page/careers`,
+  image: brandBannerUrl(),
+  imageAlt: "Work with xSypher",
+});
 
 export default function CareersPage() {
   return (
@@ -16,13 +21,13 @@ export default function CareersPage() {
         <div className="max-w-7xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:px-8 lg:pt-44 lg:px-12">
           <div className="max-w-3xl">
             <span className="text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-3 block">
-              We're Hiring
+              We&apos;re hiring
             </span>
             <h1 className="font-[family:var(--f-display)] text-4xl sm:text-5xl font-bold mb-4 text-[var(--ink)] tracking-tight">
-              Join the xSypher Desk
+              Write with xSypher
             </h1>
             <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              We are looking for passionate journalists, sharp engineers, and curious tech analysts to help us decode the future of technology.
+              We are a small, founder-led publication, and everyone here does the work: reporting, testing, building, editing. If you would rather dig into one system for three weeks than rewrite a press release in thirty minutes, you will fit in.
             </p>
           </div>
         </div>
@@ -39,9 +44,9 @@ export default function CareersPage() {
             </h4>
             <nav className="flex flex-col font-[family:var(--f-ui)] text-sm border-l-2 border-[var(--line-2)]">
               <a href="#culture" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">1. Our Culture</a>
-              <a href="#perks" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">2. Perks & Benefits</a>
+              <a href="#perks" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">2. What we offer</a>
               <a href="#open-roles" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">3. Open Positions</a>
-              <a href="#apply" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">4. General Application</a>
+              <a href="#apply" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">4. Pitch us</a>
             </nav>
           </div>
         </aside>
@@ -59,10 +64,10 @@ export default function CareersPage() {
             </div>
             <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
               <p className="mb-4">
-                At xSypher, our culture is built on deep technical curiosity, rigorous verification, and a relentless pursuit of the truth. We operate at the intersection of complex software engineering and high-stakes global cyber-politics.
+                xSypher is small on purpose. We publish fewer pieces than a newsroom, we check them properly, and we would rather be right than first. The bar for a story is simple: would an engineer who builds this kind of system learn something from it?
               </p>
               <p>
-                We do not do "fluff." We believe that our readers are highly intelligent professionals who deserve uncompromising, in-depth analysis. If you love diving into dense documentation, interviewing security researchers, or building extremely fast web applications, you will find a home here.
+                There is no fluff and no click farming here. If you enjoy reading dense documentation, reproducing a benchmark, talking to the person who wrote the patch, or making a page load fast on a mid-range Android device, you will fit in.
               </p>
             </div>
           </section>
@@ -72,20 +77,20 @@ export default function CareersPage() {
             <div className="flex items-center gap-3 mb-6">
               <HeartPulse className="w-6 h-6 text-[var(--accent)]" />
               <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                2. Perks & Benefits
+                2. What we offer
               </h2>
             </div>
             <p className="text-[var(--muted)] font-[family:var(--f-body)] mb-8">
-              We expect top-tier work, and we provide top-tier support. Our benefits package is designed to give you the flexibility and resources you need to do the best work of your career.
+              We are funded by sponsorship and reader support rather than by a balance sheet full of investors, so we will not promise a corporate benefits package we cannot honour. What we can offer is straightforward.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-2xl p-6">
                 <div className="w-10 h-10 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)] mb-4">
                   <Globe className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-[var(--ink)] mb-2">100% Remote-First</h4>
+                <h4 className="font-bold text-[var(--ink)] mb-2">Remote and asynchronous</h4>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Work from anywhere in the world. We care about the quality of your output, not your timezone or commute. We operate asynchronously by default.
+                  The team is in Peshawar; readers are everywhere. We work in writing, across time zones, with deadlines agreed up front instead of daily stand-ups.
                 </p>
               </div>
 
@@ -93,16 +98,16 @@ export default function CareersPage() {
                 <div className="w-10 h-10 rounded-full bg-[var(--surface)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)] mb-4">
                   <Laptop className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-[var(--ink)] mb-2">Elite Tech Stipend</h4>
+                <h4 className="font-bold text-[var(--ink)] mb-2">Tooling and test budget</h4>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Generous annual budget to upgrade your home office, buy the latest gadgets, and fund your deep-dive technical research and server costs.
+                  The software, paid plans, test accounts, cloud spend and hardware a story needs are covered. If a review has to be run on a paid tier to be honest, we buy the tier.
                 </p>
               </div>
 
               <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-2xl p-6 md:col-span-2">
-                <h4 className="font-bold text-[var(--ink)] mb-2">Health & Wellness</h4>
+                <h4 className="font-bold text-[var(--ink)] mb-2">Time that respects the work</h4>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Comprehensive global health coverage, flexible mental health days, and an unlimited PTO policy that our leadership team actively encourages you to use. Burnout is the enemy of good journalism and good code.
+                  Contributor and contract schedules are built around your studies or your other commitments. One piece you are proud of beats five that had to be filed to hit a quota.
                 </p>
               </div>
             </div>
@@ -126,7 +131,7 @@ export default function CareersPage() {
                       Senior Cybersecurity Reporter
                     </h3>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-[family:var(--f-body)] text-[var(--muted)] uppercase tracking-wider font-semibold">
-                      <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Full-time</span>
+                      <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Contract</span>
                       <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Remote</span>
                       <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Editorial</span>
                     </div>
@@ -147,7 +152,7 @@ export default function CareersPage() {
                       Next.js Frontend Engineer
                     </h3>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-[family:var(--f-body)] text-[var(--muted)] uppercase tracking-wider font-semibold">
-                      <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Full-time</span>
+                      <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Contract</span>
                       <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Remote</span>
                       <span className="px-2 py-1 rounded bg-[var(--surface)] border border-[var(--line)]">Engineering</span>
                     </div>
@@ -183,7 +188,7 @@ export default function CareersPage() {
             </div>
           </section>
 
-          {/* SECTION 4: GENERAL APPLICATION */}
+          {/* SECTION 4: PITCH US */}
           <section id="apply" className="scroll-mt-28 pb-12">
             <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-2xl p-8 sm:p-10 text-center relative overflow-hidden shadow-sm">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent opacity-50"></div>
@@ -191,17 +196,17 @@ export default function CareersPage() {
                 <Mail className="w-7 h-7" />
               </div>
               <h2 className="font-[family:var(--f-display)] font-bold text-2xl sm:text-3xl text-[var(--ink)] mb-3">
-                Don't see a perfect fit?
+                Don&apos;t see a perfect fit?
               </h2>
               <p className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] mb-8 max-w-lg mx-auto leading-relaxed">
-                We are always looking for exceptional talent. If you believe you can bring something unique to xSypher, send your resume, portfolio, and a brief note about why you want to join us.
+                No opening that fits? Send a link to something you have written, built or broken — a teardown, a patch, a repository, a research note — plus a short note on what you would cover and how you would test it.
               </p>
               <a
                 href="mailto:careers@xsypher.com"
                 className="group relative w-full sm:w-auto inline-flex overflow-hidden py-3.5 px-8 !bg-[var(--accent)] dark:!bg-[var(--accent)] !text-white dark:!text-white font-[family:var(--f-ui)] font-bold tracking-wide rounded-xl items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg hover:-translate-y-0.5"
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  Email Careers Desk
+                  Email the editors
                 </span>
                 <div className="absolute inset-0 -translate-x-[150%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-[150%] transition-transform duration-700 ease-in-out z-0"></div>
               </a>

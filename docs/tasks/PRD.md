@@ -23,8 +23,66 @@ xSypher is a premium editorial newsroom CMS and publication built with modern we
       dismissal + history trap for the search overlay.
 * [ ] Task 5 — purge stale asset references from live rows (`scripts/purge-stale-assets.ts --apply`; needs `DATABASE_URL`),
       and confirm `lib/search.ts` full-text uses `Article_search_idx` via `EXPLAIN ANALYZE`.
+* [x] Task 6 — identity pass: replace the enterprise/roleplay copy on the transparency report,
+      the advertising page and the surrounding trust surfaces with the voice of an independent,
+      founder-led engineering publication, and make About / Footer / contact / corrections /
+      careers / media kit tell the same story.
 
 ## 5. Task log
+
+### Task 6 — independent-publication identity and cross-site consistency
+The policy pages were written in the voice of an organisation xSypher is not: a
+surveillance-resistant newsroom with a legal desk, a revenue split and a subpoena
+counter. None of it was true, and all of it was checkable — a publication that
+invents a warrant canary has no answer when a reader asks who funds it. So the
+fiction was removed and replaced with the facts a small publication can be held to.
+
+Removed everywhere: the FISA-court / national-security-letter / subpoena ledger and its
+warrant-canary framing, law-enforcement and wiretap request sections, the reader
+subscription and enterprise-licensing revenue split, inflated headcount and bureau
+claims, the enterprise media kit ($5k–$50k minimums, monthly impression figures), the
+careers page's "elite stipend / unlimited PTO" package, and the hosted PGP-key and
+SecureDrop claims (no such material exists in this repository).
+
+What the transparency report now states instead: independent, founder-led and
+bootstrapped ownership with no venture capital and no corporate parent, and what that
+buys a reader (benchmarks, architecture breakdowns and reviews cannot be bought);
+the research pipeline (primary documentation, reproducible testing, editor review
+before publication); the AI policy (assistive use only — the thesis, the fact-checking
+and the verdict are human); the advertising and affiliate firewall (labelled
+sponsorships, no sold do-follow links, declined categories, no editorial control);
+a corrections, copyright and takedown policy with response targets (2 business days
+for a factual error, 1 for a security correction, 3 for attribution, 5 for a copyright
+complaint or retraction request) and the reasoning for keeping corrections on the
+article instead of in a separate log; and a plain-language reader-data section.
+
+The advertising page dropped its price tiers and impression counts for the audience it
+actually reaches (full-stack developers, architects, security and AI practitioners,
+engineering students), three formats without price tags — dedicated technical deep-dive
+or product review, category/article banner sponsorship, and early-partner custom
+packages — six sponsor guidelines including the declined categories, and a four-step
+process that ends in the existing contact form (`partnerships`).
+
+Consistency pass over the surrounding surfaces: About (founder credit, no chart, no
+staff-count claims, funding link), media kit (boilerplate, both word counts, founder
+bio), editorial policy and editorial standards (funding, affiliate, AI, and source
+protection now says an encrypted channel is available on request rather than implying
+a drop box), contact (department text, and a clear statement that no secure drop is
+operated), corrections (copyright and attribution section), careers, the newsletter
+page, the series index, the Sidebar "how we work" card, the mobile drawer and the
+footer links. Every route and fragment the rewritten pages link to was checked against
+the routes that exist, including `#firewall` and `#corrections` on `/page/transparency`.
+
+Verified in this repository: `npx tsc --noEmit`, `npx eslint` on every changed file
+(no new findings; the four remaining errors in these files are pre-existing lines in
+`Sidebar.tsx`, `MobileDrawer.tsx`, `NewsletterPageForm.tsx` and `privacy-policy`),
+`npx vitest run` (59 files / 698 tests) and `npx next build`. The production build
+confirms the static/dynamic split of the policy routes is unchanged (about, advertising,
+contact, corrections and transparency stay `force-static`; the rest were already dynamic
+because `app/(public)/layout.tsx` reads the CSP nonce from `headers()`).
+
+Not verified here: how the pages look on a real handset, and the "Last reviewed" dates
+are editorial placeholders to be re-stamped at release.
 
 ### Task 3 — mobile Mermaid/SVG diagram fix
 Reported symptom: label text inside flowchart boxes overflowed, clipped or refused to

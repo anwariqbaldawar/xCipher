@@ -2,11 +2,16 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Scale, UserCheck, LaptopMinimal, Quote } from "lucide-react";
+import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = constructMetadata({
   title: "Editorial Standards — xSypher",
-  description: "Truth, transparency, and deep technical accuracy. Our core rulebook for journalism.",
-};
+  description:
+    "The four rules behind xSypher's reporting: independence from vendors, careful sourcing, no paid reviews, and attribution for work that is not ours.",
+  canonical: `${siteConfig.url}/page/editorial-standards`,
+  image: brandBannerUrl(),
+  imageAlt: "xSypher editorial standards",
+});
 
 export default function EditorialStandardsPage() {
   return (
@@ -75,10 +80,10 @@ export default function EditorialStandardsPage() {
               </h2>
               <div className="font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed space-y-4">
                 <p>
-                  We aggressively verify leaks and protect our whistleblowers. We grant anonymity to sources only when their physical, financial, or professional safety is at risk, and only when the information they provide is highly newsworthy and verifiable.
+                  We verify what we are given before we publish it, and we protect the people who give it to us. Anonymity is granted where a source’s safety, job or finances are genuinely at risk — and only when the material can be verified independently, because an unverifiable anonymous claim is not a story.
                 </p>
                 <p>
-                  For highly sensitive information, our newsroom utilizes secure channels like PGP encryption and SecureDrop to ensure the identities of our sources are protected from end to end.
+                  For sensitive material, ask for an encrypted channel and we will use one — authors can publish a PGP public key on their profile, and the desk will confirm a key fingerprint before you send anything. We keep the minimum material needed to verify a story, and we will tell you plainly what we can and cannot protect rather than pointing at a drop box we do not operate.
                 </p>
               </div>
             </div>
@@ -99,7 +104,7 @@ export default function EditorialStandardsPage() {
               </h2>
               <div className="font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed space-y-4">
                 <p>
-                  Gadgets and software are reviewed honestly. We do not do paid positive reviews or "sponsored reviews" disguised as editorial content. 
+                  Gadgets and software are reviewed honestly. We do not do paid positive reviews, or &ldquo;sponsored reviews&rdquo; disguised as editorial content. 
                 </p>
                 <p>
                   Hardware sent to us by manufacturers is either returned after the review period or kept purely in a secure editorial vault for future benchmark comparisons. We never sell review units, and accepting a review unit never guarantees coverage—let alone positive coverage.
@@ -123,7 +128,7 @@ export default function EditorialStandardsPage() {
               </h2>
               <div className="font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed space-y-4">
                 <p>
-                  We maintain a strict zero-tolerance policy for plagiarism. We always credit original reporting and aim to link directly to the primary source whenever we are building upon another publication's breaking news.
+                  Plagiarism is a firing offence, not a style question. When we build on another outlet’s reporting we name them and link to the original, and we link the primary source behind it wherever one exists.
                 </p>
                 <p>
                   Our goal is to elevate the technology journalism ecosystem, and that starts with respecting the hard work of our peers.
@@ -139,14 +144,22 @@ export default function EditorialStandardsPage() {
       <section className="w-full py-16 sm:py-24 border-t border-[var(--line)] text-center">
         <div className="max-w-3xl mx-auto px-4 sm:px-8 flex flex-col items-center">
           <p className="font-[family:var(--f-body)] text-[var(--muted)] mb-8 max-w-lg">
-            Have questions about our standards or need to reach our editorial team?
+            Questions about these standards, or a correction to request?
           </p>
-          <Link 
-            href="/page/contact"
-            className="py-3 px-6 bg-[var(--accent)] hover:opacity-90 text-white font-[family:var(--f-ui)] font-bold rounded-lg inline-flex items-center justify-center transition-all shadow-sm"
-          >
-            Return to Contact Desk
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+            <Link
+              href="/page/contact"
+              className="py-3 px-6 !bg-[var(--accent)] !text-[var(--on-accent)] hover:brightness-110 font-[family:var(--f-ui)] font-bold rounded-lg inline-flex items-center justify-center transition-all shadow-sm"
+            >
+              Contact the desk
+            </Link>
+            <Link
+              href="/page/transparency"
+              className="py-3 px-6 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--ink)] border border-[var(--line)] font-[family:var(--f-ui)] font-bold rounded-lg inline-flex items-center justify-center transition-all"
+            >
+              Transparency report
+            </Link>
+          </div>
         </div>
       </section>
     </div>

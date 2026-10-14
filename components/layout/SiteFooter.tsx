@@ -76,6 +76,7 @@ export default function SiteFooter() {
           <div className="flex flex-col space-y-0">
             <p className="text-xs font-bold tracking-widest uppercase !text-red-500 mb-4 block">Standards & Legal</p>
             <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/editorial-standards">Editorial Standards</Link>
+            <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/editorial-policy">Editorial Policy</Link>
             <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/corrections">Corrections Policy</Link>
             <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/transparency">Transparency Report</Link>
             <Link prefetch={false} className="!text-gray-400 hover:!text-white transition-colors" href="/page/privacy-policy">Privacy Policy</Link>

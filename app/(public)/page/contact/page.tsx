@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { siteConfig } from "@/lib/seo";
+import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 import ContactPageClient from "./ContactPageClient";
 
 export const dynamic = "force-static";
 
-export const metadata: Metadata = {
-  title: "Contact xSypher — Editorial & Security Desks",
+export const metadata: Metadata = constructMetadata({
+  title: "Contact xSypher — Editorial, Corrections & Sponsorship",
   description:
-    "Have a breaking security vulnerability, investigative tip, PR inquiry, or technical feedback? Get in touch with xSypher.",
-  alternates: {
-    canonical: `${siteConfig.url}/page/contact`,
-  },
-};
+    "Report a correction, send a technical tip, ask about sponsorship or report a platform bug. Every message reaches the editors directly.",
+  canonical: `${siteConfig.url}/page/contact`,
+  image: brandBannerUrl(),
+  imageAlt: "Contact xSypher",
+});
 
 export default function ContactPage() {
   return <ContactPageClient />;

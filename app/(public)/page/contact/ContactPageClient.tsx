@@ -88,7 +88,7 @@ export default function ContactPageClient() {
           <div className="flex items-center gap-2 mb-4">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20">
               <Sparkles className="w-3.5 h-3.5" />
-              Direct Communication Channel
+              Talk to the desk
             </span>
           </div>
 
@@ -97,17 +97,17 @@ export default function ContactPageClient() {
           </h1>
 
           <p className="mt-4 text-base sm:text-lg lg:text-xl text-[var(--muted)] font-[family:var(--f-body)] max-w-2xl leading-relaxed">
-            Have a breaking security vulnerability, investigative tip, PR inquiry, or technical feedback? The xSypher newsroom and engineering desks are listening.
+            Spotted an error in a story, found something broken in a system we cover, or want to talk about sponsorship? Your message goes to the editors who run this publication — not to a call centre.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-6 text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-ui)]">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-[var(--accent)]" />
-              <span>Editorial Tip Response: &lt; 4 hours</span>
+              <span>Corrections answered within 2 business days</span>
             </div>
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-[var(--accent)]" />
-              <span>Encrypted Source Anonymity Protected</span>
+              <span>Encrypted contact available on request</span>
             </div>
           </div>
         </div>
@@ -130,7 +130,7 @@ export default function ContactPageClient() {
                   Reach the Right Desk
                 </h2>
                 <p className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-body)] mt-1 mb-6">
-                  Select a department below to ensure your message lands with the dedicated editor or engineer.
+                  Pick the desk that fits. Every message is read by a person on the team.
                 </p>
               </div>
 
@@ -169,7 +169,7 @@ export default function ContactPageClient() {
                       Editorial &amp; News Tips
                     </h3>
                     <p className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-body)] mt-1 mb-2 leading-relaxed">
-                      For article pitches, security disclosures, zero-day research, and confidential leaks.
+                      Corrections, article pitches, vulnerability disclosures and confidential tips.
                     </p>
                     <a
                       href="mailto:editor@xsypher.com"
@@ -193,7 +193,7 @@ export default function ContactPageClient() {
                       Partnerships &amp; PR
                     </h3>
                     <p className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-body)] mt-1 mb-2 leading-relaxed">
-                      For corporate press releases, media syndication, and conference appearances.
+                      Sponsorship enquiries, press questions and speaking requests.
                     </p>
                     <a
                       href="mailto:press@xsypher.com"
@@ -217,7 +217,7 @@ export default function ContactPageClient() {
                       Technical Support &amp; Bugs
                     </h3>
                     <p className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-body)] mt-1 mb-2 leading-relaxed">
-                      Encountered broken layout, RSS feed failures, or platform bugs? Notify our web engineering team.
+                      Broken layout, feed failures, accessibility problems or anything else wrong with the site.
                     </p>
                     <a
                       href="mailto:support@xsypher.com"
@@ -234,8 +234,8 @@ export default function ContactPageClient() {
               <div className="p-4 sm:p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--line)] flex items-start gap-3">
                 <ShieldCheck className="w-5 h-5 text-[var(--accent)] shrink-0 mt-0.5" />
                 <div className="text-xs text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  <strong className="text-[var(--ink)] block mb-0.5">Whistleblower &amp; Source Security:</strong>
-                  Need end-to-end cryptographic protection? Encrypted PGP public keys and SecureDrop details are available upon request via our editorial desk.
+                  <strong className="text-[var(--ink)] block mb-0.5">Sensitive tip?</strong>
+                  Ask the editorial desk for an encrypted channel and we will set one up; authors can also publish a PGP public key on their profile. We do not operate a third-party secure-drop service, and we would rather say so than imply one exists.
                 </div>
               </div>
             </div>

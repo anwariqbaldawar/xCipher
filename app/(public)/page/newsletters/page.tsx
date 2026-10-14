@@ -1,11 +1,15 @@
-import { Info, Mail, Zap, Shield, Clock, Search } from 'lucide-react';
+import { Info, Zap, Shield, Clock, Search } from 'lucide-react';
 import type { Metadata } from 'next';
+import { brandBannerUrl, constructMetadata, siteConfig } from '@/lib/seo';
 import NewsletterPageForm from './NewsletterPageForm';
 
-export const metadata: Metadata = {
-  title: 'Newsletters | xSypher',
-  description: 'Subscribe to the xSypher Daily Brief for the latest in tech, journalism, and analysis directly to your inbox.',
-};
+export const metadata: Metadata = constructMetadata({
+  title: 'The Daily Brief — Newsletter | xSypher',
+  description: 'One short email on weekday mornings: what shipped, what broke, and the engineering detail behind it. No hype, unsubscribe in one click.',
+  canonical: `${siteConfig.url}/page/newsletters`,
+  image: brandBannerUrl(),
+  imageAlt: 'The xSypher Daily Brief',
+});
 
 export default function NewslettersPage() {
   return (
@@ -15,13 +19,13 @@ export default function NewslettersPage() {
         <div className="max-w-7xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:px-8 lg:pt-44 lg:px-12">
           <div className="max-w-3xl">
             <span className="text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-3 block">
-              Editorial Communications
+              Newsletter
             </span>
             <h1 className="font-[family:var(--f-display)] text-4xl sm:text-5xl font-bold mb-4 text-[var(--ink)] tracking-tight">
               xSypher Newsletters
             </h1>
             <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              Curated intelligence for the modern technologist. Join thousands of readers who start their day with our uncompromising editorial insights.
+              One short email on weekday mornings: what shipped, what broke, and the engineering detail behind it. Written by the same people who write the site — no hype, no list-building, unsubscribe in one click.
             </p>
             <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--faint)]">
               <span className="w-2 h-2 rounded-full bg-[var(--accent)]"></span>
@@ -64,7 +68,7 @@ export default function NewslettersPage() {
                 <ul className="list-none space-y-3 font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed">
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We offer the <strong>xSypher Daily Brief</strong>, a premium morning newsletter.</span>
+                    <span className="text-[var(--muted)] leading-relaxed">We send the <strong>xSypher Daily Brief</strong>, a short morning newsletter.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
@@ -88,15 +92,15 @@ export default function NewslettersPage() {
             <div className="flex items-center gap-3 mb-6">
               <Search className="w-6 h-6 text-[var(--accent)]" />
               <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                1. The Daily Brief: Cut Through The Noise
+                1. The Daily Brief
               </h2>
             </div>
             <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
               <p className="mb-4">
-                The modern tech landscape is saturated with low-effort aggregation and algorithmic noise. The <strong>xSypher Daily Brief</strong> is our antidote. It is our flagship editorial product designed exclusively for readers who demand high-signal, meticulously verified information.
+                The <strong>xSypher Daily Brief</strong> is a short, plain-text email. No teaser paragraphs, no engagement bait, no sponsored slots inside the body — it links to what we published and to the primary sources behind it.
               </p>
               <p className="mb-4">
-                Every morning, our senior editorial team curates the most critical developments across software engineering, global cybersecurity, and tech business. We don't just link to stories—we provide the crucial context, expert technical analysis, and the "why it matters" breakdown before you even finish your first coffee.
+                Each issue carries a handful of items across software engineering, security and AI: a specification or advisory worth reading, a release we have actually tried, and one thing we are testing or benchmarking at the moment. If nothing earned your attention that week, the issue says so instead of padding itself out.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 mb-6">
                 <div className="p-4 border border-[var(--line)] rounded-xl bg-[var(--surface-2)] text-center">
@@ -130,10 +134,10 @@ export default function NewslettersPage() {
             </h2>
             <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
               <p>
-                The Daily Brief is dispatched exactly <strong>once per day, Monday through Friday</strong>, carefully timed to arrive before the standard North American and European workdays begin. 
+                The brief goes out <strong>once per day, Monday through Friday</strong>. One email, and it stays short. 
               </p>
               <p>
-                We do not send weekend newsletters unless there is an extraordinary breaking news event of critical global importance (e.g., a massive zero-day vulnerability or major industry acquisition). We respect your weekend downtime.
+                Weekends stay quiet. A Saturday send would have to be something genuinely urgent — a critical vulnerability being exploited in the wild, say — and even then it is one email, not a campaign.
               </p>
             </div>
           </section>

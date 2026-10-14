@@ -49,7 +49,7 @@ export default function NewsletterPageForm() {
         Join The Inner Circle
       </h2>
       <p className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] mb-8 max-w-lg mx-auto leading-relaxed">
-        Subscribe to the Daily Brief to receive our uncompromising insights delivered directly to your inbox.
+        Subscribe to the xSypher Brief: one short email on weekday mornings, written by the people who write the site.
       </p>
       
       <form onSubmit={handleSubmit} className="max-w-md mx-auto flex flex-col gap-4">

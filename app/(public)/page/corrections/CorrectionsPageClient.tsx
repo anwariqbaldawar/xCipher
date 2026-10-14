@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileWarning, CheckCircle2, AlertOctagon, RefreshCw } from "lucide-react";
+import { FileWarning, CheckCircle2, AlertOctagon, RefreshCw, ShieldCheck } from "lucide-react";
 import { submitContactMessage } from "@/app/actions/contact";
 
 export default function CorrectionsPageClient() {
@@ -57,13 +57,13 @@ export default function CorrectionsPageClient() {
         <div className="max-w-7xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:px-8 lg:pt-44 lg:px-12">
           <div className="max-w-3xl">
             <span className="text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-3 block">
-              Editorial Accountability
+              Corrections & integrity
             </span>
             <h1 className="font-[family:var(--f-display)] text-4xl sm:text-5xl font-bold mb-4 text-[var(--ink)] tracking-tight">
               Corrections Policy
             </h1>
             <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              We are fiercely committed to fixing our mistakes openly. If we publish an error, we correct it as quickly as possible and ensure transparency with our readers.
+              If we get a number, a version or a security claim wrong, we fix the article itself and say what changed. This page is how you tell us, and it is the same channel a rights holder uses for a copyright or attribution problem.
             </p>
             <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--faint)]">
               <span className="w-2 h-2 rounded-full bg-[var(--accent)]"></span>
@@ -88,10 +88,10 @@ export default function CorrectionsPageClient() {
             </div>
             <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
               <p className="mb-4">
-                At xSypher, accuracy is the bedrock of our journalism. Our reporters and editors work tirelessly to verify facts, cross-reference technical claims, and authenticate documents before publication. However, in the fast-paced environment of technical reporting, mistakes can occasionally slip through. 
+                Every claim in an xSypher story is checked against primary documentation — release notes, source code, advisories, filings — before the piece goes out. Even so, a version number gets mistyped and a benchmark gets misread, and readers who work in the field regularly spot it before we do. 
               </p>
               <p>
-                When they do, we do not hide them. We believe that acknowledging and correcting errors is the only way to build and maintain trust with our highly technical audience.
+                When that happens we do not quietly rewrite and move on. The correction goes on the story, with the time it was made, so anyone who read the original can see what changed.
               </p>
             </div>
           </section>
@@ -136,6 +136,36 @@ export default function CorrectionsPageClient() {
             </div>
           </section>
 
+          <section className="pb-12">
+            <div className="flex items-center gap-3 mb-6">
+              <ShieldCheck className="w-6 h-6 text-[var(--accent)]" />
+              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
+                Copyright & Attribution
+              </h2>
+            </div>
+            <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
+              <p className="mb-4">
+                If you own a photograph, diagram, screenshot or other asset that appears in an xSypher story and you
+                believe we have used it without the right to do so, tell us which asset and which article. We audit
+                the asset and its provenance, and anything we cannot license or verify is removed or replaced whether
+                or not we agree with the claim behind it. Target first response: <strong>5 business days</strong>.
+              </p>
+              <p className="mb-4">
+                The same form covers missing or misattributed credit. If a finding, quote, dataset or patch is yours
+                and the story does not say so clearly enough, we correct the attribution in the article and in the
+                metadata around it.
+              </p>
+              <p>
+                Formal notices can also go to{" "}
+                <a href="mailto:contact@xsypher.com" className="text-[var(--accent)] hover:underline font-semibold">
+                  contact@xsypher.com
+                </a>
+                : mark the subject line clearly and it is routed to the editor. This publication is small enough that
+                no request sits in a ticket queue.
+              </p>
+            </div>
+          </section>
+
         </article>
 
         {/* Right Column: Sticky Report Form */}
@@ -150,7 +180,7 @@ export default function CorrectionsPageClient() {
                   Report an Error
                 </h2>
                 <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm mt-1">
-                  Found a mistake? Let our editorial desk know immediately.
+                  Found a mistake? It reaches the editors directly. First response within 2 business days — 1 for a security correction.
                 </p>
               </div>
             </div>

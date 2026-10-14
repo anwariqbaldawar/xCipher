@@ -67,7 +67,7 @@ export default function SeriesHub() {
           </h1>
 
           <p className="mt-4 text-base sm:text-lg lg:text-xl text-[var(--muted)] font-[family:var(--f-body)] max-w-2xl leading-relaxed">
-            Multi-part investigations, deep-dive technical guides, and curated reporting tracks from the xSypher newsroom.
+            Multi-part reporting, deep-dive technical guides and curated reading tracks from the xSypher desk.
           </p>
         </div>
       </section>

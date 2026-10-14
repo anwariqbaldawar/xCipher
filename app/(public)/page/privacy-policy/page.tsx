@@ -137,7 +137,7 @@ export default function PrivacyPolicyPage() {
                 </div>
                 <div className="p-5 border border-[var(--line)] rounded-xl bg-[var(--surface-2)]">
                   <h4 className="font-bold text-[var(--ink)] mb-2">Editorial Analytics</h4>
-                  <p className="text-sm">To understand which topics our audience cares about most, helping us direct our investigative resources.</p>
+                  <p className="text-sm">To understand which topics readers actually use, so we know what to cover in more depth.</p>
                 </div>
               </div>
             </div>

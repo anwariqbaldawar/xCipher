@@ -27,11 +27,19 @@ import { siteConfig } from "@/lib/seo";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "About xSypher — Decoding the Future of Technology",
+  title: "About xSypher — An Independent Engineering Publication",
   description:
-    "xSypher is an independent technology publication dedicated to deep technical analysis, noise-free reporting, and investigative journalism across AI, Cybersecurity, Software, and Next-Gen Systems.",
+    "xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware — with hands-on testing and primary-source verification instead of press-release rewrites.",
   alternates: {
     canonical: `${siteConfig.url}/page/about`,
+  },
+  openGraph: {
+    title: "About xSypher — An Independent Engineering Publication",
+    description:
+      "Who builds xSypher, how we are funded, and the standards a story has to clear before it publishes.",
+    url: `${siteConfig.url}/page/about`,
+    siteName: siteConfig.name,
+    type: "website",
   },
 };
 
@@ -67,7 +75,7 @@ export default function AboutPage() {
           <div className="flex items-center gap-2 mb-6">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/20">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse" />
-              Inside xSypher // Editorial Manifesto
+              Inside xSypher // Who we are
             </span>
           </div>
 
@@ -78,7 +86,7 @@ export default function AboutPage() {
 
           {/* Short Sub-headline */}
           <p className="mt-6 text-lg sm:text-xl lg:text-2xl text-[var(--muted)] font-[family:var(--f-body)] max-w-3xl leading-relaxed">
-            An independent publication delivering noise-free, rigorous analysis across Artificial Intelligence, Offensive &amp; Defensive Cybersecurity, and Next-Generation Systems.
+            An independent, founder-led engineering publication: software architecture, cybersecurity, AI systems and the hardware developers actually buy — tested, sourced and written by people who build things.
           </p>
 
           {/* Key Metrics Strip */}
@@ -94,10 +102,10 @@ export default function AboutPage() {
 
             <div className="flex flex-col">
               <span className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                140+
+                Zero
               </span>
               <span className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-ui)] mt-1">
-                Countries Reached
+                Outside Investors
               </span>
             </div>
 
@@ -106,7 +114,7 @@ export default function AboutPage() {
                 100%
               </span>
               <span className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-ui)] mt-1">
-                Technical Provenance
+                Editor-Reviewed
               </span>
             </div>
 
@@ -152,8 +160,8 @@ export default function AboutPage() {
                     xS
                   </span>
                   <div className="text-xs">
-                    <strong className="block font-semibold text-[var(--ink)]">xSypher Editorial Council</strong>
-                    <span className="text-[var(--faint)]">Published Standard</span>
+                    <strong className="block font-semibold text-[var(--ink)]">Anwar Iqbal Dawar</strong>
+                    <span className="text-[var(--faint)]">Founder &amp; Lead Editor</span>
                   </div>
                 </div>
               </div>
@@ -162,19 +170,19 @@ export default function AboutPage() {
             {/* Right Detailed Narrative */}
             <div className="lg:col-span-8 flex flex-col gap-6 text-[var(--ink)] font-[family:var(--f-body)] text-base sm:text-lg leading-relaxed">
               <p>
-                xSypher was founded at a crucial historical inflection point. The digital world is experiencing unprecedented transformation: artificial intelligence is disrupting decades of software paradigms, decentralized protocols are testing the foundations of data sovereignty, and cyber warfare has graduated from hypothetical threat models to daily geopolitical reality.
+                xSypher started in 2025 as a personal notebook about the systems its founder was studying — kernel internals, network protocols, cloud infrastructure and the machine-learning stack — and turned into a publication because the deep material was the part nobody else was writing.
               </p>
 
               <p>
-                Yet, as computing became more critical to human civilization, mainstream tech reporting became shallower. The modern media machine incentivizes breathless press release rewrites, speculative rumors, and sensational headlines manufactured to farm clicks rather than deliver insight. Crucial questions—<em>How does this neural architecture actually compute weights? What zero-day attack vector was leveraged? Can this hardware handle edge inference without throttling?</em>—were constantly glossed over.
+                Most technology coverage is written from the press release outwards. That is not a conspiracy, it is an incentive: announcements are cheap to cover and always available. The interesting material sits one layer down — <em>how does this scheduler actually behave under load? What does this advisory mean for a service that already shipped? Is this benchmark reproducible, or was it tuned for the launch?</em> — and that is the layer we work in.
               </p>
 
               <p>
-                We launched xSypher to be the antidote to that superficiality. Our mission is direct and uncompromising: <strong>deliver noise-free, mathematically grounded, and empirically tested technology journalism</strong>. We believe you deserve reporting written by people who open the terminal, inspect the bytecode, compile the binaries, and audit the packets before putting pen to paper.
+                So the standard we hold ourselves to is deliberately unglamorous: <strong>read the primary source, run the test, link what you claim, and say plainly when something is unproven</strong>. Where we cannot test a claim ourselves, we say whose claim it is. Where we got something wrong, the correction goes on the article.
               </p>
 
               <p>
-                The name <strong>xSypher</strong> is deliberate. Rooted in the word <em>cipher</em>—the fundamental cryptographic algorithm used to encrypt and decrypt data—it reflects our core mandate. The &apos;x&apos; represents the unknown frontier of next-generation technology, while &apos;Sypher&apos; embodies the complex, often opaque systems we investigate. We exist to decrypt the industry&apos;s noise, translating cryptic machine-level mechanics, neural architectures, and zero-day vulnerabilities into clear, verified intelligence.
+                The name <strong>xSypher</strong> comes from <em>cipher</em>: a transformation you can specify exactly, verify, and repeat. That is the standard for a technical claim — if you cannot show the procedure, you have not shown anything. The &apos;x&apos; is the unknown we are still working out, which in engineering is most of it.
               </p>
 
               {/* Three Core Tenets Sub-block */}
@@ -199,7 +207,7 @@ export default function AboutPage() {
                     Code-Level Audits
                   </h3>
                   <p className="text-xs text-[var(--muted)] leading-normal">
-                    Every software and security story is backed by reproduced setups, local benchmarks, and GitHub artifacts.
+                    Where a claim is testable we reproduce it locally — reference setups, benchmarks and the commands we ran.
                   </p>
                 </div>
 
@@ -211,7 +219,7 @@ export default function AboutPage() {
                     Complete Independence
                   </h3>
                   <p className="text-xs text-[var(--muted)] leading-normal">
-                    No hardware manufacturer or venture fund dictates our tone. We test units purchased at retail.
+                    No vendor and no fund sets our verdicts. Where a review unit or a test account was provided, the story says so.
                   </p>
                 </div>
               </div>
@@ -239,7 +247,7 @@ export default function AboutPage() {
               </h2>
             </div>
             <p className="text-sm sm:text-base text-[var(--muted)] font-[family:var(--f-ui)] max-w-md">
-              Specialized research desks dedicated to unraveling technical complexity into clear, actionable intelligence.
+              Five areas, one standard: read the primary source, test what can be tested, and link the evidence.
             </p>
           </div>
 
@@ -368,13 +376,13 @@ export default function AboutPage() {
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--accent)]">
-                  Exclusive Reports
+                  Original reporting
                 </span>
                 <h3 className="font-[family:var(--f-display)] text-xl font-bold text-[var(--ink)] mt-1 mb-3">
-                  Investigative Dispatches
+                  Long-form reporting
                 </h3>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Original reporting on data breaches, covert surveillance protocols, regulatory battles, and internal corporate engineering maneuvers that shape tech geopolitics.
+                  Longer-form reporting on security incidents, supply-chain failures, regulatory pressure, and the engineering decisions inside products people actually use.
                 </p>
               </div>
               <div className="mt-6 pt-4 border-t border-[var(--line)] flex items-center justify-between text-xs font-semibold text-[var(--accent)]">
@@ -399,13 +407,13 @@ export default function AboutPage() {
           <div className="max-w-3xl mb-12 sm:mb-16">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--accent)] mb-2">
               <Award className="w-4 h-4" />
-              <span>Editorial Leadership &amp; Analysts</span>
+              <span>The Team</span>
             </div>
             <h2 className="font-[family:var(--f-display)] text-2xl sm:text-4xl font-bold tracking-tight text-[var(--ink)]">
-              Meet the Minds Behind xSypher
+              Who builds xSypher
             </h2>
             <p className="mt-3 text-sm sm:text-base text-[var(--muted)] font-[family:var(--f-ui)]">
-              Engineers, penetration testers, and investigative researchers committed to fearless technical accuracy.
+              A small, founder-led team of engineers and researchers. Everyone here writes, tests and ships — there is no layer of management between a story and publication.
             </p>
           </div>
 
@@ -566,7 +574,7 @@ export default function AboutPage() {
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Oversees xSypher&apos;s core engineering infrastructure and distributed cloud systems. Leads high-availability server architecture, microservices scaling, and platform reliability engineering across all services.
+                  Builds and maintains the platform this publication runs on — the web application, the database and storage plumbing, and the deployment pipeline — alongside his own infrastructure work.
                 </p>
               </div>
 
@@ -664,7 +672,7 @@ export default function AboutPage() {
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Leads threat intelligence research, adversary simulation, and systematic vulnerability assessments. Audits zero-day vectors, cloud attack surfaces, and deep-dive technical insights for our security readers.
+                  Researches and writes on vulnerability analysis, attack-surface review and defensive tooling — including the parts of a disclosure that a vendor advisory tends to leave out.
                 </p>
               </div>
 
@@ -713,7 +721,7 @@ export default function AboutPage() {
                   </div>
                 </div>
                 <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                  Drives xSypher&apos;s global digital footprint, content dissemination, and community growth. Manages multi-channel audience engagement, editorial outreach, and media communications across all public ecosystems.
+                  Runs our social accounts and community replies, and handles the outreach that puts a story in front of the people it was written for.
                 </p>
               </div>
 
@@ -754,10 +762,10 @@ export default function AboutPage() {
               <span>Ethical Standards</span>
             </div>
             <h2 className="font-[family:var(--f-display)] text-2xl sm:text-4xl font-bold tracking-tight text-[var(--ink)]">
-              Our Unyielding Editorial Promise
+              What we promise — and what you can hold us to
             </h2>
             <p className="mt-3 text-sm sm:text-base text-[var(--muted)] font-[family:var(--f-ui)] leading-relaxed">
-              Every word we publish is anchored by four foundational covenants to our readers. Trust is easy to forfeit and impossible to buy back.
+              Four commitments that decide what runs, what gets corrected, and who gets a say in it.
             </p>
           </div>
 
@@ -771,10 +779,10 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <h3 className="font-[family:var(--f-display)] text-lg font-bold text-[var(--ink)] mb-2">
-                    1. Empirical Fact-Checking &amp; Primary Verification
+                    1. Primary-source verification
                   </h3>
                   <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                    We do not rely on second-hand regurgitations or vendor claims. Technical statements, performance claims, and vulnerability disclosures are tested in controlled sandboxes and verified against primary code repositories and raw packet captures.
+                    We do not pass on vendor claims as findings. Technical statements, performance numbers and vulnerability reports are checked against the primary source — the specification, the repository, the advisory — and tested on our own machines wherever a test is possible. When a number came from somebody else, the story says whose it is.
                   </p>
                 </div>
               </div>
@@ -788,10 +796,10 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <h3 className="font-[family:var(--f-display)] text-lg font-bold text-[var(--ink)] mb-2">
-                    2. Strict Separation of Editorial and Commercial
+                    2. A real wall between editorial and commercial
                   </h3>
                   <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                    No advertiser, corporate sponsor, or investor has preview access or editorial influence over our coverage. Sponsored content is exceptionally rare, always prominently labelled, and never produced by our editorial reporting staff.
+                    No advertiser, sponsor or investor gets preview access or a say in what we publish. Sponsored material is labelled before the first paragraph, and where a sponsor&apos;s product is reviewed, the verdict stays ours: sponsorship buys placement, not conclusions.
                   </p>
                 </div>
               </div>
@@ -805,10 +813,10 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <h3 className="font-[family:var(--f-display)] text-lg font-bold text-[var(--ink)] mb-2">
-                    3. Transparent, Unapologetic Corrections
+                    3. Corrections live on the article
                   </h3>
                   <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                    When we make an error, we correct it visibly and quickly. Substantive corrections are appended directly to the top of articles with clear changelogs and timestamps. We never quietly edit away errors to save face.
+                    When we get something wrong, the fix goes on the story itself, with a timestamp and a note explaining what changed. Minor typos are fixed silently; substantive changes never are. Anyone can report an error and get an answer within two business days — the policy and the form are on our corrections page.
                   </p>
                 </div>
               </div>
@@ -822,10 +830,10 @@ export default function AboutPage() {
                 </div>
                 <div>
                   <h3 className="font-[family:var(--f-display)] text-lg font-bold text-[var(--ink)] mb-2">
-                    4. Ironclad Source Protection &amp; OpSec
+                    4. Source protection, honestly described
                   </h3>
                   <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                    We safeguard our sources using PGP encryption, zero-log communication channels, and secure drop techniques. If you share confidential intelligence on critical vulnerabilities or corporate misconduct, your identity is shielded at all costs.
+                    Sensitive tip? Ask for an encrypted channel and we will use one — authors can publish a PGP key on their profile. We keep the minimum material needed to verify a story and publish nothing that could identify a source who asked us not to. We will also tell you plainly what we can and cannot protect: we do not operate a third-party secure-drop service, and we would rather say that than pretend otherwise.
                   </p>
                 </div>
               </div>
@@ -849,15 +857,15 @@ export default function AboutPage() {
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] mb-4">
               <Globe2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-              <span>Connect With The Newsroom</span>
+              <span>Connect with xSypher</span>
             </div>
 
             <h2 className="font-[family:var(--f-display)] text-2xl sm:text-4xl font-extrabold text-[var(--ink)] tracking-tight">
-              Have a Security Tip or Want to Join the Conversation?
+              Got a tip, a correction or a system worth tearing down?
             </h2>
 
             <p className="mt-4 text-sm sm:text-base text-[var(--muted)] font-[family:var(--f-body)] max-w-2xl mx-auto leading-relaxed">
-              We respond to every credible intelligence lead, technical inquiry, and research collaboration. Explore our latest investigations or reach our editorial desk directly.
+              We read every credible tip, technical correction and collaboration request ourselves. If something here does not match how we behave, tell us — that is the fastest way to get it fixed.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -874,8 +882,15 @@ export default function AboutPage() {
                 href="/page/contact"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm text-[var(--ink)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--line)] transition-all"
               >
-                Submit a News Tip
+                Contact the desk
                 <Mail className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/page/transparency"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl font-semibold text-sm text-[var(--ink)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-[var(--line)] transition-all"
+              >
+                How we are funded
+                <ShieldCheck className="w-4 h-4" />
               </Link>
             </div>
           </div>

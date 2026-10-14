@@ -55,8 +55,8 @@ export default async function Sidebar() {
 
       <div className="trust-card">
         <h3>How we work</h3>
-        <p>xSypher stories are reported, fact-checked and edited before publication. We correct errors openly and label opinion clearly. We buy our own review units and accept no payment for coverage.</p>
-        <Link href="/page/editorial-policy">Read our editorial standards →</Link>
+        <p>xSypher stories are researched, fact-checked and edited before publication, and errors are corrected on the article itself. Reviews are never paid for; any review unit, test account or sponsorship is disclosed in the story.</p>
+        <Link href="/page/editorial-policy">Read our editorial policy →</Link>
       </div>
 
       <NewsletterSignup style={{ borderRadius: "var(--r-lg)" }} />
