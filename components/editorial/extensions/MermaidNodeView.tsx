@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { cleanMermaidCode, resolveMermaidCode } from './MermaidBlock';
 import { waitForMermaidFonts } from '@/lib/mermaid-fonts';
+import { getMermaidDirection } from '@/lib/mermaid-direction';
 
 /** Decode HTML entities that the sanitizer injects into attribute values. */
 function decodeHtmlEntities(str: string): string {
@@ -239,7 +240,7 @@ export const MermaidNodeView = (props: any) => {
   };
 
   return (
-    <NodeViewWrapper className={`mermaid-node-wrapper mermaid-wrapper not-prose w-full overflow-x-auto relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
+    <NodeViewWrapper className={`mermaid-node-wrapper mermaid-wrapper not-prose w-full relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
       {isEditing ? (
         <div className="w-full flex flex-col gap-2">
           <textarea
@@ -281,12 +282,13 @@ export const MermaidNodeView = (props: any) => {
           ) : svgContent ? (
             <div
               ref={resizableRef}
-              className="mermaid-wrapper not-prose w-full overflow-x-auto relative mx-auto"
-              style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%' }}
+              className="mermaid-wrapper not-prose w-full flex justify-center relative mx-auto"
+              data-direction={getMermaidDirection(currentCode)}
+              style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%', minWidth: 0 }}
             >
               <div
                 ref={containerRef}
-                className="mermaid-svg-container not-prose overflow-x-auto w-full flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
+                className="mermaid-svg-container not-prose w-full [&_svg]:block [&_svg]:mx-auto [&_svg]:h-auto"
                 style={{ minHeight: '100px' }}
                 dangerouslySetInnerHTML={{ __html: svgContent }}
               />

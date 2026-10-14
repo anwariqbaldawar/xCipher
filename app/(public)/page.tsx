@@ -125,14 +125,14 @@ export default async function Home() {
   }));
   
   let picks = [...placedPicks];
-  if (picks.length < 5) {
+  if (picks.length < 4) {
     const pickIds = picks.map(a => a.id);
-    const fallbackPicks = latest.filter(a => !pickIds.includes(a.id)).slice(0, 5 - picks.length);
+    const fallbackPicks = latest.filter(a => !pickIds.includes(a.id)).slice(0, 4 - picks.length);
     picks = [...picks, ...fallbackPicks.map(a => ({ ...a, pick: true }))];
   }
   
   const pickFeat = picks[0];
-  const pickGrid = picks.slice(1, 5);
+  const pickGrid = picks.slice(1, 4);
 
   return (
     <>
