@@ -86,6 +86,41 @@ describe("request-time backend configuration", () => {
     poolQuery.mockRestore();
   });
 
+  it("moves the driver onto Neon's pooled hostname, and only there", async () => {
+    const { withNeonPooler } = await import("@/lib/db");
+
+    // One WebSocket backend connection is held per pool for the life of the
+    // process, so a build fanning out across workers has to go through PgBouncer.
+    expect(withNeonPooler("postgresql://u:p@ep-cool-123.us-east-2.aws.neon.tech/db?sslmode=require"))
+      .toBe("postgresql://u:p@ep-cool-123-pooler.us-east-2.aws.neon.tech/db?sslmode=require");
+
+    // Already pooled, self-hosted, or a DSN this cannot parse: untouched.
+    const pooled = "postgresql://u:p@ep-cool-123-pooler.us-east-2.aws.neon.tech/db";
+    expect(withNeonPooler(pooled)).toBe(pooled);
+    const local = "postgresql://u:p@localhost:5432/editor";
+    expect(withNeonPooler(local)).toBe(local);
+    expect(withNeonPooler("/var/run/postgresql")).toBe("/var/run/postgresql");
+  });
+
+  it("lets a deployment keep its own pooler", async () => {
+    const { withNeonPooler } = await import("@/lib/db");
+    vi.stubEnv("NEON_POOLER", "off");
+    const direct = "postgresql://u:p@ep-cool-123.us-east-2.aws.neon.tech/db";
+    expect(withNeonPooler(direct)).toBe(direct);
+  });
+
+  it("caps the pool and gives the driver a WebSocket constructor", async () => {
+    const { POOL_MAX_CONNECTIONS } = await import("@/lib/db");
+    const { neonConfig } = await import("@neondatabase/serverless");
+
+    // A production build runs many workers at once; each pool is capped so a
+    // burst of in-flight queries cannot exhaust the compute.
+    expect(POOL_MAX_CONNECTIONS).toBe(5);
+    // Node has no implicit constructor: without one the first query rejects with
+    // a bare `ErrorEvent { type: "error" }` and no Postgres message.
+    expect(typeof neonConfig.webSocketConstructor).toBe("function");
+  });
+
   it("resolves Auth.js secrets, cookies and adapter only when requested", async () => {
     await import("@/lib/auth");
     const configure = initializeAuth.mock.calls[0][0];

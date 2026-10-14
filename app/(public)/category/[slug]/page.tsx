@@ -7,12 +7,15 @@ import { db } from "@/lib/db";
 import { getCategoryArticles } from "@/lib/cached-queries";
 import { eq, sql, isNull } from "drizzle-orm";
 import { category as categoryTable } from "@/lib/db/schema";
-import { siteConfig } from "@/lib/seo";
+import { brandBannerUrl, siteConfig } from "@/lib/seo";
+import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
+import { serializeJsonLd } from "@/lib/article-schema";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
+import { headers } from "next/headers";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import ArticleByline from "@/components/article/ArticleByline";
 import { LISTING_ARTICLE_LIMIT } from "@/lib/queries";
 import Sidebar from "@/components/layout/Sidebar";
-import { getImgSrc } from "@/lib/utils";
 import RelativeTime from "@/components/common/RelativeTime";
 import AdUnit from "@/components/common/AdUnit";
 import SubcategoryStrip from "@/components/category/SubcategoryStrip";
@@ -49,7 +52,44 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     alternates: {
       canonical: `${siteConfig.url}/category/${slug}`,
     },
-    ...(cat.publishedArticleCount === 0 && { robots: { index: false, follow: true } }),
+    // IMPORTANT (Google Images): a category archive lists dozens of stories and
+    // therefore renders dozens of featured images. Even an empty archive stays
+    // crawlable via `follow`, so link equity still flows to the articles.
+    robots: {
+      index: false,
+      follow: true,
+      googleBot: {
+        index: false,
+        follow: true,
+        // Do not let the archive's cards be indexed as images of this page.
+        "max-image-preview": "none",
+      },
+    },
+    // The archive's own social card is the brand banner. It never borrows a
+    // story's featured image, which is what previously made Google Images bind
+    // article photographs to "… — xSypher" category titles.
+    openGraph: {
+      title: `${catName} — ${siteConfig.name}`,
+      description: catDesc || `${catName} news and updates on ${siteConfig.name}.`,
+      url: `${siteConfig.url}/category/${slug}`,
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: brandBannerUrl(),
+          width: 1200,
+          height: 630,
+          alt: `${catName} — ${siteConfig.name}`,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${catName} — ${siteConfig.name}`,
+      description: catDesc || `${catName} news and updates on ${siteConfig.name}.`,
+      images: [brandBannerUrl()],
+      site: siteConfig.twitter,
+    },
   };
 }
 
@@ -101,8 +141,29 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const feat = articles[0];
   const rest = articles.slice(1);
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+  const canonical = `${siteConfig.url}/category/${slug}${sub ? `?sub=${sub}` : ""}`;
+
   return (
     <div className="wrap">
+      {/* CollectionPage, not an article: the only ImageObject on this page is
+          the brand banner, and the story list is a bare URL ItemList. A crawler
+          reading this JSON-LD has no path from a card thumbnail to this URL. */}
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(generateCollectionPageJsonLd({
+            url: canonical,
+            name: `${catFullTitle} — ${siteConfig.name}`,
+            description: catDesc,
+            items: articles.slice(0, 20).map(article => ({
+              url: `${siteConfig.url}/article/${article.slug}`,
+              name: article.title,
+            })),
+          })),
+        }}
+      />
       <section className="cat-hero">
         <span className="kicker">xSypher section</span>
         <h1>{catFullTitle}</h1>
@@ -124,8 +185,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           {feat ? (
             <article className="cat-feat story" style={{ marginBottom: "34px" }} data-reveal>
               <Link href={`/article/${feat.slug}`} className="ph r-219" tabIndex={-1} aria-hidden="true">
+                {/* Archive cards are width-capped well below the article hero
+                    (1400px): a listing renders 20-40 of these, and a full-size
+                    original per card is both slow and a stronger image signal
+                    than the archive deserves. */}
                 <Image
-                  src={getImgSrc(feat.img || "", 1100, 471)}
+                  src={resolveImageSrc(feat.img, IMAGE_WIDTHS.cardHero, 471)}
                   alt={feat.title}
                   fill
                   sizes="(max-width: 1023px) 100vw, 66vw"

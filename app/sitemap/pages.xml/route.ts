@@ -1,6 +1,6 @@
 import { dbRead } from "@/lib/db";
 import { article as articleTable, tag as tagTable, category as categoryTable, author as authorTable } from "@/lib/db/schema";
-import { siteConfig } from "@/lib/seo";
+import { articleFeaturedCrawlerUrl, siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 
@@ -74,7 +74,11 @@ export async function GET(request?: NextRequest) {
       "articles",
       dbRead.query.article.findMany({
         where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
-        columns: { slug: true, updatedAt: true },
+        // `img` feeds the <image:image> extension below. Nothing else on this
+        // page is allowed to emit an image: category, tag and author URLs are
+        // listed without one so Google Images binds each featured image to its
+        // article and to nothing else.
+        columns: { slug: true, title: true, img: true, featuredImageCaption: true, updatedAt: true },
         orderBy: (article, { desc }) => [desc(article.publishedAt)],
         offset,
         limit: SITEMAP_ARTICLE_LIMIT,
@@ -142,10 +146,14 @@ export async function GET(request?: NextRequest) {
             `<url><loc>${siteConfig.url}${item.path}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>${item.changefreq}</changefreq><priority>${item.priority}</priority></url>`,
         )
       : []),
-    ...articleRows.map(
-      (a) =>
-        `<url><loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc><lastmod>${(a.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.8</priority></url>`,
-    ),
+    ...articleRows.map((a) => {
+      const featured = articleFeaturedCrawlerUrl(a);
+      return `<url><loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc><lastmod>${(a.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.8</priority>${
+        featured
+          ? `<image:image><image:loc>${escapeXml(featured)}</image:loc><image:title>${escapeXml(a.title)}</image:title><image:caption>${escapeXml(a.featuredImageCaption?.trim() || a.title)}</image:caption></image:image>`
+          : ""
+      }</url>`;
+    }),
     ...categoryRows.map(
       (c) =>
         `<url><loc>${siteConfig.url}/category/${escapeXml(c.slug)}</loc><lastmod>${latestUpdateIso}</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>`,
@@ -161,7 +169,7 @@ export async function GET(request?: NextRequest) {
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.join("\n")}
 </urlset>`;
 

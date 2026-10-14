@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from "lucide-react";
-import Logo from "@/components/common/Logo";
+import Logo, { LogoIcon } from "@/components/common/Logo";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -224,12 +224,16 @@ export default function LoginPage() {
           }}
         />
         
-        {/* Layer 4: Giant 4-Squares Logo Watermark */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02] mix-blend-screen">
-          <img 
-            src="/logo-4-squares.png" 
-            alt="" 
-            className="w-[90vw] max-w-[900px] h-auto object-contain"
+        {/* Layer 4: Giant brand-mark watermark.
+            Was a bitmap named "logo-4-squares.png" — which turned out to be a
+            screenshot of a browser window rather than the mark, and was the
+            kind of stray asset that ends up indexed. The vector mark below is
+            the same four squares and cross the header renders, so there is one
+            brand graphic in the repository instead of two that disagree. */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] mix-blend-screen">
+          <LogoIcon
+            className="w-[90vw] max-w-[900px] h-auto"
+            style={{ height: "auto" }}
           />
         </div>
       </div>

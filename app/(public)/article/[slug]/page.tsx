@@ -5,12 +5,12 @@ import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
-import { getImgSrc } from "@/lib/utils";
 import { db } from "@/lib/db";
 import { getArticleRecommendations, getBenchmarkLeaderboard, getRecentArticleSlugs } from "@/lib/cached-queries";
 import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
-import { constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
+import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import { getArticleAuthor } from "@/lib/personas";
 import nextDynamic from "next/dynamic";
 import { serializeJsonLd, withEditorialSchema } from "@/lib/article-schema";
@@ -86,7 +86,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   if (article.publishedAt && article.publishedAt > new Date()) return {};
-  
+
   const authorName = getArticleAuthor(article).name;
   const catName = article.category?.parent?.name || article.category?.name || "News";
   const ogParams = new URLSearchParams();
@@ -96,14 +96,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
   const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
 
-  // Prioritize the actual story featured image so shares on WhatsApp, Twitter,
-  // and social platforms show the article's real visual rather than a generic template card.
-  const articleVisual = article.img || article.ogImage;
-  const resolvedImage = articleVisual
-    ? (articleVisual.startsWith("http://") || articleVisual.startsWith("https://")
-        ? articleVisual
-        : `${baseUrl}${articleVisual.startsWith("/") ? "" : "/"}${articleVisual}`)
-    : ogUrl;
+  // The article's own featured image is the ONLY editorial image this route may
+  // present. A stale placeholder resolves to undefined and the generated card
+  // below covers social sharing; the brand banner is never substituted, because
+  // that is what made article pages claim an image that is not theirs.
+  const featuredImage = articleFeaturedImageUrl(article);
+  const resolvedImage = featuredImage || ogUrl;
 
   return constructMetadata({
     // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription
@@ -114,11 +112,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: article.metaTitle || article.seoTitle || article.title,
     description: article.metaDescription || article.seoDesc || article.deck || "",
     image: resolvedImage,
+    // Alt text: the editor's description when set (better for screen readers),
+    // otherwise the exact headline, so the image is unambiguously tied to it.
+    imageAlt: article.featuredImageAlt?.trim() || article.title,
     canonical: article.canonicalUrl || `/article/${article.slug}`,
     type: "article",
     publishedTime: article.publishedAt ? article.publishedAt.toISOString() : article.createdAt.toISOString(),
     modifiedTime: article.updatedAt.toISOString(),
-    authors: [getArticleAuthor(article).name],
+    authors: [authorName],
+    section: catName,
+    tags: article.tags?.map(entry => entry.tag?.name || "").filter(Boolean),
   });
 }
 
@@ -248,8 +251,9 @@ export default async function ArticlePage({ params }: Props) {
                 {catName} {subCat && `/ ${subCat.name}`}
               </Link>
               <h1 className="art-title" itemProp="headline">{article.title}</h1>
+
               <p className="art-deck" itemProp="description">{article.deck}</p>
-              
+
               <div className="py-4 my-6 border-t border-b border-[var(--line)]">
                 <div className="flex items-center gap-3 mb-4"><ArticleByline article={article} size={40} showRole priority={true} /></div>
                 <div className="font-mono text-[11px] text-[var(--muted)] tracking-tight flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -272,19 +276,33 @@ export default async function ArticlePage({ params }: Props) {
                   <span>Comments</span>
                 </a>
               </div>
-              
-              <figure className="art-hero mb-0">
-                <div className="ph r-169 relative w-full overflow-hidden rounded-xl aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
-                  <Image 
-                    src={getImgSrc(article.img || "", 1400, 788)} 
-                    alt={article.featuredImageAlt || article.title}
-                    fill 
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    priority={true} 
+
+              {/* FEATURED (PRIMARY) IMAGE.
+                  Read in order, the header is kicker → headline → deck →
+                  byline and publication details → action bar → photograph:
+                  the whole editorial block is together, and the picture opens
+                  the story instead of standing between the headline and who
+                  wrote it. It closes the <header>, so body copy still starts
+                  below it.
+                  `data-image-role="featured"` is the marker every metadata
+                  builder reads to decide which image this page is allowed to
+                  publish, so that binding survives any further layout change.
+                  `preload` (Next 16's replacement for `priority`) writes the
+                  <link rel="preload"> into <head>; fetchPriority="high" keeps it
+                  ahead of every inline body image in the network queue. */}
+              <figure className="art-hero my-8 overflow-hidden rounded-xl border border-[var(--glass-border)]" data-image-role="featured">
+                <div className="ph r-169 relative w-full aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
+                  <Image
+                    src={resolveImageSrc(article.img, IMAGE_WIDTHS.articleHero, 788)}
+                    alt={article.featuredImageAlt?.trim() || article.title}
+                    fill
+                    sizes="(max-width: 1024px) 100vw, 66vw"
+                    preload
+                    fetchPriority="high"
                     className="object-cover"
                   />
                 </div>
-                <figcaption className="text-xs text-[var(--muted)] mt-3">
+                <figcaption className="text-xs text-[var(--muted)] mt-3 px-4 pb-3">
                   {article.featuredImageCaption || article.title}
                   {article.featuredImageCredit && (
                     <span className="credit block text-[10px] uppercase tracking-wider mt-1">
@@ -293,6 +311,7 @@ export default async function ArticlePage({ params }: Props) {
                   )}
                 </figcaption>
               </figure>
+
             </header>
 
           {/* LEFT SIDEBAR (Socials, 1 col) */}

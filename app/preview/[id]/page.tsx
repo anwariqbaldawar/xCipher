@@ -3,11 +3,11 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
-import { getImgSrc, fmtViews } from "@/lib/utils";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { canEditArticle, canViewReviewQueue } from "@/lib/permissions";
-import { eq, inArray, and, not, notInArray } from "drizzle-orm";
+import { eq, and, not, notInArray } from "drizzle-orm";
 import { article as articleTable, user as userTable } from "@/lib/db/schema";
 import ArticleBody from "@/components/article/ArticleBody";
 import ArticleSidebar from "@/components/article/ArticleSidebar";
@@ -207,10 +207,10 @@ export default async function PreviewPage({ params }: Props) {
               <figure className="art-hero mb-8">
                 <div className="ph r-169 relative w-full overflow-hidden rounded-xl aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
                   <Image 
-                    src={getImgSrc(article.img || "", 1400, 788)} 
+                    src={resolveImageSrc(article.img, IMAGE_WIDTHS.articleHero, 788)} 
                     alt={article.title} 
                     fill 
-                    priority={true} 
+                    preload={true} fetchPriority="high" 
                     className="object-cover"
                   />
                 </div>

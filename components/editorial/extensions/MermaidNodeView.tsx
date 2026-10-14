@@ -1,8 +1,10 @@
-import { NodeViewWrapper } from '@tiptap/react';
+import { NodeViewWrapper, type NodeViewProps } from '@tiptap/react';
 import React, { useEffect, useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { cleanMermaidCode, resolveMermaidCode } from './MermaidBlock';
-import { waitForMermaidFonts } from '@/lib/mermaid-fonts';
+import { getMermaidDirection } from '@/lib/mermaid-direction';
+import { renderMermaidDiagram } from '@/lib/mermaid-render';
+import { useMermaidRenderTrigger } from '@/lib/use-mermaid-render';
 
 /** Decode HTML entities that the sanitizer injects into attribute values. */
 function decodeHtmlEntities(str: string): string {
@@ -12,14 +14,22 @@ function decodeHtmlEntities(str: string): string {
   return el.value;
 }
 
-interface MermaidRenderResult {
+/** What this node view has rendered, keyed by the source and theme it used. */
+interface EditorDiagramState {
   code: string;
   theme: string | undefined;
   svg?: string;
   error?: string;
 }
 
-export const MermaidNodeView = (props: any) => {
+/**
+ * Mermaid diagram inside the editor.
+ *
+ * Renders through the same `lib/mermaid-render.ts` path as the article page, so
+ * the preview the author approves is the diagram the reader gets — same font
+ * size, same node padding, same wrapping width, same measurement waits.
+ */
+export const MermaidNodeView = (props: NodeViewProps) => {
   const { node, updateAttributes, selected } = props;
 
   // Derive from the latest ProseMirror props on every render. Keeping a second
@@ -33,7 +43,7 @@ export const MermaidNodeView = (props: any) => {
 
   const [editValue, setEditValue] = useState<string>(currentCode);
   const [isEditing, setIsEditing] = useState(false);
-  const [renderResult, setRenderResult] = useState<MermaidRenderResult | null>(null);
+  const [renderResult, setRenderResult] = useState<EditorDiagramState | null>(null);
   const [isRendering, setIsRendering] = useState(false);
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,6 +54,9 @@ export const MermaidNodeView = (props: any) => {
   const startXRef = useRef<number>(0);
   const startWidthRef = useRef<number>(0);
   const resizableRef = useRef<HTMLDivElement>(null);
+
+  const direction = getMermaidDirection(currentCode);
+  const renderTrigger = useMermaidRenderTrigger(containerRef, !isEditing);
 
   // Key results by source and theme. A new ProseMirror node value immediately
   // selects the loading state during render; it never briefly falls through to
@@ -93,112 +106,28 @@ export const MermaidNodeView = (props: any) => {
     const isDark = theme === 'dark';
     const codeToRender = currentCode.trim();
 
-    const renderMermaid = async () => {
+    const render = async () => {
       // Delay slightly to let React 18 Strict Mode cancel the first effect run
       // before we fire off parallel mermaid.render calls which can hang the parser.
       await new Promise(r => setTimeout(r, 50));
-      if (cancelled) return;
-
-      if (!codeToRender) return;
+      if (cancelled || !codeToRender) return;
 
       setIsRendering(true);
-      const id = `mermaid-svg-${crypto.randomUUID()}`;
-
       try {
-        await new Promise(r => setTimeout(r, 50));
-        if (cancelled) return;
-
-        const { default: mermaid } = await import('mermaid');
-        if (cancelled) return;
-
-        await waitForMermaidFonts(codeToRender);
-        if (cancelled) return;
-
-        mermaid.initialize({
-          startOnLoad: false,
-          theme: isDark ? 'dark' : 'base',
-          themeVariables: {
-            primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
-            primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',
-            primaryTextColor: isDark ? '#ffffff' : '#111111',
-            lineColor: isDark ? '#e0e0e0' : '#333333',
-            edgeLabelBackground: 'transparent',
-            labelBackground: 'transparent',
-            tertiaryColor: 'transparent',
-          },
-          themeCSS: `
-            .node rect, .node circle, .node ellipse, .node polygon, .node path, .cluster rect {
-              filter: none !important;
-              box-shadow: none !important;
-            }
-            /* Custom prose rules also target paragraphs inside not-prose. */
-            .nodeLabel, .edgeLabel, .nodeLabel p, .edgeLabel p {
-              font-family: var(--f-ui), sans-serif !important;
-              line-height: normal !important;
-              letter-spacing: normal !important;
-              word-break: normal !important;
-              overflow-wrap: normal !important;
-            }
-            .nodeLabel p, .edgeLabel p {
-              margin: 0 !important;
-              /* Inherit Mermaid's nowrap/break-spaces measurement policy. */
-              white-space: inherit !important;
-            }
-            /* Remove box and background completely from edge labels */
-            .edgeLabel,
-            .edgeLabel *,
-            .edgeLabel span,
-            .edgeLabel p,
-            .edgeLabel div,
-            .edgeLabel rect,
-            .label rect,
-            .labelBkg,
-            rect.label-container {
-              background: transparent !important;
-              background-color: transparent !important;
-              fill: transparent !important;
-              border: none !important;
-              box-shadow: none !important;
-              outline: none !important;
-            }
-            /* Edge label text: dark mode white, light mode black */
-            .edgeLabel,
-            .edgeLabel *,
-            .edgeLabel span,
-            .edgeLabel p,
-            .edgeLabel div,
-            .edgeLabel text,
-            .edgeLabel tspan {
-              color: ${isDark ? '#ffffff' : '#111111'} !important;
-              fill: ${isDark ? '#ffffff' : '#111111'} !important;
-              font-weight: 500 !important;
-            }
-            .edgePath path, .flowchart-link {
-              stroke: ${isDark ? '#e0e0e0' : '#333333'} !important;
-            }
-          `,
-          fontFamily: "var(--f-ui), sans-serif",
-          flowchart: {
-            htmlLabels: true,
-            padding: 20,
-          },
+        const { svg, error: renderError } = await renderMermaidDiagram(codeToRender, {
+          isDark,
+          idPrefix: 'mermaid-editor',
+          isCancelled: () => cancelled,
         });
+        if (cancelled) return;
 
-        const { svg } = await mermaid.render(id, codeToRender);
-        if (!cancelled) {
-          setRenderResult({ code: codeToRender, theme, svg });
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          console.error('Mermaid Render Error:', err);
-          setRenderResult({
-            code: codeToRender,
-            theme,
-            error: err?.message || 'Invalid diagram syntax',
-          });
-        }
+        setRenderResult(
+          renderError
+            ? { code: codeToRender, theme, error: renderError }
+            : { code: codeToRender, theme, svg },
+        );
       } finally {
-        setIsRendering(false);
+        if (!cancelled) setIsRendering(false);
       }
     };
 
@@ -206,14 +135,14 @@ export const MermaidNodeView = (props: any) => {
     // or edit commit returns to display mode, render the current source without
     // an extra timeout/requestAnimationFrame delay.
     if (!isEditing && codeToRender) {
-      void renderMermaid();
+      void render();
     }
 
     return () => {
       cancelled = true;
       setIsRendering(false);
     };
-  }, [currentCode, theme, isEditing]);
+  }, [currentCode, theme, isEditing, renderTrigger]);
 
   const handleCommitEdit = () => {
     // Done also blurs the textarea. Commit once so the duplicate blur/click
@@ -239,7 +168,11 @@ export const MermaidNodeView = (props: any) => {
   };
 
   return (
-    <NodeViewWrapper className={`mermaid-node-wrapper mermaid-wrapper not-prose w-full overflow-x-auto relative my-4 rounded p-4 ${selected ? 'outline outline-1 outline-line' : ''}`} contentEditable={false}>
+    <NodeViewWrapper
+      className={`mermaid-node-wrapper mermaid-wrapper not-prose w-full relative my-4 rounded p-4 overflow-visible ${selected ? 'outline outline-1 outline-line' : ''}`}
+      data-direction={direction}
+      contentEditable={false}
+    >
       {isEditing ? (
         <div className="w-full flex flex-col gap-2">
           <textarea
@@ -281,12 +214,12 @@ export const MermaidNodeView = (props: any) => {
           ) : svgContent ? (
             <div
               ref={resizableRef}
-              className="mermaid-wrapper not-prose w-full overflow-x-auto relative mx-auto"
+              className="mermaid-wrapper not-prose w-full relative mx-auto overflow-visible"
               style={{ width: isResizing ? containerWidth : (node.attrs.containerWidth || '100%'), maxWidth: '100%' }}
             >
               <div
                 ref={containerRef}
-                className="mermaid-svg-container not-prose overflow-x-auto w-full flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
+                className="mermaid-svg-container not-prose w-full flex justify-center"
                 style={{ minHeight: '100px' }}
                 dangerouslySetInnerHTML={{ __html: svgContent }}
               />

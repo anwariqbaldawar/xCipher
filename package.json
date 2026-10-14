@@ -71,6 +71,7 @@
     "tailwind-merge": "^3.7.0",
     "tippy.js": "^6.3.7",
     "tiptap-markdown": "^0.9.0",
+    "ws": "^8.22.0",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
   },
@@ -83,6 +84,7 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "@types/trusted-types": "^2.0.7",
+    "@types/ws": "^8.18.2",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.4.0",

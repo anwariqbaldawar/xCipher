@@ -1,5 +1,5 @@
 import { dbRead } from "@/lib/db";
-import { siteConfig } from "@/lib/seo";
+import { articleFeaturedCrawlerUrl, siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
 
@@ -26,15 +26,24 @@ function escapeXml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+type NewsArticleRow = {
+  slug: string;
+  title: string;
+  img: string | null;
+  featuredImageCaption: string | null;
+  publishedAt: Date | null;
+  updatedAt: Date | null;
+};
+
 export async function GET() {
-  let articles: { slug: string; title: string; publishedAt: Date | null; updatedAt: Date | null }[] = [];
+  let articles: NewsArticleRow[] = [];
 
   try {
     articles = await dbRead.query.article.findMany({
       where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"
         AND ${articleTable.publishedAt} IS NOT NULL
         AND ${articleTable.publishedAt} >= NOW() - INTERVAL '48 HOURS'`,
-      columns: { slug: true, title: true, publishedAt: true, updatedAt: true },
+      columns: { slug: true, title: true, img: true, featuredImageCaption: true, publishedAt: true, updatedAt: true },
       orderBy: (article, { desc }) => [desc(article.publishedAt)],
       limit: NEWS_SITEMAP_LIMIT,
     });
@@ -45,7 +54,7 @@ export async function GET() {
     if (!articles.length) {
       articles = await dbRead.query.article.findMany({
         where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
-        columns: { slug: true, title: true, publishedAt: true, updatedAt: true },
+        columns: { slug: true, title: true, img: true, featuredImageCaption: true, publishedAt: true, updatedAt: true },
         orderBy: (article, { desc }) => [desc(article.publishedAt)],
         limit: 10,
       });
@@ -56,9 +65,23 @@ export async function GET() {
 
   const urls = articles.map((a) => {
     const date = (a.publishedAt || a.updatedAt || new Date()).toISOString();
+    const featured = articleFeaturedCrawlerUrl(a);
     return [
       "  <url>",
       `    <loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc>`,
+      // Image extension: one image, the featured one, bound to this article's
+      // canonical URL. Google Images treats this as the authoritative pairing
+      // and stops inferring the association from whichever archive page also
+      // happens to render the same photograph.
+      ...(featured
+        ? [
+            "    <image:image>",
+            `      <image:loc>${escapeXml(featured)}</image:loc>`,
+            `      <image:title>${escapeXml(a.title)}</image:title>`,
+            `      <image:caption>${escapeXml(a.featuredImageCaption?.trim() || a.title)}</image:caption>`,
+            "    </image:image>",
+          ]
+        : []),
       "    <news:news>",
       "      <news:publication>",
       `        <news:name>${PUBLICATION_NAME}</news:name>`,
@@ -72,7 +95,7 @@ export async function GET() {
   });
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
 ${urls.join("\n")}
 </urlset>`;
 

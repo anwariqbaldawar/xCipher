@@ -106,7 +106,9 @@ export function withEditorialSchema(base: Record<string, unknown>, html: string 
     ...base, '@type': 'TechArticle',
     mainEntity: {
       '@type': 'Product', name: verdict.product,
-      ...(base.image ? { image: base.image } : {}),
+      // The article's image is an array of ImageObject once the featured-image
+      // node is present; Product.image accepts a single object or URL.
+      ...(base.image ? { image: Array.isArray(base.image) ? base.image[0] : base.image } : {}),
       ...(benchmarks.length ? { additionalProperty: benchmarks } : {}),
       review: {
         '@type': 'Review', name: base.headline, author: base.author, datePublished: base.datePublished,

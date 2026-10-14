@@ -10,7 +10,7 @@ import { getAuthorArticles } from "@/lib/cached-queries";
 import { publicFeedWhere } from "@/lib/feed";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import { siteConfig } from "@/lib/seo";
-import { generatePersonJsonLd, parseAuthorSocialLinks } from "@/lib/entity-schema";
+import { generatePersonJsonLd, generateProfilePageJsonLd, parseAuthorSocialLinks } from "@/lib/entity-schema";
 import { serializeJsonLd } from "@/lib/article-schema";
 import AuthorProfileView from "@/components/author/AuthorProfileView";
 
@@ -34,14 +34,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   const authorName = author.name || "Author";
   const articles = await getAuthorArticles(author.id, slug);
-  
+
   return {
     title: `${authorName} — ${siteConfig.name}`,
     description: author.overview || author.bio?.slice(0, 160) || `${authorName} on ${siteConfig.name}.`,
     alternates: {
       canonical: `${siteConfig.url}/author/${slug}`,
     },
-    ...(articles.length === 0 && { robots: { index: false, follow: true } }),
+    // Empty profiles stay out of the index; a populated profile is a legitimate
+    // entity page, but its image signal is capped at the avatar so the cards in
+    // its grid cannot be read as this page's photograph (see the ProfilePage
+    // JSON-LD below, which is the authoritative version of that rule).
+    ...(articles.length === 0
+      ? { robots: { index: false, follow: true } }
+      : { robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "none" as const } } }),
     openGraph: {
       title: `${authorName} — ${siteConfig.name}`,
       description: author.overview || author.bio?.slice(0, 160) || "",
@@ -110,6 +116,21 @@ export default async function AuthorProfile({ params }: Props) {
 
   return (
     <>
+    {/* ProfilePage: the author's avatar is the page's primary image. The
+        article list is emitted as a bare URL ItemList (`hasPart`) with no
+        image nodes, so the story thumbnails rendered by the grid below can
+        never be resolved as this profile's image — the exact mis-attribution
+        that put author names on article featured images in Google Images. */}
+    <script
+      type="application/ld+json"
+      nonce={nonce}
+      dangerouslySetInnerHTML={{
+        __html: serializeJsonLd(generateProfilePageJsonLd(author, articles.map(article => ({
+          slug: article.slug,
+          title: article.title,
+        })))),
+      }}
+    />
     <script
       type="application/ld+json"
       nonce={nonce}

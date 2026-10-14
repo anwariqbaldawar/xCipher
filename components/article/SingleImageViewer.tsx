@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Maximize } from "lucide-react";
 import MediaModal, { type MediaSummary } from "./MediaModal";
+import { optimizeImageUrl } from "@/lib/image-url";
+import { isStaleAsset } from "@/lib/stale-assets";
 
 interface SingleImageViewerProps {
   src: string;
@@ -22,6 +24,12 @@ export default function SingleImageViewer({
   height = 675,
 }: SingleImageViewerProps) {
   const [open, setOpen] = useState(false);
+
+  // A body image that is a known-stale placeholder is not rendered at all.
+  // Rendering the neutral cover here instead would put a picture the editor
+  // never chose in the middle of a published story.
+  if (isStaleAsset(src)) return null;
+
   const summary: MediaSummary[] = [
     { label: "Caption", value: caption || "—" },
     { label: "Alt text", value: alt || "—" },
@@ -39,13 +47,19 @@ export default function SingleImageViewer({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={src}
+            // Inline body images are subordinate to the featured image: kept
+            // lazy, width-capped through the R2 transform (a 4000px diagram in
+            // the body would otherwise outweigh the hero), and tagged so the
+            // hierarchy is auditable in the rendered DOM.
+            src={optimizeImageUrl(src, 1200)}
             alt={alt}
             title={caption}
             width={width || 1200}
             height={height || 675}
             loading="lazy"
             decoding="async"
+            fetchPriority="low"
+            data-image-role="inline"
             className="h-auto w-full"
           />
           <span className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-black/65 text-white opacity-100 shadow transition md:opacity-0 md:group-hover:opacity-100">

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getImgSrc, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import RelativeTime from "@/components/common/RelativeTime";
 import { Article, Category } from "@/lib/types";
 import { getReadingTimeMinutes } from "@/lib/reading-time";
@@ -55,11 +56,13 @@ export default function StoryRow({ article: a, showDeck = true }: Props) {
   return (
     <article className="story-row" data-reveal suppressHydrationWarning>
       <Link href={`/article/${a.slug}`} className="ph" tabIndex={-1} aria-hidden="true">
+        {/* 118px-wide column: 300px covers a 2x display without pulling a hero. */}
         <Image 
-          src={getImgSrc(a.img || "", 300, 225)} 
+          src={resolveImageSrc(a.img, IMAGE_WIDTHS.row, 225)} 
           alt={a.title} 
           fill
           sizes="118px"
+          data-image-role="article-card"
           className="object-cover"
         />
       </Link>

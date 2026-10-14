@@ -9,7 +9,10 @@ import { getTagArticles } from "@/lib/cached-queries";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import Sidebar from "@/components/layout/Sidebar";
 import Link from "next/link";
-import { siteConfig } from "@/lib/seo";
+import { brandBannerUrl, siteConfig } from "@/lib/seo";
+import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
+import { serializeJsonLd } from "@/lib/article-schema";
+import { headers } from "next/headers";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -42,17 +45,57 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   }
 
   const pageSuffix = page > 1 ? ` (Page ${page})` : "";
+  const title = `${tag.name} News & Articles${pageSuffix} — ${siteConfig.name}`;
+  const description = tag.description || `Read the latest news and analysis about ${tag.name}.`;
+  const url = `${siteConfig.url}/tag/${tag.slug}`;
+
+  // The thin-content rule is unchanged: a tag with fewer than three stories is
+  // not worth indexing. What is new is everything else — this is an archive of
+  // other people's stories, so it must not present itself as owning their
+  // photographs (the same reason category archives are noindexed).
+  const indexable = count >= 3;
 
   return {
-    title: `${tag.name} News & Articles${pageSuffix} — xSypher`,
-    description: tag.description || `Read the latest news and analysis about ${tag.name}.`,
+    title,
+    description,
     alternates: {
-      canonical: page > 1 ? `${siteConfig.url}/tag/${tag.slug}?page=${page}` : `${siteConfig.url}/tag/${tag.slug}`,
+      canonical: page > 1 ? `${url}?page=${page}` : url,
     },
     robots: {
-      index: count >= 3,
+      index: indexable,
       follow: true,
-    }
+      googleBot: {
+        index: indexable,
+        follow: true,
+        // A thin tag archive is never an image destination.
+        "max-image-preview": indexable ? "standard" : "none",
+      },
+    },
+    // The tag archive's own social card is the brand banner. Without this the
+    // page declared no image at all, which left a card thumbnail free to be
+    // bound to "${tag.name} News & Articles — xSypher" in Google Images.
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: siteConfig.name,
+      images: [
+        {
+          url: brandBannerUrl(),
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [brandBannerUrl()],
+      site: siteConfig.twitter,
+    },
   };
 }
 
@@ -79,8 +122,28 @@ export default async function TagPage({ params, searchParams }: Props) {
   const hasNextPage = skip + limit < totalCount;
   const hasPrevPage = page > 1;
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <div className="wrap">
+      {/* CollectionPage whose only ImageObject is the brand banner and whose
+          ItemList entries are bare article URLs: the tag archive has no
+          structured path from a card thumbnail to this URL. */}
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(generateCollectionPageJsonLd({
+            url: siteConfig.url + "/tag/" + tag.slug,
+            name: `${tag.name} — ${siteConfig.name}`,
+            description: tag.description || `Stories tagged ${tag.name} on ${siteConfig.name}.`,
+            items: articles.slice(0, 20).map(article => ({
+              url: `${siteConfig.url}/article/${article.slug}`,
+              name: article.title,
+            })),
+          })),
+        }}
+      />
       <section className="cat-hero">
         <span className="kicker">Tag</span>
         <h1>{tag.name}</h1>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getImgSrc, timeAgo } from "@/lib/utils";
+import { timeAgo } from "@/lib/utils";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import RelativeTime from "@/components/common/RelativeTime";
 import { Article, Category } from "@/lib/types";
 import { getReadingTimeMinutes } from "@/lib/reading-time";
@@ -55,11 +56,16 @@ export default function StoryCard({ article: a, showDeck = true }: Props) {
   return (
     <article className="story-card" data-reveal suppressHydrationWarning>
       <Link href={`/article/${a.slug}`} className="ph r-32" tabIndex={-1} aria-hidden="true">
+        {/* Archive thumbnail: width-capped at 640 and resolved through the R2
+            transform, so a listing never ships the 1400px article hero. Non-URL
+            values (a missing image, a stale placeholder) land on the neutral
+            cover rather than a broken frame. */}
         <Image 
-          src={getImgSrc(a.img || "", 640, 427)} 
+          src={resolveImageSrc(a.img, IMAGE_WIDTHS.card, 427)} 
           alt={a.title} 
           fill
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          data-image-role="article-card"
           className="object-cover"
         />
       </Link>

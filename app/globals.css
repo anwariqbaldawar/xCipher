@@ -48,10 +48,16 @@
     --ink-panel-line: #2c323a;
     --ink-panel-text: #eceae5;
     --ink-panel-muted: #9aa3ad;
-    /* Glassmorphism tokens (header, mobile article bar, drawer) */
+    /* Glassmorphism tokens (header, mobile article bar, drawer, live search) */
     --glass-bg: rgba(255, 255, 255, 0.75);
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-blur: blur(16px) saturate(180%);
+    /* 1px specular highlight along the top edge of a glass surface, and the
+       ambient pool of shadow beneath it. Both flip per theme: a white inner
+       highlight reads as light catching an edge on the light theme, and as a
+       faint rim on the dark one. */
+    --glass-specular: rgba(255, 255, 255, 0.7);
+    --glass-shadow-strong: rgba(6, 8, 12, 0.42);
     --drawer-bg: rgba(255, 255, 255, 0.75);
     --drawer-border: rgba(0, 0, 0, 0.1);
     --drawer-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -100,6 +106,8 @@
 [data-theme="dark"] {
     --glass-bg: rgba(10, 10, 10, 0.72);
     --glass-border: rgba(255, 255, 255, 0.08);
+    --glass-specular: rgba(255, 255, 255, 0.07);
+    --glass-shadow-strong: rgba(0, 0, 0, 0.85);
     --drawer-bg: rgba(10, 10, 10, 0.65);
     --drawer-border: rgba(255, 255, 255, 0.1);
     --drawer-shadow: 20px 0 50px rgba(0, 0, 0, 0.6);
@@ -1470,13 +1478,34 @@ a.ph:hover img {
     margin-top: 18px
 }
 
-.lead-story h1 {
+/* The lead story is an <h2> on purpose: the homepage's <h1> is the publication
+   itself (.page-h1-sr below), so the page stops asserting that it *is* the lead
+   article. Styled identically to the old h1 so nothing moves visually. */
+.lead-story h1,
+.lead-story h2,
+.lead-story .lead-h2 {
     font-family: var(--f-display);
     font-size: clamp(1.9rem, 3.6vw, 2.9rem);
     font-weight: 700;
     line-height: 1.05;
     letter-spacing: var(--track-display);
     margin: 10px 0 12px
+}
+
+/* Homepage <h1>: present for document structure and for crawlers, off-screen for
+   readers (the masthead already carries the brand). Visually hidden rather than
+   display:none so it is still announced by assistive technology and read by
+   text extraction. */
+.page-h1-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .lead-story .story-deck {
@@ -8038,33 +8067,129 @@ body.is-article .prose pre {
   }
 }
 
-/* Fix Mermaid text clipping & prose conflicts */
-/* The 100% cap is desktop-only; on phones the diagram keeps its natural width inside a scroller. */
-@media (min-width: 640px) {
-    .mermaid-wrapper svg {
-        max-width: 100% !important;
-    }
+/* ═══════════════════════════════════════════════════════════════════════════
+   MERMAID DIAGRAMS — isolation, sizing and mobile hardening
+   ═══════════════════════════════════════════════════════════════════════════
+   Two renderers share these rules: the editor node view
+   (`.mermaid-node-wrapper.mermaid-wrapper`) and the article page
+   (`.mermaid-wrapper[data-direction] .mermaid-svg-container`). Both call
+   `lib/mermaid-render.ts`, so the SVG they insert is produced by the same config
+   and the same measurement waits; everything below exists only so that the page
+   around the SVG cannot change what was measured.
+
+   The three ways that used to happen:
+
+     1. Mobile text inflation. Android Chrome / in-app WebViews autosize text
+        inside a foreignObject after the fact, which makes labels wider than the
+        boxes Mermaid sized for them. `text-size-adjust: 100%` is pinned on every
+        element from the wrapper down to the label.
+     2. The article typography and the A−/A+ reader text scaler
+        (`lib/fontSize.ts` sets `--prose-fs` on <html>, and this file scales
+        `.prose` with it). Diagrams are `not-prose`, and the base font size is
+        restated in px here and inside the SVG's own `themeCSS`, so no inherited
+        size can reach a label.
+     3. `line-height`. Mermaid measures HTML labels with `line-height: 1.5`
+        (hard-coded in its `addHtmlSpan()`); the prose line-height of 1.75 used to
+        bleed in and made every label taller than its box. The lock below uses
+        Mermaid's own 1.5 so measured and painted heights agree exactly.
+
+   Labels get one `width` and no `max-width`/`height`. Mermaid's inline
+   `max-width: <wrappingWidth>px` is what makes a long label wrap at all —
+   overriding it would let the text run to the full width of the (much wider)
+   `foreignObject` and straight out of the shape again. `width: max-content`
+   only replaces Mermaid's shrink-to-fit `display: table-cell` box, so a short
+   label keeps its natural width while a long one is clamped by that max-width
+   and wraps. The same rule lives in `lib/mermaid-config.ts` as `themeCSS` so it
+   is also in force inside the SVG while Mermaid measures.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Font-size isolation (A−/A+ scaler, prose styles, Android inflation) ── */
+
+.mermaid-wrapper,
+.mermaid-svg-container,
+.mermaid-node-wrapper,
+.mermaid-wrapper svg,
+.mermaid-svg-container svg {
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
-.mermaid-wrapper svg {
-    height: auto;
-}
+
 .not-prose.mermaid-wrapper,
-.not-prose.mermaid-svg-container {
-    line-height: normal !important;
+.not-prose.mermaid-svg-container,
+.not-prose.mermaid-node-wrapper {
+    line-height: 1.5 !important;
 }
+
 .mermaid-svg-container svg {
     height: auto;
+    display: block;
+    margin: 0 auto;
+    /* Mermaid draws its viewBox from the measured diagram; a label that ends up
+       one line taller than measured must still be visible instead of being cut
+       off at the SVG boundary. */
+    overflow: visible !important;
 }
-@media (min-width: 640px) {
-    .mermaid-svg-container svg {
-        max-width: 100% !important;
-    }
-}
+
 .mermaid-svg-container foreignObject,
 .mermaid-wrapper foreignObject {
     overflow: visible !important;
 }
-/* Remove background box completely from line edge labels */
+
+@media (min-width: 640px) {
+    .mermaid-wrapper svg,
+    .mermaid-svg-container svg {
+        max-width: 100% !important;
+    }
+}
+
+/* ── Label geometry: wrap inside the box instead of overflowing it ── */
+
+.mermaid-wrapper .nodeLabel,
+.mermaid-wrapper .edgeLabel,
+.mermaid-wrapper .nodeLabel span,
+.mermaid-wrapper .edgeLabel span,
+.mermaid-wrapper .nodeLabel p,
+.mermaid-wrapper .edgeLabel p,
+.mermaid-svg-container .nodeLabel,
+.mermaid-svg-container .edgeLabel,
+.mermaid-svg-container .nodeLabel span,
+.mermaid-svg-container .edgeLabel span,
+.mermaid-svg-container .nodeLabel p,
+.mermaid-svg-container .edgeLabel p {
+    font-family: var(--f-ui), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+    letter-spacing: normal !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    text-align: center !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+.mermaid-wrapper foreignObject > div,
+.mermaid-svg-container foreignObject > div {
+    display: block !important;
+    width: max-content !important;
+    margin: 0 !important;
+    text-align: center !important;
+    line-height: 1.5 !important;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+.mermaid-wrapper .nodeLabel p,
+.mermaid-wrapper .edgeLabel p,
+.mermaid-svg-container .nodeLabel p,
+.mermaid-svg-container .edgeLabel p {
+    margin: 0 !important;
+}
+
+/* ── Edge labels: transparent box, theme-appropriate text ── */
+
 .mermaid-svg-container .edgeLabel,
 .mermaid-svg-container .edgeLabel *,
 .mermaid-svg-container .edgeLabel rect,
@@ -8076,12 +8201,7 @@ body.is-article .prose pre {
 .mermaid-wrapper .edgeLabel rect,
 .mermaid-wrapper .label rect,
 .mermaid-wrapper .labelBkg,
-.mermaid-wrapper rect.label-container,
-.mermaid .edgeLabel,
-.mermaid .edgeLabel *,
-.mermaid .edgeLabel rect,
-.mermaid .label rect,
-.mermaid .labelBkg {
+.mermaid-wrapper rect.label-container {
     background: transparent !important;
     background-color: transparent !important;
     fill: transparent !important;
@@ -8090,7 +8210,6 @@ body.is-article .prose pre {
     outline: none !important;
 }
 
-/* Light mode text: black */
 .mermaid-svg-container .edgeLabel,
 .mermaid-svg-container .edgeLabel *,
 .mermaid-svg-container .edgeLabel text,
@@ -8104,20 +8223,12 @@ body.is-article .prose pre {
 .mermaid-wrapper .edgeLabel tspan,
 .mermaid-wrapper .edgeLabel span,
 .mermaid-wrapper .edgeLabel p,
-.mermaid-wrapper .edgeLabel div,
-.mermaid .edgeLabel,
-.mermaid .edgeLabel *,
-.mermaid .edgeLabel text,
-.mermaid .edgeLabel tspan,
-.mermaid .edgeLabel span,
-.mermaid .edgeLabel p,
-.mermaid .edgeLabel div {
+.mermaid-wrapper .edgeLabel div {
     color: #111111 !important;
     fill: #111111 !important;
     font-weight: 500 !important;
 }
 
-/* Dark mode text: white */
 :root[data-theme="dark"] .mermaid-svg-container .edgeLabel,
 :root[data-theme="dark"] .mermaid-svg-container .edgeLabel *,
 :root[data-theme="dark"] .mermaid-svg-container .edgeLabel text,
@@ -8132,13 +8243,6 @@ body.is-article .prose pre {
 :root[data-theme="dark"] .mermaid-wrapper .edgeLabel span,
 :root[data-theme="dark"] .mermaid-wrapper .edgeLabel p,
 :root[data-theme="dark"] .mermaid-wrapper .edgeLabel div,
-:root[data-theme="dark"] .mermaid .edgeLabel,
-:root[data-theme="dark"] .mermaid .edgeLabel *,
-:root[data-theme="dark"] .mermaid .edgeLabel text,
-:root[data-theme="dark"] .mermaid .edgeLabel tspan,
-:root[data-theme="dark"] .mermaid .edgeLabel span,
-:root[data-theme="dark"] .mermaid .edgeLabel p,
-:root[data-theme="dark"] .mermaid .edgeLabel div,
 .dark .mermaid-svg-container .edgeLabel,
 .dark .mermaid-svg-container .edgeLabel *,
 .dark .mermaid-svg-container .edgeLabel text,
@@ -8152,14 +8256,7 @@ body.is-article .prose pre {
 .dark .mermaid-wrapper .edgeLabel tspan,
 .dark .mermaid-wrapper .edgeLabel span,
 .dark .mermaid-wrapper .edgeLabel p,
-.dark .mermaid-wrapper .edgeLabel div,
-.dark .mermaid .edgeLabel,
-.dark .mermaid .edgeLabel *,
-.dark .mermaid .edgeLabel text,
-.dark .mermaid .edgeLabel tspan,
-.dark .mermaid .edgeLabel span,
-.dark .mermaid .edgeLabel p,
-.dark .mermaid .edgeLabel div {
+.dark .mermaid-wrapper .edgeLabel div {
     color: #ffffff !important;
     fill: #ffffff !important;
 }
@@ -8167,104 +8264,72 @@ body.is-article .prose pre {
 .mermaid-svg-container .edgePath path,
 .mermaid-svg-container .flowchart-link,
 .mermaid-wrapper .edgePath path,
-.mermaid-wrapper .flowchart-link,
-.mermaid .edgePath path,
-.mermaid .flowchart-link {
+.mermaid-wrapper .flowchart-link {
     stroke: var(--ink, #333333) !important;
 }
+
 :root[data-theme="dark"] .mermaid-svg-container .edgePath path,
 :root[data-theme="dark"] .mermaid-svg-container .flowchart-link,
 :root[data-theme="dark"] .mermaid-wrapper .edgePath path,
 :root[data-theme="dark"] .mermaid-wrapper .flowchart-link,
-:root[data-theme="dark"] .mermaid .edgePath path,
-:root[data-theme="dark"] .mermaid .flowchart-link,
 .dark .mermaid-svg-container .edgePath path,
 .dark .mermaid-svg-container .flowchart-link,
 .dark .mermaid-wrapper .edgePath path,
-.dark .mermaid-wrapper .flowchart-link,
-.dark .mermaid .edgePath path,
-.dark .mermaid .flowchart-link {
+.dark .mermaid-wrapper .flowchart-link {
     stroke: #e0e0e0 !important;
 }
-.mermaid-svg-container div,
-.mermaid-wrapper div {
-    font-family: var(--f-ui) !important;
-    line-height: normal !important;
-}
 
-/* Fix Mermaid text vertical alignment and prevent global line-height from breaking nodes */
-.mermaid svg text, 
-[data-mermaid] svg text {
-  line-height: normal !important;
-}
+/* ── Scroll behaviour, per direction ──
+   A top-down graph fits the article column, so nothing scrolls and no diagram
+   is ever scaled down to illegibility. A left-right graph is wide by nature and
+   gets exactly one horizontal scroller with native touch momentum. */
 
-/* Center HTML labels inside Mermaid nodes */
-.mermaid foreignObject div,
-[data-mermaid] foreignObject div {
-  line-height: 1.2 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.mermaid foreignObject .nodeLabel,
-[data-mermaid] foreignObject .nodeLabel {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* Mermaid mobile hardening: stop iOS/Android font inflation inside diagrams and let
-   HTML labels wrap inside their node boxes instead of spilling out. */
 .mermaid-wrapper,
-.mermaid-svg-container,
-.mermaid-wrapper svg,
-.mermaid-svg-container svg,
-.mermaid svg {
-    -webkit-text-size-adjust: 100%;
-    text-size-adjust: 100%;
+.mermaid-node-wrapper {
+    overflow: visible !important;
 }
 
-.mermaid svg {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto;
+.mermaid-wrapper[data-direction="td"] .mermaid-svg-container,
+.mermaid-node-wrapper .mermaid-svg-container {
+    overflow: visible !important;
+    max-height: none !important;
 }
 
-.mermaid foreignObject {
-    overflow: visible;
+.mermaid-wrapper[data-direction="td"] svg {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
 }
 
-/* Scoped to HTML labels (foreignObject) so SVG edge labels keep their own layout. */
-.mermaid foreignObject .nodeLabel,
-.mermaid foreignObject .label,
-[data-mermaid] foreignObject .nodeLabel {
-    white-space: normal !important;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.3 !important;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
+.mermaid-wrapper[data-direction="lr"] .mermaid-svg-container {
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    max-height: none !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
 }
 
 @media (max-width: 639px) {
-    .mermaid-wrapper,
-    .mermaid-svg-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-    }
-    .mermaid-svg-container svg,
-    .mermaid-wrapper svg {
+    .mermaid-wrapper[data-direction="lr"] svg {
+        max-width: none !important;
         min-width: 320px;
+        width: max(var(--mermaid-natural-w, 100%), 320px) !important;
+        height: auto !important;
     }
 }
+
+/* ── Error state (article page) ── */
+
+.mermaid-error {
+    padding: 12px 16px;
+    border: 1px solid var(--line-2, var(--line));
+    border-radius: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+}
+
 
 /* Highlight.js Theme (Atom One Light / Dark) */
 .hljs {
@@ -8359,4 +8424,627 @@ body.is-article .prose pre {
 [data-theme="dark"] .hljs-title.class_,
 [data-theme="dark"] .hljs-class .hljs-title {
   color: #e6c07b;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIVE INSTANT SEARCH — glassmorphism surface
+   ═══════════════════════════════════════════════════════════════════════════
+   The search box and its results dropdown. Built on the existing
+   --glass-* tokens (see the theme blocks at the top of this file) so light and
+   dark keep working from one definition, with two extra tokens for the
+   specular highlight along the top edge (what makes glass read as glass rather
+   than as a translucent grey box) and the ambient shadow beneath it.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.instant-search {
+    position: relative;
+    width: 100%;
+}
+
+/* ── Overlay ───────────────────────────────────────────────────────────── */
+
+.search-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 9vh 16px 16px;
+    background: radial-gradient(120% 90% at 50% -10%, rgba(230, 0, 0, .10), transparent 60%), rgba(6, 7, 10, .52);
+    -webkit-backdrop-filter: blur(10px) saturate(130%);
+    backdrop-filter: blur(10px) saturate(130%);
+    opacity: 0;
+    /* The panel is mounted permanently so the exit transition can play (no
+       unmount to cut it off). `visibility: hidden` is what actually removes it
+       from the tab order and from the accessibility tree while closed — an
+       opacity-0 overlay is invisible but every link inside it is still
+       focusable. The visibility change is delayed by the length of the fade so
+       the closing animation stays on screen. */
+    visibility: hidden;
+    transition: opacity .18s ease, visibility 0s linear .18s;
+}
+
+.search-overlay.is-open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .18s ease, visibility 0s linear 0s;
+}
+
+.search-overlay.is-closing {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* ── Glass panel ───────────────────────────────────────────────────────── */
+
+.search-panel-glass,
+.search-dropdown-glass {
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(26px) saturate(185%);
+    backdrop-filter: blur(26px) saturate(185%);
+    border: 1px solid var(--glass-border);
+    box-shadow:
+        inset 0 1px 0 var(--glass-specular),
+        0 1px 2px rgba(6, 8, 12, .10),
+        0 26px 70px -22px var(--glass-shadow-strong);
+}
+
+.search-panel-glass {
+    width: min(680px, 100%);
+    max-height: 84vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: 18px;
+    overflow: hidden;
+    animation: search-panel-in .24s cubic-bezier(.2, .7, .2, 1);
+}
+
+.search-dropdown-glass {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    right: 0;
+    z-index: 60;
+    border-radius: 16px;
+    overflow: hidden;
+    animation: search-panel-in .18s cubic-bezier(.2, .7, .2, 1);
+}
+
+@keyframes search-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(-8px) scale(.985);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* ── Input row ─────────────────────────────────────────────────────────── */
+
+.search-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    min-height: 64px;
+    border-bottom: 1px solid var(--glass-border);
+    flex: none;
+}
+
+.search-input-row-inline {
+    min-height: 52px;
+    padding: 0 12px;
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    background: var(--glass-bg);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    backdrop-filter: blur(18px) saturate(180%);
+    box-shadow:
+        inset 0 1px 0 var(--glass-specular),
+        0 10px 30px -18px var(--glass-shadow-strong);
+    transition: border-color .16s ease, box-shadow .16s ease;
+}
+
+.search-input-row-inline:focus-within {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--glass-border));
+    box-shadow:
+        inset 0 1px 0 var(--glass-specular),
+        0 0 0 3px var(--accent-soft),
+        0 14px 34px -20px var(--glass-shadow-strong);
+}
+
+.search-input-icon {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    color: var(--muted);
+}
+
+.search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: var(--ink);
+    font-family: var(--f-ui);
+    font-size: 1.02rem;
+    letter-spacing: -.01em;
+    padding: 14px 0;
+}
+
+.search-input::placeholder {
+    color: var(--muted);
+}
+
+/* Safari draws its own clear button inside type=search; we ship our own. */
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.search-input-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: 999px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--glass-border);
+    transition: color .14s ease, background .14s ease, transform .14s ease;
+}
+
+.search-input-clear:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    transform: scale(1.06);
+}
+
+/* The close affordance for touch devices: a phone has no Esc key, and the
+   mobile panel fills the viewport so there is no backdrop strip left to tap.
+   44x44 CSS px is the platform minimum for a tap target, so that is the default
+   — every touch device gets it, including a tablet too wide for the mobile
+   block. A mouse pointer only needs the icon, so it drops to 34px. */
+.search-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    flex: none;
+    margin-left: 4px;
+    border-radius: 999px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid var(--glass-border);
+    transition: color .14s ease, background .14s ease, transform .14s ease;
+}
+
+.search-close:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 12%, transparent);
+}
+
+.search-close:active {
+    transform: scale(.94);
+}
+
+@media (pointer: fine) and (min-width: 641px) {
+    .search-close {
+        width: 34px;
+        height: 34px;
+    }
+}
+
+.search-kbd,
+.search-kbd-sm {
+    font-family: var(--f-mono);
+    font-size: 10px;
+    line-height: 1;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    padding: 5px 7px;
+    flex: none;
+    letter-spacing: .04em;
+}
+
+.search-kbd-sm {
+    padding: 3px 5px;
+    font-size: 9.5px;
+    margin-right: 3px;
+}
+
+.search-spinner {
+    width: 17px;
+    height: 17px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--accent) 25%, transparent);
+    border-top-color: var(--accent);
+    animation: search-spin .7s linear infinite;
+}
+
+@keyframes search-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.search-submit {
+    flex: none;
+}
+
+/* ── Results ───────────────────────────────────────────────────────────── */
+
+.search-results {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    /* Fill whatever height the panel has left. On a phone the panel is the
+       viewport, so this is what makes the empty space below the last result a
+       tappable dismissal target instead of dead panel chrome. */
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.search-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 24px;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px 10px 14px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    color: inherit;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+/* The accent rail that slides in on the active row — the micro-interaction that
+   makes keyboard navigation legible without a heavy selected state. */
+.search-row::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 2px;
+    height: 0;
+    border-radius: 2px;
+    background: var(--accent);
+    transform: translateY(-50%);
+    transition: height .18s cubic-bezier(.2, .7, .2, 1);
+}
+
+.search-row:hover,
+.search-row[data-active="true"] {
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border-color: var(--glass-border);
+}
+
+.search-row[data-active="true"] {
+    transform: translateX(1px);
+}
+
+.search-row[data-active="true"]::before {
+    height: 62%;
+}
+
+.search-row-thumb {
+    width: 72px;
+    height: 54px;
+    object-fit: cover;
+    border-radius: 9px;
+    background: var(--surface-2);
+    border: 1px solid var(--glass-border);
+    flex: none;
+}
+
+.search-row-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.search-row-topline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.search-row-cat {
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+
+.search-row-match {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--f-mono);
+    font-size: 9px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--glass-border);
+    border-radius: 5px;
+    padding: 2px 6px;
+}
+
+.search-row-title {
+    font-family: var(--f-ui);
+    font-size: .95rem;
+    font-weight: 640;
+    line-height: 1.3;
+    letter-spacing: -.012em;
+    color: var(--ink);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.search-row-excerpt {
+    font-size: .78rem;
+    line-height: 1.45;
+    color: var(--muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.search-row-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: .02em;
+    color: var(--muted);
+    margin-top: 1px;
+}
+
+.search-dot {
+    opacity: .55;
+}
+
+.search-row-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    opacity: .45;
+    transition: opacity .15s ease, color .15s ease, transform .15s ease;
+}
+
+.search-row:hover .search-row-action,
+.search-row[data-active="true"] .search-row-action {
+    opacity: 1;
+    color: var(--accent);
+    transform: translateX(1px);
+}
+
+.search-row-skeleton {
+    pointer-events: none;
+    grid-template-columns: 72px minmax(0, 1fr);
+}
+
+.search-row-skeleton .search-row-thumb {
+    height: 54px;
+}
+
+/* The characters the reader actually typed. */
+.search-mark {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-radius: 3px;
+    padding: 0 1px;
+    font-weight: 760;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+
+/* ── Footer, empty and hint states ─────────────────────────────────────── */
+
+.search-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px 4px;
+    margin-top: 4px;
+    border-top: 1px solid var(--glass-border);
+    font-family: var(--f-mono);
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
+
+.search-footer-link {
+    color: var(--accent);
+    text-transform: none;
+    letter-spacing: .01em;
+    font-family: var(--f-ui);
+    font-size: 11.5px;
+    font-weight: 640;
+}
+
+.search-footer-link:hover {
+    text-decoration: underline;
+}
+
+.search-empty,
+.search-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    padding: 30px 22px 26px;
+    color: var(--muted);
+}
+
+.search-empty svg {
+    color: var(--accent);
+}
+
+.search-hint {
+    align-items: flex-start;
+    text-align: left;
+    padding: 18px 16px 14px;
+}
+
+.search-hint-title {
+    font-family: var(--f-ui);
+    font-size: .92rem;
+    font-weight: 660;
+    color: var(--ink);
+    letter-spacing: -.01em;
+}
+
+.search-hint-body {
+    font-size: .8rem;
+    line-height: 1.5;
+    color: var(--muted);
+    max-width: 46ch;
+}
+
+.search-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 6px;
+    justify-content: inherit;
+}
+
+.search-chip {
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .04em;
+    color: var(--ink-2);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    border: 1px solid var(--glass-border);
+    border-radius: 999px;
+    padding: 5px 11px;
+    transition: color .14s ease, border-color .14s ease, transform .14s ease, background .14s ease;
+}
+
+.search-chip:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--glass-border));
+    background: var(--accent-soft);
+    transform: translateY(-1px);
+}
+
+.search-clear {
+    font-family: var(--f-ui);
+    font-size: 11px;
+    color: var(--muted);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    margin-top: 4px;
+}
+
+.search-clear:hover {
+    color: var(--accent);
+}
+
+/* Keyboard legend pinned to the bottom of the ⌘K panel. */
+.search-panel-foot {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 16px;
+    border-top: 1px solid var(--glass-border);
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    flex: none;
+}
+
+@media (max-width: 640px) {
+    .search-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .search-panel-glass {
+        max-height: 100vh;
+        height: 100%;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+    }
+
+    .search-row {
+        grid-template-columns: 62px minmax(0, 1fr);
+        gap: 11px;
+    }
+
+    .search-row-thumb {
+        width: 62px;
+        height: 46px;
+    }
+
+    .search-row-action {
+        display: none;
+    }
+
+    .search-row-excerpt {
+        -webkit-line-clamp: 1;
+    }
+
+    .search-panel-foot {
+        display: none;
+    }
+
+    .search-kbd {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .search-panel-glass,
+    .search-dropdown-glass {
+        animation: none;
+    }
+
+    .search-row,
+    .search-row::before,
+    .search-overlay,
+    .search-close {
+        transition: none;
+    }
+
+    .search-spinner {
+        animation-duration: 1.6s;
+    }
 }

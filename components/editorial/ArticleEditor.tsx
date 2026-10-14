@@ -28,6 +28,7 @@ import tippy from 'tippy.js';
 import { useDraftCache, clearDraftCache } from "@/lib/use-draft-cache";
 import { Loader2, ArrowLeft, Settings, Eye } from "lucide-react";
 import { getAllowedMediaDomains } from "@/lib/sanitize";
+import { isStaleAsset } from "@/lib/stale-assets";
 import SeoPreview from "./SeoPreview";
 import ReviewWorkspace from "./ReviewWorkspace";
 import TableOfContents from "../article/TableOfContents";
@@ -265,6 +266,13 @@ export default function ArticleEditor({
   const handleExternalImage = async (url: string) => {
     if (!url) return;
     const finalUrl = url.trim();
+    // Retired placeholders never render: the article page, the RSS feed and the
+    // structured data all refuse them (lib/stale-assets.ts). Storing one would
+    // silently fall back to the generic cover, so it is refused here instead.
+    if (isStaleAsset(finalUrl)) {
+      showToast("That image is a retired placeholder — pick a real photograph.", "error");
+      return;
+    }
     if (finalUrl.includes("pub-") || finalUrl.includes("xsypher")) {
       setValue("img", finalUrl, { shouldDirty: true });
       return;
@@ -695,7 +703,10 @@ export default function ArticleEditor({
       featured: true,
       status: "DRAFT",
       deck: "Quantum-accelerated neural networks achieve breakthrough benchmarks in preliminary lab evaluations.",
-      img: "https://images.pexels.com/photos/8386440/pexels-photo-8386440.jpeg?auto=compress&cs=tinysrgb&fit=crop&w=1280&h=720",
+      // Left empty on purpose: the dev seeder used to inject a stock Pexels
+      // photo as the featured image, which is how third-party placeholder
+      // artwork ends up attached to a real headline.
+      img: "",
       seoTitle: `${title} | xSypher`,
       seoDesc: "Evaluating quantum-accelerated neural computing benchmarks and architectural implications.",
       tags: "AI, Quantum Computing, Neural Networks",
@@ -1137,6 +1148,9 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
   const currentTagsString = watch("tags") || "";
   const currentTags = typeof currentTagsString === "string" ? currentTagsString.split(",").map(t => t.trim()).filter(Boolean) : (Array.isArray(currentTagsString) ? currentTagsString : []);
   const featuredImageUrl = String(watch("img") || getValues("img") || "").trim();
+  // Legacy rows can still hold one of these; the rail must say so rather
+  // than show a preview of an image that will never be published.
+  const featuredImageIsStale = isStaleAsset(featuredImageUrl);
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); }} onKeyDown={event => {
@@ -1673,6 +1687,22 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
                         />
                       </div>
                     </div>
+                  ) : featuredImageIsStale ? (
+                    <div className="mt-3 rounded-md border border-[var(--bad)]/40 bg-[var(--bad)]/10 p-3 space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[var(--bad)]">Placeholder image blocked</p>
+                      <p className="text-xs text-[var(--ink-2)]">
+                        This URL points at a retired placeholder. The article page, feed and
+                        structured data all refuse to publish it, so the story would fall back to
+                        the generic cover image. Replace it with a real photograph.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setValue("img", "", { shouldDirty: true })}
+                        className="btn-cs ghost !text-[var(--bad)] border-[var(--bad)]/30 hover:bg-[var(--bad)]/10"
+                      >
+                        Clear Image URL
+                      </button>
+                    </div>
                   ) : (
                     <div className="mt-3 group relative aspect-video w-full rounded-md overflow-hidden border border-[var(--line-2)] bg-[var(--surface-3)]">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1885,8 +1915,12 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
                       <span>Category selected</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${featuredImageUrl ? "bg-emerald-500" : "bg-[var(--warn)]"}`} />
-                      <span>Featured thumbnail {featuredImageUrl ? "ready" : "recommended"}</span>
+                      <span className={`w-2 h-2 rounded-full ${featuredImageIsStale ? "bg-[var(--bad)]" : featuredImageUrl ? "bg-emerald-500" : "bg-[var(--warn)]"}`} />
+                      <span>
+                        {featuredImageIsStale
+                          ? "Featured image is a retired placeholder"
+                          : `Featured thumbnail ${featuredImageUrl ? "ready" : "recommended"}`}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${(editor?.storage?.characterCount?.words?.() || 0) >= 30 ? "bg-emerald-500" : "bg-[var(--warn)]"}`} />

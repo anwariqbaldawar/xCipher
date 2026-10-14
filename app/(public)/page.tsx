@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getImgSrc, fmtViews } from "@/lib/utils";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import RelativeTime from "@/components/common/RelativeTime";
 import { getHomeArticles, getHomeHeroArticle, getHomeBriefing, getHomePicks } from "@/lib/cached-queries";
 import StoryCard from "@/components/article/StoryCard";
@@ -11,12 +11,41 @@ import BreakingTicker from "@/components/home/BreakingTicker";
 import EditorialTicker from "@/components/home/EditorialTicker";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import AdUnit from "@/components/common/AdUnit";
-import { siteConfig } from "@/lib/seo";
+import { brandBannerUrl, siteConfig } from "@/lib/seo";
+import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
+import { serializeJsonLd } from "@/lib/article-schema";
+import { headers } from "next/headers";
 import { getReadingTimeMinutes } from "@/lib/reading-time";
 
 export const metadata: Metadata = {
   alternates: {
     canonical: siteConfig.url,
+  },
+  // The homepage's own image is the brand banner — never the lead story's
+  // photograph. Previously the homepage emitted no image at all, which left
+  // Google Images free to bind whatever it found in the markup (a placeholder
+  // truck PNG at one point) to the homepage title.
+  openGraph: {
+    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: brandBannerUrl(),
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} — ${siteConfig.tagline}`,
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${siteConfig.name} — ${siteConfig.tagline}`,
+    description: siteConfig.description,
+    images: [brandBannerUrl()],
+    site: siteConfig.twitter,
   },
 };
 
@@ -134,8 +163,36 @@ export default async function Home() {
   const pickFeat = picks[0];
   const pickGrid = picks.slice(1, 5);
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <>
+      {/* The page's <h1> is the publication itself, not the lead story.
+          A homepage whose only <h1> is an article headline tells Google that
+          this page IS that story, which is one of the reasons a story's
+          featured image could be bound to a non-article URL. The lead story
+          keeps its visual weight as an <h2>. */}
+      <h1 className="page-h1-sr">
+        {siteConfig.name} — {siteConfig.tagline}
+      </h1>
+      {/* CollectionPage with the brand banner as its only image, and the top
+          stories as a bare URL ItemList: the homepage never claims an article's
+          photograph as its own primary image. */}
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(generateCollectionPageJsonLd({
+            url: siteConfig.url,
+            name: `${siteConfig.name} — ${siteConfig.tagline}`,
+            description: siteConfig.description,
+            items: mappedArticles.slice(0, 20).map(article => ({
+              url: `${siteConfig.url}/article/${article.slug}`,
+              name: article.title,
+            })),
+          })),
+        }}
+      />
       {/* Uses the topped-up briefing list rather than the raw placement
           filter: BreakingTicker returns null on an empty array, so keying it
           off placement alone would make the ticker disappear entirely on any
@@ -151,7 +208,7 @@ export default async function Home() {
         <article className="lead-story story">
           <Link href={`/article/${lead.slug}`} className="ph r-169" tabIndex={-1} aria-hidden="true">
               <Image 
-                src={getImgSrc(lead.img || "", 1280, 720)} 
+                src={resolveImageSrc(lead.img, IMAGE_WIDTHS.articleHero, 720)} 
                 alt={lead.alt || lead.title} 
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 900px) 100vw, 66vw"
@@ -162,11 +219,11 @@ export default async function Home() {
           <Link href={`/category/${(lead.category as any)?.parent?.slug || lead.category?.slug || "news"}`} className="kicker">
             {(lead.category as any)?.parent ? `${(lead.category as any).parent.name} / ${lead.category?.name}` : lead.category?.name || "News"}
           </Link>
-          <h1>
+          <h2 className="lead-h2">
             <Link href={`/article/${lead.slug}`}>
               <span className="hlink">{lead.title}</span>
             </Link>
-          </h1>
+          </h2>
           <p className="story-deck">{lead.deck}</p>
           <div className="byline">
             <ArticleByline article={lead} size={56} showRole>
@@ -352,7 +409,7 @@ export default async function Home() {
                 <article className="pick-feat story">
                   <Link href={`/article/${pickFeat.slug}`} className="ph r-169" tabIndex={-1} aria-hidden="true">
                     <Image 
-                      src={getImgSrc(pickFeat.img || "", 900, 506)} 
+                      src={resolveImageSrc(pickFeat.img, IMAGE_WIDTHS.cardHero, 506)} 
                       alt={pickFeat.alt || pickFeat.title} 
                       fill 
                       sizes="(max-width: 1024px) 100vw, 50vw"
@@ -388,7 +445,7 @@ export default async function Home() {
                   <article key={a.id} className="pick-card group">
                     <Link href={`/article/${a.slug}`} className="ph r-169 mb-3 block" tabIndex={-1} aria-hidden="true">
                       <Image 
-                        src={getImgSrc(a.img || "", 600, 338)} 
+                        src={resolveImageSrc(a.img, IMAGE_WIDTHS.card, 338)} 
                         alt={a.title} 
                         fill 
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
@@ -465,7 +522,7 @@ function CatSplit({ cat, articles, reverse = false }: { cat: string, articles: a
           <article className="cat-feat story" data-reveal>
             <Link href={`/article/${feat.slug}`} className="ph r-169" tabIndex={-1} aria-hidden="true">
               <Image 
-                src={getImgSrc(feat.img || "", 960, 540)} 
+                src={resolveImageSrc(feat.img, IMAGE_WIDTHS.cardHero, 540)} 
                 alt={feat.alt || feat.title} 
                 fill 
                 sizes="(max-width: 900px) 100vw, 50vw"

@@ -3,13 +3,56 @@ import { getLatestArticles } from "@/lib/cached-queries";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import { LATEST_ARTICLE_LIMIT } from "@/lib/queries";
 import Sidebar from "@/components/layout/Sidebar";
-import { siteConfig } from "@/lib/seo";
+import { brandBannerUrl, siteConfig } from "@/lib/seo";
+import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
+import { serializeJsonLd } from "@/lib/article-schema";
+import { headers } from "next/headers";
+
+const latestTitle = `Latest — ${siteConfig.name}`;
+const latestDescription = "Every xSypher story, newest first — reporting, analysis, reviews and guides as they publish.";
 
 export const metadata: Metadata = {
-  title: "Latest Technology News — xSypher",
-  description: "Every xSypher story, newest first — reporting, analysis, reviews and guides as they publish.",
+  title: latestTitle,
+  description: latestDescription,
   alternates: {
     canonical: `${siteConfig.url}/latest`,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // /latest is a complete duplicate of the published article set, so it is
+      // never allowed to represent itself with a photograph. Without this the
+      // feed's card thumbnails were eligible to be bound to "Latest — xSypher"
+      // in Google Images, which is the same hijack the category archives had.
+      "max-image-preview": "none",
+    },
+  },
+  // The feed page's own social card is the brand banner — it never borrows a
+  // story's featured image.
+  openGraph: {
+    title: latestTitle,
+    description: latestDescription,
+    url: `${siteConfig.url}/latest`,
+    siteName: siteConfig.name,
+    images: [
+      {
+        url: brandBannerUrl(),
+        width: 1200,
+        height: 630,
+        alt: latestTitle,
+      },
+    ],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: latestTitle,
+    description: latestDescription,
+    images: [brandBannerUrl()],
+    site: siteConfig.twitter,
   },
 };
 
@@ -48,8 +91,28 @@ export default async function LatestPage() {
   // correct for day-granularity headings.
   const renderedAt = currentTimestamp();
 
+  const nonce = (await headers()).get("x-csp-nonce") || undefined;
+
   return (
     <div className="wrap">
+      {/* CollectionPage with a bare-URL ItemList: the first image a crawler can
+          reach from this page's structured data is the brand banner, never a
+          story's own photograph. */}
+      <script
+        type="application/ld+json"
+        nonce={nonce}
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd(generateCollectionPageJsonLd({
+            url: `${siteConfig.url}/latest`,
+            name: latestTitle,
+            description: latestDescription,
+            items: articles.slice(0, 20).map(article => ({
+              url: `${siteConfig.url}/article/${article.slug}`,
+              name: article.title,
+            })),
+          })),
+        }}
+      />
       <section className="cat-hero" style={{ marginBottom: 0 }}>
         <span className="kicker">The wire</span>
         <h1>Latest</h1>

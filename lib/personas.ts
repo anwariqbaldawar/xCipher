@@ -42,7 +42,14 @@ export function getPersonaForCategory(slug?: string | null, parentSlug?: string 
 
 export interface ArticleAuthorSource {
   isAnonymous?: boolean;
-  category?: { slug?: string | null; parent?: { slug?: string | null } | null } | null;
+  // `name`/`id` are optional here so structured-data builders can read the
+  // section a story belongs to without widening the call sites themselves.
+  category?: {
+    id?: string | null;
+    slug?: string | null;
+    name?: string | null;
+    parent?: { id?: string | null; slug?: string | null; name?: string | null } | null;
+  } | null;
   cat?: string;
   author?: string | null;
   authorId?: string | null;

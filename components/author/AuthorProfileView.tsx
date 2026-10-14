@@ -6,6 +6,7 @@ import CopyPgpButton from "./CopyPgpButton";
 import StoryCard from "@/components/article/StoryCard";
 import Sidebar from "@/components/layout/Sidebar";
 import { fmtViews } from "@/lib/utils";
+import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import { sanitizeBioHtml } from "@/lib/sanitize";
 import CodeBlockEnhancer from "@/components/article/CodeBlockEnhancer";
 
@@ -54,7 +55,16 @@ export default function AuthorProfileView({ author, articles, socials, totalView
         <div className="wrap ap-hero-inner flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-6 md:gap-8">
           <div className="ap-avatar-wrap shrink-0">
             {author.avatar ? (
-              <Image src={author.avatar} alt={author.name || "Author"} width={130} height={130} sizes="(min-width: 700px) 130px, 110px" className="ap-avatar" />
+              // The one image on this page that belongs to the profile itself.
+              <Image
+                src={resolveImageSrc(author.avatar, IMAGE_WIDTHS.cardHero, IMAGE_WIDTHS.cardHero, "/icon.svg")}
+                alt={author.name || "Author"}
+                width={130}
+                height={130}
+                sizes="(min-width: 700px) 130px, 110px"
+                data-image-role="author-avatar"
+                className="ap-avatar"
+              />
             ) : (
               <div className="ap-avatar ap-avatar-initial">
                 {(author.name || "A").charAt(0).toUpperCase()}
@@ -212,7 +222,18 @@ export default function AuthorProfileView({ author, articles, socials, totalView
                   <article className="ap-article-featured">
                     {articles[0].img && (
                       <Link href={`/article/${articles[0].slug}`} className="ap-featured-img-wrap" tabIndex={-1} aria-hidden="true">
-                        <img src={articles[0].img} alt={articles[0].title} loading="lazy" decoding="async" className="ap-featured-img" />
+                        {/* data-image-role marks this as a card thumbnail, not the
+                            profile's picture: the ProfilePage JSON-LD lists only
+                            the avatar, and the card is served at a reduced width. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={resolveImageSrc(articles[0].img, IMAGE_WIDTHS.cardHero)}
+                          alt={articles[0].title}
+                          loading="lazy"
+                          decoding="async"
+                          data-image-role="article-card"
+                          className="ap-featured-img"
+                        />
                         <div className="ap-featured-img-overlay" />
                       </Link>
                     )}

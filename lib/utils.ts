@@ -1,10 +1,22 @@
-import { Article } from "./mockData";
 
 const PNGS = new Set([17483873]);
 
+/**
+ * Expand a bare Pexels photo id into its CDN URL.
+ *
+ * This is the pre-R2 storage format: rows written before images moved to
+ * Cloudflare R2 hold a photo id rather than a URL. Nothing creates one any
+ * more (the editor stores R2 URLs), and `scripts/purge-stale-assets.ts` lists
+ * whatever is left, but the expansion is kept so a legacy row keeps rendering
+ * its own featured image instead of silently becoming a blank card.
+ *
+ * Non-numeric input returns an empty string rather than a `…NaN.jpeg` URL,
+ * which is what the previous implementation produced for any stray string.
+ */
 export function getImgSrc(imgId: number | string, w: number = 1200, h: number = 800) {
   if (typeof imgId === 'string' && imgId.startsWith('http')) return imgId;
   const numId = Number(imgId);
+  if (!Number.isFinite(numId) || numId <= 0) return "";
   const e = PNGS.has(numId) ? "png" : "jpeg";
   return `https://images.pexels.com/photos/${numId}/pexels-photo-${numId}.${e}?auto=compress&cs=tinysrgb&fit=crop&w=${w}&h=${h}`;
 }
