@@ -38,6 +38,8 @@ const HIDE_ROW3_Y = 160; // scrolling down, past this -> Row 3 collapses
 const REVEAL_ROW3_DELTA = 8; // scrolling up, accumulated px -> Row 3 returns
 const REVEAL_ROW2_DELTA = 35; // scrolling up, accumulated px -> Row 2 returns
 const RESET_Y = 20; // at/above this offset every row is visible again
+const LISTING_RESET_Y = 15; // non-article pages: Row 1 returns at/above this offset
+const LISTING_DELTA = 4; // non-article pages: per-frame px needed to toggle Row 1
 
 export default function SiteHeader() {
   const pathname = usePathname() || "";
@@ -110,7 +112,7 @@ export default function SiteHeader() {
     // the progressive header is active on article pages.
     const root = document.documentElement;
     const previousAnchor = root.style.overflowAnchor;
-    if (isArticlePage) root.style.overflowAnchor = "none";
+    root.style.overflowAnchor = "none";
 
     // Only the article reading view uses progressive hide; other pages keep all rows.
     const applyRows = (next: HiddenRows) => {
@@ -133,7 +135,16 @@ export default function SiteHeader() {
       else if (y < 20) document.body.classList.remove("scrolled");
 
       if (!isArticlePage) {
-        applyRows(NO_HIDDEN_ROWS);
+        // Home / category / other routes: only the utility bar (Row 1) toggles.
+        // Rows 2 and 3 stay sticky and visible at all times.
+        setHiddenRows((prev) => {
+          let row1 = prev.row1;
+          if (y <= LISTING_RESET_Y) row1 = false;
+          else if (diff > LISTING_DELTA) row1 = true;
+          else if (diff < -LISTING_DELTA) row1 = false;
+          const next: HiddenRows = { row1, row2: false, row3: false };
+          return next.row1 === prev.row1 && !prev.row2 && !prev.row3 ? prev : next;
+        });
         return;
       }
 
@@ -222,6 +233,7 @@ export default function SiteHeader() {
           (never display:none or unmount) and the whole header stays sticky at top-0. */}
       <header
         className="site-head sticky top-0 z-40"
+        data-article={isArticlePage ? "true" : "false"}
       >
         {/* Row 1: Top utility bar (date, quick links, theme toggle) */}
         <div className={`hdr-row hdr-row-1 ${hiddenRows.row1 ? "is-collapsed" : ""}`}>
