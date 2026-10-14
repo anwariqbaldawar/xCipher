@@ -52,8 +52,6 @@
     --glass-bg: rgba(255, 255, 255, 0.75);
     --glass-border: rgba(0, 0, 0, 0.1);
     --glass-blur: blur(16px) saturate(180%);
-    --glass-dark-bg: rgba(10, 10, 10, 0.72);
-    --glass-dark-border: rgba(255, 255, 255, 0.08);
     --drawer-bg: rgba(255, 255, 255, 0.75);
     --drawer-border: rgba(0, 0, 0, 0.1);
     --drawer-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -4459,13 +4457,39 @@ select.ed-input {
 }
 #toast.info .toast-icon svg { color: var(--accent); }
 
+/* Footer is an always-dark signature surface in both themes: solid obsidian, no glass.
+   Its own text colours are fixed, so nothing inside inherits the light-mode ink. */
 .site-foot {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     margin-top: var(--sp-8);
-    background: var(--glass-dark-bg);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur);
-    border-top: 1px solid var(--glass-dark-border);
-    color: var(--ink-panel-text)
+    background: #08080a;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d4d4d4;
+    color-scheme: dark
+}
+
+/* Edge-only architectural grid: visible at the outer edges and corners, faded out
+   through the middle where the logo, description and link columns sit. */
+.site-foot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 36px 36px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, transparent 35%, #000 100%);
+    mask-image: radial-gradient(ellipse 70% 65% at 50% 50%, transparent 35%, #000 100%)
+}
+
+/* Footer content sits above the decorative layers. */
+.site-foot > .wrap {
+    position: relative;
+    z-index: 1
 }
 
 .foot-grid {
@@ -4491,7 +4515,7 @@ select.ed-input {
 .foot-grid a {
     display: block;
     font: 500 13.5px/24px var(--f-ui);
-    color: var(--ink-2);
+    color: #a3a3a3;
     padding: 10px 0;
     transition: color .2s
 }

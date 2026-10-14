@@ -4,7 +4,14 @@ import Logo from "@/components/common/Logo";
 
 export default function SiteFooter() {
   return (
-    <footer className="site-foot">
+    <footer className="site-foot relative overflow-hidden border-t border-white/10 text-neutral-300">
+      {/* Decorative layers: non-interactive, hidden from assistive tech. The grid is a
+          CSS layer on .site-foot::before; the corner glows and accent line are below. */}
+      <div aria-hidden className="pointer-events-none select-none absolute inset-0 z-0 overflow-hidden">
+        <div className="absolute -bottom-28 -left-28 w-[420px] h-[420px] rounded-full bg-red-600/15 blur-[110px]" />
+        <div className="absolute -bottom-28 -right-28 w-[420px] h-[420px] rounded-full bg-red-600/12 blur-[110px]" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-red-500/30 via-white/5 to-red-500/30" />
+      </div>
       <div className="wrap">
         <AdUnit location="footer" size="728 × 90" slotClass="ad-leaderboard" style={{ paddingTop: "34px" }} />
         <div className="foot-grid">
