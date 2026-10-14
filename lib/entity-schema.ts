@@ -41,6 +41,7 @@ export function generateOrganizationJsonLd() {
     sameAs: [
       `https://x.com/${siteConfig.twitter.replace(/^@/, "")}`,
       "https://github.com/anwariqbaldawar",
+      "https://www.linkedin.com/company/xsypher/",
     ],
   };
 }
