@@ -2,6 +2,17 @@ import Link from "next/link";
 import { Terminal, Search, ArrowRight } from "lucide-react";
 import ScrollReveal from "@/components/common/ScrollReveal";
 
+// The 404 document for everything inside the public group — including a
+// deleted article slug, which is the response crawlers see when a ghost test
+// record finally goes away. Without metadata of its own this boundary
+// inherited the root layout's homepage title, so a dead URL previewed as the
+// homepage and could be mistaken for a soft 404 instead of a real one.
+export const metadata = {
+  title: "Page not found — xSypher",
+  description: "The requested page could not be found on xSypher.",
+  robots: { index: false, follow: true },
+};
+
 export default function GlobalNotFound() {
   return (
     <>

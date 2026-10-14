@@ -22,7 +22,13 @@ import {
 } from "@/lib/notifications";
 import { revalidatePath, revalidateTag } from "@/lib/revalidate";
 import { CACHE_TAGS, articleTag, articleMutationTags } from "@/lib/cache-tags";
-import { deleteFileFromR2, deleteKeyFromR2, fetchFromR2, getR2Config } from "@/lib/storage";
+import { fetchFromR2 } from "@/lib/storage";
+import {
+  purgeArticleAssets,
+  revalidateArticleDeletion,
+  notifyIndexingOfDeletion,
+  type DeletableArticle,
+} from "@/lib/article-deletion";
 import { enqueueGoogleIndexing } from "@/lib/google-indexing";
 import { ArticleStatus, Role } from "@/lib/types";
 
@@ -48,9 +54,64 @@ async function getArticle(id: string) {
       deck: true,
       contentUrl: true,
       img: true,
+      ogImage: true,
+      publishedAt: true,
     },
-    with: { category: { columns: { slug: true } }, authorModel: { columns: { slug: true } } }
+    with: {
+      category: { columns: { slug: true } },
+      authorModel: { columns: { slug: true } },
+      // Needed by the delete paths: a tag page keeps showing a deleted article
+      // until its own cache tag is invalidated.
+      tags: { with: { tag: { columns: { slug: true } } } },
+    }
   });
+}
+
+type ArticleRow = NonNullable<Awaited<ReturnType<typeof getArticle>>>;
+
+/**
+ * The fields the deletion helpers read, as a structural subset.
+ *
+ * Declared loosely on purpose: `getArticle` returns the full admin row while
+ * the bulk path selects only what it needs, and both must hand over the same
+ * set — a narrower parameter would force one of them to over-select, which is
+ * how a mapping like this drifts and starts skipping an asset.
+ */
+export interface DeletableArticleSource {
+  id: string;
+  slug: string;
+  title?: string | null;
+  img?: string | null;
+  ogImage?: string | null;
+  contentUrl?: string | null;
+  publishedAt?: Date | null;
+  category?: { slug?: string | null } | null;
+  authorModel?: { slug?: string | null } | null;
+  tags?: { tag?: { slug?: string | null } | null }[] | null;
+}
+
+/**
+ * The shape the deletion helpers need.
+ *
+ * Kept as one mapping so the three delete paths (permanent, own draft, bulk)
+ * cannot pass a different subset of fields and silently skip an asset — the
+ * failure mode being an orphaned file nobody notices for a year.
+ */
+function asDeletable(articleData: ArticleRow | DeletableArticleSource): DeletableArticle {
+  return {
+    id: articleData.id,
+    slug: articleData.slug,
+    title: articleData.title,
+    img: articleData.img,
+    ogImage: articleData.ogImage,
+    contentUrl: articleData.contentUrl,
+    publishedAt: articleData.publishedAt,
+    category: articleData.category,
+    authorModel: articleData.authorModel,
+    tagSlugs: (articleData.tags ?? [])
+      .map((entry) => entry.tag?.slug)
+      .filter((slug): slug is string => Boolean(slug)),
+  };
 }
 
 async function checkSelfReviewGuard(articleData: any, actor: any) {
@@ -706,65 +767,50 @@ export async function deleteArticlePermanently(id: string): Promise<ActionRespon
   }
 
   try {
-    if (articleData.img) await deleteFileFromR2(articleData.img);
-    if (articleData.contentUrl) {
-      try {
-        const payload = await fetchFromR2(articleData.contentUrl);
-        if (payload) {
-          const config = getR2Config();
-          if (!("error" in config)) {
-            const publicBase = config.publicBase;
-            const imageUrls = new Set<string>();
-            
-            if (payload.json) {
-              const str = JSON.stringify(payload.json);
-              const regex = /"src":\s*"([^"]+)"/g;
-              let match;
-              while ((match = regex.exec(str)) !== null) {
-                if (match[1].startsWith(publicBase)) imageUrls.add(match[1]);
-              }
-            }
-            if (payload.html) {
-              const regex = /src=["']([^"']+)["']/g;
-              let match;
-              while ((match = regex.exec(payload.html)) !== null) {
-                if (match[1].startsWith(publicBase)) imageUrls.add(match[1]);
-              }
-            }
-
-            for (const url of imageUrls) {
-              await deleteFileFromR2(url);
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Failed deep R2 deletion for permanent delete:", e);
-      }
-      await deleteKeyFromR2(articleData.contentUrl);
+    // 1. Storage first, while the row still holds every reference (content
+    //    blob, featured image, social image, inline media). A failure here is
+    //    reported, not swallowed: the row is still going away, and the sweep
+    //    script can find whatever is left by listing the bucket.
+    const target = asDeletable(articleData);
+    const assets = await purgeArticleAssets(target);
+    if (assets.failed.length) {
+      console.error(
+        `[workflow] deleteArticlePermanently: ${assets.failed.length} R2 object(s) could not be deleted for ${articleData.slug}:`,
+        assets.failed,
+      );
     }
 
-    
-            await db.insert(auditLog).values({
-              id: crypto.randomUUID(),
-              userId: actor.id,
-              action: "DELETE_ARTICLE_PERMANENTLY",
-              entityType: "Article",
-              entityId: id,
-              details: { title: articleData.title, slug: articleData.slug, authorId: articleData.authorId, status: articleData.status }
-            });
-            
-            await db.delete(articleReview).where(eq(articleReview.articleId, id));
-            await db.delete(articleRevision).where(eq(articleRevision.articleId, id));
-            await db.delete(comment).where(eq(comment.articleSlug, articleData.slug));
-            
-            await db.delete(article).where(eq(article.id, id));
-          
+    // 2. Database. Relations cascade (tags, comments, reviews, revisions), but
+    //    comments are also keyed by slug for legacy rows, so they are cleared
+    //    explicitly as well.
+    await db.insert(auditLog).values({
+      id: crypto.randomUUID(),
+      userId: actor.id,
+      action: "DELETE_ARTICLE_PERMANENTLY",
+      entityType: "Article",
+      entityId: id,
+      details: {
+        title: articleData.title,
+        slug: articleData.slug,
+        authorId: articleData.authorId,
+        status: articleData.status,
+        r2KeysRequested: assets.keys.length,
+        r2KeysDeleted: assets.deleted.length,
+      }
+    });
 
-    await enqueueGoogleIndexing(articleData.slug, "URL_DELETED");
+    await db.delete(articleReview).where(eq(articleReview.articleId, id));
+    await db.delete(articleRevision).where(eq(articleRevision.articleId, id));
+    await db.delete(comment).where(eq(comment.articleSlug, articleData.slug));
+
+    await db.delete(article).where(eq(article.id, id));
+
+    // 3. Caches and 4. the index, in that order: the URL must be a 404 for the
+    //    next crawler that asks before we tell Google it is gone.
+    await revalidateArticleDeletion(target);
+    await notifyIndexingOfDeletion(target);
+
     revalidatePath(`/admin/articles`);
-    revalidatePath(`/article/${articleData.slug}`);
-    revalidatePath(`/`);
-    revalidatePath(`/sitemap.xml`);
     return { ok: true };
   } catch (e: any) {
     return { ok: false, code: "SERVER", message: e.message };
@@ -795,62 +841,43 @@ export async function deleteOwnDraft(id: string): Promise<ActionResponse> {
   }
 
   try {
-    if (articleData.img) await deleteFileFromR2(articleData.img);
-    if (articleData.contentUrl) {
-      try {
-        const payload = await fetchFromR2(articleData.contentUrl);
-        if (payload) {
-          const config = getR2Config();
-          if (!("error" in config)) {
-            const publicBase = config.publicBase;
-            const imageUrls = new Set<string>();
-            
-            if (payload.json) {
-              const str = JSON.stringify(payload.json);
-              const regex = /"src":\s*"([^"]+)"/g;
-              let match;
-              while ((match = regex.exec(str)) !== null) {
-                if (match[1].startsWith(publicBase)) imageUrls.add(match[1]);
-              }
-            }
-            if (payload.html) {
-              const regex = /src=["']([^"']+)["']/g;
-              let match;
-              while ((match = regex.exec(payload.html)) !== null) {
-                if (match[1].startsWith(publicBase)) imageUrls.add(match[1]);
-              }
-            }
-
-            for (const url of imageUrls) {
-              await deleteFileFromR2(url);
-            }
-          }
-        }
-      } catch (e) {
-        console.error("Failed deep R2 deletion for own draft:", e);
-      }
-      await deleteKeyFromR2(articleData.contentUrl);
+    const target = asDeletable(articleData);
+    const assets = await purgeArticleAssets(target);
+    if (assets.failed.length) {
+      console.error(
+        `[workflow] deleteOwnDraft: ${assets.failed.length} R2 object(s) could not be deleted for ${articleData.slug}:`,
+        assets.failed,
+      );
     }
 
-    
-            await db.delete(articleReview).where(eq(articleReview.articleId, id));
-            await db.delete(articleRevision).where(eq(articleRevision.articleId, id));
-            await db.delete(article).where(eq(article.id, id));
-            
-            await db.insert(auditLog).values({
-              id: crypto.randomUUID(),
-              userId: actor.id,
-              action: "DELETE_OWN_DRAFT",
-              entityType: "Article",
-              entityId: id,
-              details: { title: articleData.title }
-            });
-          
+    await db.delete(articleReview).where(eq(articleReview.articleId, id));
+    await db.delete(articleRevision).where(eq(articleRevision.articleId, id));
+    // Keyed by slug for legacy rows, so this cannot rely on the articleId
+    // cascade alone — the previous version left a deleted draft's comments
+    // behind, and they reappeared the moment a new article reused the slug.
+    await db.delete(comment).where(eq(comment.articleSlug, articleData.slug));
+    await db.delete(article).where(eq(article.id, id));
+
+    await db.insert(auditLog).values({
+      id: crypto.randomUUID(),
+      userId: actor.id,
+      action: "DELETE_OWN_DRAFT",
+      entityType: "Article",
+      entityId: id,
+      details: {
+        title: articleData.title,
+        r2KeysRequested: assets.keys.length,
+        r2KeysDeleted: assets.deleted.length,
+      }
+    });
+
+    // A draft that was never live has nothing cached and nothing indexed;
+    // `revalidateArticleDeletion` still runs because a slug can have been
+    // published once, unpublished back to DRAFT, and deleted from there.
+    await revalidateArticleDeletion(target);
+    await notifyIndexingOfDeletion(target);
 
     revalidatePath(`/admin/articles`);
-    revalidatePath(`/article/${articleData.slug}`);
-    revalidatePath(`/`);
-    revalidatePath(`/sitemap.xml`);
     return { ok: true };
   } catch (e: any) {
     return { ok: false, code: "SERVER", message: e.message };
@@ -1202,27 +1229,70 @@ export async function bulkDelete(ids: string[]): Promise<BulkResponse> {
   const deletableSlugs = deletable.map((a) => a.slug);
 
   try {
-    
-            const auditPayload = deletable.map((a) => ({
-              id: crypto.randomUUID(),
-              userId: actor.id,
-              action: "BULK_DELETE_ARTICLE",
-              entityType: "Article",
-              entityId: a.id,
-              details: { title: a.title, slug: a.slug, status: a.status, authorId: a.authorId },
-            }));
-            if (auditPayload.length > 0) {
-              await db.insert(auditLog).values(auditPayload);
-            }
-            if (deletableIds.length > 0) {
-              await db.delete(articleReview).where(inArray(articleReview.articleId, deletableIds));
-              await db.delete(articleRevision).where(inArray(articleRevision.articleId, deletableIds));
-              await db.delete(article).where(inArray(article.id, deletableIds));
-            }
-            if (deletableSlugs.length > 0) {
-              await db.delete(comment).where(inArray(comment.articleSlug, deletableSlugs));
-            }
-          
+    // Storage first, exactly as the single-article paths do, and while the rows
+    // still hold their references. This was missing entirely: bulk-deleting a
+    // hundred archived test posts left a hundred content blobs and every one of
+    // their images in the bucket, which is the orphan class the sweep script
+    // then has to find by listing.
+    const fullRows = await db.query.article.findMany({
+      where: inArray(article.id, deletableIds),
+      columns: {
+        id: true,
+        slug: true,
+        title: true,
+        img: true,
+        ogImage: true,
+        contentUrl: true,
+        publishedAt: true,
+      },
+      with: {
+        category: { columns: { slug: true } },
+        authorModel: { columns: { slug: true } },
+        tags: { with: { tag: { columns: { slug: true } } } },
+      },
+    });
+    const targets = fullRows.map(asDeletable);
+
+    // Small concurrency window: each purge reads a content payload and issues a
+    // batch delete, and a hundred of those at once would exhaust the pool.
+    const PURGE_CONCURRENCY = 5;
+    for (let i = 0; i < targets.length; i += PURGE_CONCURRENCY) {
+      const slice = targets.slice(i, i + PURGE_CONCURRENCY);
+      const reports = await Promise.all(slice.map((target) => purgeArticleAssets(target)));
+      const failed = reports.flatMap((report) => report.failed);
+      if (failed.length) {
+        console.error(`[workflow] bulkDelete: ${failed.length} R2 object(s) could not be deleted:`, failed);
+      }
+    }
+
+    const auditPayload = deletable.map((a) => ({
+      id: crypto.randomUUID(),
+      userId: actor.id,
+      action: "BULK_DELETE_ARTICLE",
+      entityType: "Article",
+      entityId: a.id,
+      details: { title: a.title, slug: a.slug, status: a.status, authorId: a.authorId },
+    }));
+    if (auditPayload.length > 0) {
+      await db.insert(auditLog).values(auditPayload);
+    }
+    if (deletableIds.length > 0) {
+      await db.delete(articleReview).where(inArray(articleReview.articleId, deletableIds));
+      await db.delete(articleRevision).where(inArray(articleRevision.articleId, deletableIds));
+      await db.delete(article).where(inArray(article.id, deletableIds));
+    }
+    if (deletableSlugs.length > 0) {
+      await db.delete(comment).where(inArray(comment.articleSlug, deletableSlugs));
+    }
+
+    // An archived article that was once live can still be in a listing, a tag
+    // page or the sitemap; a draft that was never published has no public trace
+    // and is skipped rather than revalidating routes nothing changed.
+    for (const target of targets) {
+      if (!target.publishedAt) continue;
+      await revalidateArticleDeletion(target);
+      await notifyIndexingOfDeletion(target);
+    }
 
     for (const a of deletable) {
       outcomes.push({ id: a.id, title: a.title, ok: true });
@@ -1241,8 +1311,9 @@ export async function bulkDelete(ids: string[]): Promise<BulkResponse> {
   }
 
   revalidatePath("/admin/articles");
-  // Neither drafts nor archived articles are on the public site, so the reader
-  // -facing cache is untouched. Only the console listing changes.
+  // Public caches are handled per article above: a row that was never published
+  // has no public surface to clear, and revalidating every listing for a
+  // hundred drafts would throw away a warm cache for nothing.
 
   const succeeded = outcomes.filter((o) => o.ok).length;
   return {

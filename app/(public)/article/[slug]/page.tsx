@@ -81,11 +81,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!article) {
     const historicalArticle = await getHistoricalArticleBySlug(slug);
-    if (historicalArticle) return {};
-    return {};
+    // A renamed article still resolves — the page below redirects to the
+    // current slug — so metadata must return rather than throw. The old URL,
+    // however, is not a page in its own right and must never be indexed.
+    if (historicalArticle) return { robots: { index: false, follow: true } };
+
+    // Unknown, unpublished or deleted slug. Throwing notFound() here is what
+    // makes the response a 404 with the 404 document: without it Next served
+    // the route's empty metadata, so a dead article URL answered with the
+    // homepage <title> and social card while the body rendered "not found".
+    // Crawlers treated those as soft 404s and kept the URLs alive.
+    notFound();
   }
 
-  if (article.publishedAt && article.publishedAt > new Date()) return {};
+  // Scheduled for a future date. The page 404s it, so the title, description
+  // and OG image must not be readable from the metadata either.
+  if (article.publishedAt && article.publishedAt > new Date()) notFound();
 
   const authorName = getArticleAuthor(article).name;
   const catName = article.category?.parent?.name || article.category?.name || "News";

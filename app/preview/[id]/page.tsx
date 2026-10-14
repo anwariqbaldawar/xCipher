@@ -28,19 +28,34 @@ interface Props {
   params: Promise<{ id: string }>;
 }
 
+// Never indexable, whatever it renders. The preview token is an internal id,
+// not a public URL, and it exists precisely so unpublished work can be looked
+// at without being crawled.
+const PREVIEW_ROBOTS: Metadata["robots"] = {
+  index: false,
+  follow: false,
+  nocache: true,
+};
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
+
+  // The title and deck are read before the page's authorization branch runs,
+  // so an anonymous request holding an article id used to be handed the
+  // headline of an unpublished draft. Metadata now answers like the page does:
+  // a signed-in editor gets the real title, everyone else gets a placeholder.
+  const user = await getCurrentUser();
+  if (!user) {
+    return { title: "Story preview — xSypher", robots: PREVIEW_ROBOTS };
+  }
+
   const [article] = await db.query.article.findMany({ where: eq(articleTable.id, id), limit: 1 });
-  if (!article) return {};
-  
+  if (!article) return { robots: PREVIEW_ROBOTS };
+
   return {
     title: `Preview: ${article.title} — xSypher`,
     description: article.deck || "",
-    robots: {
-      index: false,
-      follow: false,
-      nocache: true
-    }
+    robots: PREVIEW_ROBOTS,
   };
 }
 

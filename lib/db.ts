@@ -1,24 +1,30 @@
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
 import * as schema from './db/schema';
 
 type Database = ReturnType<typeof createDatabase>;
 
 /**
- * WebSocket implementation for the Neon driver.
+ * WebSocket implementation for the Neon driver — the platform's own.
  *
- * The driver speaks Postgres over a WebSocket, so it needs a constructor. In a
- * browser (and in workerd, which provides its own global) that is implicit; in
- * Node it is not, and the failure mode is opaque — the first query rejects with
- * a bare `ErrorEvent { type: 'error' }` and no Postgres message at all. That is
- * what local `next dev` and the `node:22-alpine` containers were hitting.
+ * The driver speaks Postgres over a WebSocket, so it needs a constructor. In
+ * a browser and in workerd that global is always present; in Node it exists
+ * from v22, which is the floor this project builds and deploys on
+ * (`node:22-alpine` in both Dockerfiles, Node 22 in CI). When neither the
+ * configured constructor nor the global resolves, the first query rejects with
+ * a bare `ErrorEvent { type: "error" }` and no Postgres message at all, which
+ * is the failure this assignment exists to prevent.
  *
- * `ws` is the implementation the driver documents for Node, and it is a real
- * dependency (not a dev one) because the production image runs it.
+ * Assigning it explicitly rather than leaving the driver to find the global is
+ * also what makes the behaviour identical between `next dev`, the worker
+ * bundle and the container. The driver only uses standard APIs on it
+ * (`binaryType = "arraybuffer"`, `addEventListener("open" | "message" |
+ * "error" | "close")` — see `@neondatabase/serverless`'s `connect()`), so a
+ * compliant WebSocket is all that is required; no polyfill dependency is
+ * pulled in for it.
  */
-if (!neonConfig.webSocketConstructor) {
-  neonConfig.webSocketConstructor = ws as unknown as typeof neonConfig.webSocketConstructor;
+if (!neonConfig.webSocketConstructor && typeof globalThis.WebSocket === 'function') {
+  neonConfig.webSocketConstructor = globalThis.WebSocket;
 }
 
 /**

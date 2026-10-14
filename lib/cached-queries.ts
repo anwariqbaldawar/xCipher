@@ -247,7 +247,14 @@ export const getRecentArticleSlugs = unstable_cache(
   async (limit: number = 50) => {
     try {
       return await db.query.article.findMany({
-        where: eq(articleTable.status, "PUBLISHED"),
+        // A scheduled article is PUBLISHED with a future publishedAt. It must
+        // not be pre-built (the page would render, then 404 on the same slug
+        // for anyone who followed the build output) — the same "not yet live"
+        // test the feed queries use.
+        where: and(
+          eq(articleTable.status, "PUBLISHED"),
+          or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
+        ),
         orderBy: (a, { desc }) => [desc(a.publishedAt)],
         limit: limit,
         columns: { slug: true },
