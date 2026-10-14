@@ -183,6 +183,45 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
               height: auto !important;
             }
           }
+          /* Wrapper never scrolls: nested scrollers break page scroll on touch. */
+          .mermaid-wrapper[data-direction] {
+            overflow: visible !important;
+          }
+          /* TD/TB/BT: fit the article column width, no scrollbars at any width. */
+          .mermaid-wrapper[data-direction="td"] .mermaid-svg-container {
+            overflow: visible !important;
+            max-height: none !important;
+          }
+          .mermaid-wrapper[data-direction="td"] svg {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            height: auto !important;
+          }
+          /* LR/RL: horizontal scroll only, native touch momentum. */
+          .mermaid-wrapper[data-direction="lr"] .mermaid-svg-container {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            max-height: none !important;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+          }
+          @media (max-width: 639px) {
+            .mermaid-wrapper[data-direction="lr"] svg {
+              max-width: none !important;
+              min-width: 320px;
+              width: max(var(--mermaid-natural-w, 100%), 320px) !important;
+              height: auto !important;
+            }
+          }
+          /* Keep SVG text inside its box on narrow screens. */
+          .mermaid-svg-container svg foreignObject {
+            overflow: visible;
+          }
+          .mermaid-svg-container .nodeLabel,
+          .mermaid-svg-container .label {
+            overflow-wrap: anywhere;
+          }
           /* Remove background box from line edge labels */
           .mermaid-svg-container .edgeLabel,
           .mermaid-svg-container .edgeLabel *,
