@@ -27,8 +27,108 @@ xSypher is a premium editorial newsroom CMS and publication built with modern we
       the advertising page and the surrounding trust surfaces with the voice of an independent,
       founder-led engineering publication, and make About / Footer / contact / corrections /
       careers / media kit tell the same story.
+* [x] Task 7 — ghost test data: purge it from the database and the R2 bucket, and fix the
+      deletion pipeline that let it survive (asset purge, cache invalidation, real 404s).
+      The `--apply` run itself needs the live database and bucket.
 
 ## 5. Task log
+
+### Task 7 — ghost test data: purge it everywhere, and fix what let it survive
+Reported symptom: test articles deleted from the admin dashboard were still being found and
+indexed by search engines and AI crawlers. The instruction was to inspect the actual pipeline
+first rather than guess, and the inspection found four separate reasons the content outlived
+the delete.
+
+**1. Only the row was deleted.** `deleteArticlePermanently` removed the row, the reviews, the
+revisions and the thumbnail, then scraped the content payload with two regexes —
+`"src": "…"` in the JSON and `src="…"` in the HTML. A `srcset` candidate, a `data-src` lazy
+image, a `<video poster>`, an inline `background-image: url(…)`, or an image referenced only
+from a TipTap attribute that was not `src` was never deleted, and nothing else in the system
+collects those keys: uploads are content-addressed per file and R2 has no idea an object is
+unreferenced. `deleteOwnDraft` had the same scan. `bulkDelete` did no storage work at all, so
+bulk-deleting a hundred archived test posts left a hundred content blobs and every image in
+them.
+
+**2. Cache invalidation covered three paths.** Homepage, `/article/<slug>` and `/sitemap.xml`.
+`/latest`, the category, tag and author archives, the tag-keyed `unstable_cache` entries and
+the RSS feed kept serving the deleted story until their own revalidate window expired — ten
+minutes for an author page — and an edge that had already cached the HTML kept it
+indefinitely.
+
+**3. A deleted slug did not answer 404.** The article route's `generateMetadata` returned `{}`
+for a missing or future-dated slug, so the URL answered with the homepage `<title>` and social
+card while the body rendered the 404 boundary. That is the soft-404 shape a crawler treats as
+"still there", and it is why the URLs stayed in the index.
+
+**4. There was no offline cleanup surface.** `scripts/purge-stale-assets.ts` rewrites stale
+*references* inside rows; nothing could find a row or a bucket object with no live reference at
+all — which is the state the already-deleted fixtures are in, and the reference for the
+placeholder truck image was nowhere in the repository (no seed script, no static JSON, no
+`/public` asset), so it had to be a live row and a live object.
+
+**What the deletion pipeline does now** (one helper per job, shared by all three delete paths
+so they cannot drift apart again):
+
+* `lib/article-assets.ts` — `collectArticleAssetKeys()` returns the bucket keys of the content
+  blob, the featured image, the social image and every inline asset, read from the sanitized
+  HTML (`src`, `data-src`, `data-original`, `data-lazy-src`, `srcset`, `data-srcset`,
+  `poster`, `href`, `xlink:href`, `content`, CSS `url()` in inline styles and `<style>`
+  blocks) and from the TipTap JSON walked as data at any depth (`src`, `href`, `url`,
+  `srcset`, `poster`, `graphic`, `thumbnail`, `capture`). The content blob key is included even
+  when the payload could not be read.
+* `lib/storage.ts` — `r2KeyFromUrl()` normalises any stored reference (full public URL,
+  root-relative path, bare key) to a bucket key and refuses anything not in the bucket;
+  `deleteKeysFromR2()` deletes in S3 `DeleteObjects` batches of up to 1000 with per-key error
+  parsing from the response XML and a one-by-one fallback (concurrency 8, a 404 counts as
+  deleted); `listR2Objects()` pages `ListObjectsV2`.
+* `lib/article-deletion.ts` — `purgeArticleAssets()` fetches the content payload with
+  `no-store` (`fetchFromR2` caches for 300s, which would hide an image uploaded in the last
+  five minutes), deletes the keys, then evicts the public URLs from the Cache API and — when
+  `CLOUDFLARE_ZONE_ID` and `CLOUDFLARE_PURGE_API_TOKEN` are configured, now documented in
+  `.env.example` — from the zone cache. It never throws: a storage failure is reported so the
+  sweep can find the leftovers instead of blocking the delete.
+  `revalidateArticleDeletion()` clears the article's cache tags and every public surface —
+  `/`, `/latest`, `/search`, `/article/<slug>`, the category, author and tag archives,
+  `/feed.xml`, `/rss.xml`, `/sitemap.xml`, `/sitemap/pages.xml`, `/sitemap/articles.xml`.
+  `notifyIndexingOfDeletion()` reports `URL_DELETED` to the Google Indexing API, but only for a
+  row that was actually published.
+* Every delete path purges storage **before** the database delete, while the references still
+  exist to be read, hard-deletes the relations and records `r2KeysRequested` / `r2KeysDeleted`
+  in the audit row. `bulkDelete` now selects the full rows first, purges in windows of five and
+  revalidates per row for anything that was published.
+* `scripts/purge-ghost-content.ts` cleans up what is already out there. Dry run by default,
+  two sweeps: the live database (fixture phrases such as "Tiptap Editor", "Ultimate Testing
+  Document" and "Homenest", exact fixture slugs, `test-`/`dummy-`/`sample-`/`copy-of-`
+  prefixes, and Roman Urdu, which needs at least two distinct whole-word markers before it is
+  even reported) and the bucket (every object with no surviving reference in a row column or a
+  content body of a row in *any* status, with a grace window so an upload in flight is never
+  swept). `--apply --include-probable --match --slug --prefix --grace-days --concurrency
+  --skip-db --skip-r2 --skip-content-scan`. Deleted rows take their objects and their
+  revalidations with them. The classification is pure and tested, and split by how conclusive
+  each signal is on its own: `confirmed` (fixture wording, a fixture slug, a fixture slug with
+  a counter) can be deleted on; `probable` (a bare `test-` prefix, `copy-of-`, two Roman Urdu
+  markers, "Hello World") is printed for a human, because
+  `test-data-leaks-production` and `nvme-ssd-test` are slugs a real story can have.
+* Crawlability, so a dead URL is a dead URL from the first response: the article route's
+  `generateMetadata` throws `notFound()` for a missing or future-dated slug instead of
+  returning empty metadata (a renamed slug still redirects, marked `noindex`);
+  `app/(public)/not-found.tsx` has its own title and robots metadata instead of inheriting the
+  homepage title; the preview route no longer hands an unpublished draft's headline and deck
+  to an anonymous request; and `getRecentArticleSlugs()` no longer pre-builds scheduled
+  articles that would immediately 404.
+* `lib/db.ts` no longer needs `ws`: the Neon driver only uses standard WebSocket APIs
+  (`binaryType`, `addEventListener` for open/message/error/close), workerd and Node 22 both
+  provide them, and assigning the global explicitly keeps dev, worker and container identical.
+  `ws` and `@types/ws` are gone from `package.json` and the lockfile.
+
+Verified in this repository: `npx tsc --noEmit`, `npx eslint` clean on every new module,
+`npx vitest run` (61 files / 733 tests; the two new suites pin the false-positive side of both
+destructive decisions) and `npx next build`.
+
+Not verifiable here: this environment has no database and no R2 bucket, so
+`scripts/purge-ghost-content.ts --apply` and the live deletion path have to be run against the
+real bucket. Run the sweep as a dry run first; it prints the fixture rows, their evidence and
+the orphan list before anything is deleted.
 
 ### Task 6 — independent-publication identity and cross-site consistency
 The policy pages were written in the voice of an organisation xSypher is not: a
