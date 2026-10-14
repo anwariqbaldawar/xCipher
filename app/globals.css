@@ -7716,29 +7716,13 @@ body.is-article .prose pre {
   border: 1px solid var(--line-2) !important;
   border-radius: var(--r-md) !important;
   margin-top: 1.5em !important;
-  padding: 2.5rem 1.25rem 1.25rem 1.25rem !important; /* Make room for label */
+  padding: 2.5rem 1.25rem 1.25rem 1.25rem !important; /* Make room for top-right actions */
   background: var(--surface-2) !important;
   color: var(--ink) !important;
 }
 .tiptap pre code::before, .prose pre code::before {
-  content: attr(data-language-label);
-  position: absolute;
-  top: 0;
-  left: 0;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-  background-color: var(--surface-2);
-  border-bottom-right-radius: var(--r-md);
-  border-top-left-radius: var(--r-md);
-  opacity: 0.7;
-  pointer-events: none;
-}
-.tiptap pre code:not([data-language-label])::before, .prose pre code:not([data-language-label])::before {
-  content: "CODE";
+  display: none !important;
+  content: none !important;
 }
 
 /* ============ BULLETPROOF TOAST POSITIONING (single source of truth) ============
