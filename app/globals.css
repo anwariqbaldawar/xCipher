@@ -3312,8 +3312,8 @@ textarea.f-input {
     top: 0;
     left: 0;
     bottom: 0;
-    width: 75vw;
-    max-width: 300px;
+    width: 82vw;
+    max-width: 320px;
     height: 100vh;
     height: 100dvh;
     z-index: 130;
@@ -3332,6 +3332,7 @@ textarea.f-input {
 @media (min-width: 640px) {
     .drawer {
         width: 65vw;
+        max-width: 300px;
     }
 }
 
@@ -3367,12 +3368,19 @@ textarea.f-input {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 20px;
+    padding: 18px 24px;
     border-bottom: 1px solid var(--line)
 }
 
+/* Close button: fixed 36x36 square, kept inside the header's 24px safe padding. */
+.drawer-head .icon-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0
+}
+
 .drawer nav {
-    padding: 8px 12px
+    padding: 8px 16px
 }
 
 .dr-group {
@@ -3403,7 +3411,7 @@ textarea.f-input {
 .drawer-foot {
     flex-shrink: 0;
     margin-top: auto;
-    padding: 18px 20px;
+    padding: 18px 24px;
     border-top: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
@@ -8043,7 +8051,6 @@ body.is-article .prose pre {
 .not-prose.mermaid-wrapper,
 .not-prose.mermaid-svg-container {
     line-height: normal !important;
-    overflow-x: auto;
 }
 .mermaid-svg-container svg {
     height: auto;

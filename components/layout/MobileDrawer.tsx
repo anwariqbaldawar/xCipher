@@ -69,7 +69,7 @@ export default function MobileDrawer() {
           <div className="drawer-head shrink-0">
             <Link className="logo" href="/" aria-label="xSypher — home" onClick={() => setIsOpen(false)}>
               <Logo variant="brand" className="text-[22px]" />
-              <div className="flex flex-col text-[8px] font-bold tracking-widest text-[var(--muted)] uppercase leading-tight ml-3 border-l border-[var(--line)] pl-3">
+              <div className="flex flex-col text-[8px] font-bold tracking-widest text-[var(--muted)] uppercase leading-tight ml-2 border-l border-[var(--line)] pl-2">
                 <span>ADVANCED TECH &</span>
                 <span>SECURITY INSIGHTS</span>
               </div>
