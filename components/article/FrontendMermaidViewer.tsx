@@ -18,11 +18,25 @@ function decodeHtmlEntities(str: string): string {
   return el.value;
 }
 
+/** Explicit font stack so Mermaid's measured label widths match what the browser renders. */
+const MERMAID_FONT_STACK = 'var(--f-ui), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
 export default function FrontendMermaidViewer({ graphDefinition, containerWidth = '100%' }: Props) {
   const decoded = decodeHtmlEntities(graphDefinition);
   const [svgContent, setSvgContent] = useState('');
   const { theme } = useTheme();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expose the SVG's natural width as a CSS variable. On small screens the stylesheet
+  // uses it to keep wide diagrams at full size inside a horizontal scroller instead of
+  // scaling the whole graph (and its text) down to the viewport.
+  useEffect(() => {
+    const svgEl = containerRef.current?.querySelector('svg');
+    const naturalWidth = svgEl?.viewBox?.baseVal?.width;
+    if (svgEl && naturalWidth) {
+      svgEl.style.setProperty('--mermaid-natural-w', `${naturalWidth}px`);
+    }
+  }, [svgContent]);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,7 +57,10 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
         mermaid.initialize({
           startOnLoad: false,
           theme: isDark ? 'dark' : 'base',
+          fontSize: 13,
           themeVariables: {
+            fontSize: '13px',
+            fontFamily: MERMAID_FONT_STACK,
             primaryColor: isDark ? '#1a1a1a' : '#f2f2f2',
             primaryBorderColor: isDark ? '#2d2d2d' : '#e6e6e6',
             primaryTextColor: isDark ? '#ffffff' : '#111111',
@@ -103,10 +120,12 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
               stroke: ${isDark ? '#e0e0e0' : '#333333'} !important;
             }
           `,
-          fontFamily: "var(--f-ui), sans-serif",
+          fontFamily: MERMAID_FONT_STACK,
           flowchart: {
             htmlLabels: true,
-            padding: 20
+            useMaxWidth: true,
+            padding: 16,
+            wrappingWidth: 160
           }
         });
         const id = `mermaid-frontend-${crypto.randomUUID()}`;
@@ -140,14 +159,37 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
       >
         <div
           ref={containerRef}
-          className="mermaid-svg-container not-prose w-full overflow-x-auto flex justify-center [&_svg]:!max-w-full [&_svg]:!h-auto"
+          className="mermaid-svg-container not-prose w-full overflow-x-auto [&_svg]:block [&_svg]:mx-auto [&_svg]:h-auto"
           dangerouslySetInnerHTML={{ __html: svgContent }}
         />
         <style>{`
+          .mermaid-wrapper,
+          .mermaid-svg-container,
           .mermaid-wrapper svg,
           .mermaid-svg-container svg {
-            max-width: 100% !important;
-            height: auto !important;
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+          }
+          @media (min-width: 640px) {
+            .mermaid-wrapper svg,
+            .mermaid-svg-container svg {
+              max-width: 100% !important;
+              height: auto !important;
+            }
+          }
+          @media (max-width: 639px) {
+            .mermaid-wrapper,
+            .mermaid-svg-container {
+              -webkit-overflow-scrolling: touch;
+              overflow-x: auto;
+            }
+            .mermaid-wrapper svg,
+            .mermaid-svg-container svg {
+              max-width: none !important;
+              min-width: 320px;
+              width: max(var(--mermaid-natural-w, 100%), 320px) !important;
+              height: auto !important;
+            }
           }
           /* Remove background box from line edge labels */
           .mermaid-svg-container .edgeLabel,

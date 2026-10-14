@@ -28,10 +28,23 @@ const NAV_ROW = [
 
 import { useNavStore } from "@/lib/store/useNavStore";
 
+type HiddenRows = { row1: boolean; row2: boolean; row3: boolean };
+const NO_HIDDEN_ROWS: HiddenRows = { row1: false, row2: false, row3: false };
+
+// Scroll thresholds for the progressive header (px).
+const HIDE_ROW1_Y = 10; // scrolling down, past this -> Row 1 collapses
+const HIDE_ROW2_Y = 80; // scrolling down, past this -> Row 2 collapses
+const HIDE_ROW3_Y = 160; // scrolling down, past this -> Row 3 collapses
+const REVEAL_ROW3_DELTA = 8; // scrolling up, accumulated px -> Row 3 returns
+const REVEAL_ROW2_DELTA = 35; // scrolling up, accumulated px -> Row 2 returns
+const RESET_Y = 20; // at/above this offset every row is visible again
+
 export default function SiteHeader() {
   const pathname = usePathname() || "";
   const isArticlePage = Boolean(pathname && (pathname.startsWith("/article/") || pathname.includes("/article/")));
-  const [isHidden, setIsHidden] = useState(false);
+  // Progressive 3-tier headroom state. Each flag = that row is collapsed.
+  // Row 1 = utility bar, Row 2 = main brand bar, Row 3 = category bar.
+  const [hiddenRows, setHiddenRows] = useState<HiddenRows>(NO_HIDDEN_ROWS);
   const lastScrollYRef = useRef(0);
   const accumulatedDeltaRef = useRef(0);
   const lastDirectionRef = useRef<"up" | "down" | null>(null);
@@ -77,9 +90,9 @@ export default function SiteHeader() {
     return () => clearInterval(interval);
   }, []);
 
-  // Reset isHidden on route change
+  // Reset header rows on route change
   useEffect(() => {
-    setIsHidden(false);
+    setHiddenRows(NO_HIDDEN_ROWS);
     lastScrollYRef.current = typeof window !== "undefined" ? window.scrollY : 0;
     accumulatedDeltaRef.current = 0;
     lastDirectionRef.current = null;
@@ -88,71 +101,90 @@ export default function SiteHeader() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let ticking = false;
+    let frame = 0;
     lastScrollYRef.current = window.scrollY;
 
-    const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          const y = window.scrollY;
-          const lastY = lastScrollYRef.current;
-          const diff = y - lastY;
-          
-          const navrow = document.getElementById("navrow");
-          if (y > 140) {
-            navrow?.classList.add("stuck");
-          } else if (y < 120) {
-            navrow?.classList.remove("stuck");
-          }
-          
-          if (y > 100) {
-            document.body.classList.add("scrolled");
-          } else if (y < 20) {
-            document.body.classList.remove("scrolled");
-          }
+    // Rows change the header's height, which sits above the article in normal flow.
+    // Browser scroll anchoring would "correct" that shift by moving scrollY, which
+    // feeds back into the headroom logic and makes the header jump. Disable it while
+    // the progressive header is active on article pages.
+    const root = document.documentElement;
+    const previousAnchor = root.style.overflowAnchor;
+    if (isArticlePage) root.style.overflowAnchor = "none";
 
-          // Smart Header (headroom): Only active on article pages and on mobile (< 768px).
-          // Desktop immunity is guaranteed via Tailwind 'md:translate-y-0 md:sticky' and CSS overrides.
-          if (isArticlePage) {
-            // Minimum scroll threshold (50px - 100px): below 70px, header never hides
-            if (y <= 70) {
-              setIsHidden(false);
-              accumulatedDeltaRef.current = 0;
-              lastDirectionRef.current = null;
-            } else if (diff !== 0) {
-              const currentDirection = diff > 0 ? "down" : "up";
+    // Only the article reading view uses progressive hide; other pages keep all rows.
+    const applyRows = (next: HiddenRows) => {
+      setHiddenRows((prev) =>
+        prev.row1 === next.row1 && prev.row2 === next.row2 && prev.row3 === next.row3 ? prev : next
+      );
+    };
 
-              // Reset accumulated delta if scroll direction reversed
-              if (currentDirection !== lastDirectionRef.current) {
-                lastDirectionRef.current = currentDirection;
-                accumulatedDeltaRef.current = 0;
-              }
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const diff = y - lastScrollYRef.current;
+      lastScrollYRef.current = y;
 
-              accumulatedDeltaRef.current += Math.abs(diff);
+      const navrow = document.getElementById("navrow");
+      if (y > 140) navrow?.classList.add("stuck");
+      else if (y < 120) navrow?.classList.remove("stuck");
 
-              // Downward scroll past 70px threshold with accumulated intent > 20px -> smoothly hide
-              if (currentDirection === "down" && y > 70 && accumulatedDeltaRef.current > 20) {
-                setIsHidden(true);
-              } 
-              // Upward scroll with accumulated intent > 15px -> smoothly reveal
-              else if (currentDirection === "up" && accumulatedDeltaRef.current > 15) {
-                setIsHidden(false);
-              }
-            }
-          } else {
-            setIsHidden(false);
-          }
-          
-          lastScrollYRef.current = y;
-          ticking = false;
-        });
-        ticking = true;
+      if (y > 100) document.body.classList.add("scrolled");
+      else if (y < 20) document.body.classList.remove("scrolled");
+
+      if (!isArticlePage) {
+        applyRows(NO_HIDDEN_ROWS);
+        return;
       }
+
+      // Back at the very top of the article: restore everything, including Row 1.
+      if (y < RESET_Y) {
+        accumulatedDeltaRef.current = 0;
+        lastDirectionRef.current = null;
+        applyRows(NO_HIDDEN_ROWS);
+        return;
+      }
+
+      if (diff === 0) return;
+
+      const direction = diff > 0 ? "down" : "up";
+      if (direction !== lastDirectionRef.current) {
+        lastDirectionRef.current = direction;
+        accumulatedDeltaRef.current = 0;
+      }
+      accumulatedDeltaRef.current += Math.abs(diff);
+
+      setHiddenRows((prev) => {
+        if (direction === "down") {
+          // Stage-wise collapse: each tier hides once the reader passes its threshold.
+          const next: HiddenRows = {
+            row1: y > HIDE_ROW1_Y,
+            row2: y > HIDE_ROW2_Y,
+            row3: y > HIDE_ROW3_Y,
+          };
+          return prev.row1 === next.row1 && prev.row2 === next.row2 && prev.row3 === next.row3 ? prev : next;
+        }
+
+        // Scrolling up: Row 3 returns first, then Row 2. Row 1 only returns at the top.
+        const acc = accumulatedDeltaRef.current;
+        const next: HiddenRows = {
+          row1: prev.row1,
+          row2: acc > REVEAL_ROW2_DELTA ? false : prev.row2,
+          row3: acc > REVEAL_ROW3_DELTA ? false : prev.row3,
+        };
+        return prev.row1 === next.row1 && prev.row2 === next.row2 && prev.row3 === next.row3 ? prev : next;
+      });
+    };
+
+    const handleScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+      root.style.overflowAnchor = previousAnchor;
       document.body.classList.remove("scrolled");
     };
   }, [isArticlePage]);
@@ -186,49 +218,56 @@ export default function SiteHeader() {
 
   return (
     <SearchProvider>
-      {/* Top Utility Bar (Date, Links, ThemeToggle) - Strictly absolute top-0 and excluded from headroom translate wrapper */}
-      <div className="utility border-b border-[var(--line)] text-[10px] w-full bg-[var(--paper)]">
-        <div className="wrap utility-in flex items-center justify-between w-full">
-          {/* Left: Date */}
-          <div className="flex-1 flex justify-start shrink-0">
-            <span id="todayDate" className="util-date !font-mono font-medium tracking-tight normal-case whitespace-nowrap">
-              <span className="date-full" suppressHydrationWarning>{currentDate ? currentDate.full : todayDateFull}</span>
-              <span className="date-compact" suppressHydrationWarning>{currentDate ? currentDate.compact : todayDateCompact}</span>
-            </span>
-          </div>
-
-          {/* Center: Quick Links with Separators */}
-          <div className="flex-1 flex items-center justify-center px-1 sm:px-2 text-[var(--muted)]">
-            <span className="text-[var(--line-2)] opacity-70 mr-2.5 sm:mr-6 text-xs">|</span>
-            <div className="flex items-center justify-center gap-2 sm:gap-3">
-              <Link href="/" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Home">
-                <Home className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-              </Link>
-              <Link href="/page/about" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="About">
-                <Info className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-              </Link>
-              <Link href="/page/contact" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Contact">
-                <Mail className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
-              </Link>
+      {/* Progressive 3-tier smart header. Rows collapse via grid-rows/opacity/translate
+          (never display:none or unmount) and the whole header stays sticky at top-0. */}
+      <header
+        className="site-head sticky top-0 z-40"
+      >
+        {/* Row 1: Top utility bar (date, quick links, theme toggle) */}
+        <div className={`hdr-row hdr-row-1 ${hiddenRows.row1 ? "is-collapsed" : ""}`}>
+          <div className="hdr-clip">
+            <div className="hdr-content">
+        <div className="utility text-[10px] w-full">
+          <div className="wrap utility-in flex items-center justify-between w-full">
+            {/* Left: Date */}
+            <div className="flex-1 flex justify-start shrink-0">
+              <span id="todayDate" className="util-date !font-mono font-medium tracking-tight normal-case whitespace-nowrap">
+                <span className="date-full" suppressHydrationWarning>{currentDate ? currentDate.full : todayDateFull}</span>
+                <span className="date-compact" suppressHydrationWarning>{currentDate ? currentDate.compact : todayDateCompact}</span>
+              </span>
             </div>
-            <span className="text-[var(--line-2)] opacity-70 ml-2.5 sm:ml-6 text-xs">|</span>
-          </div>
 
-          {/* Right: Dark Mode Toggle */}
-          <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2.5">
-            <ThemeToggle />
+            {/* Center: Quick Links with Separators */}
+            <div className="flex-1 flex items-center justify-center px-1 sm:px-2 text-[var(--muted)]">
+              <span className="text-[var(--line-2)] opacity-70 mr-2.5 sm:mr-6 text-xs">|</span>
+              <div className="flex items-center justify-center gap-2 sm:gap-3">
+                <Link href="/" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Home">
+                  <Home className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+                </Link>
+                <Link href="/page/about" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="About">
+                  <Info className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+                </Link>
+                <Link href="/page/contact" className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:text-[var(--accent)] transition-colors" aria-label="Contact">
+                  <Mail className="w-3.5 h-3.5 sm:w-[14px] sm:h-[14px]" strokeWidth={2.5} />
+                </Link>
+              </div>
+              <span className="text-[var(--line-2)] opacity-70 ml-2.5 sm:ml-6 text-xs">|</span>
+            </div>
+
+            {/* Right: Dark Mode Toggle */}
+            <div className="flex-1 flex justify-end items-center gap-1 sm:gap-2.5">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
-      </div>
+            </div>
+          </div>
+        </div>
 
-      {/* Main Header with Premium Smart Headroom Animation */}
-      <header
-        className={`site-head sticky top-0 z-40 transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] md:sticky md:top-0 md:translate-y-0 ${
-          isArticlePage && isHidden
-            ? "-translate-y-full pointer-events-none md:pointer-events-auto"
-            : "translate-y-0"
-        }`}
-      >
+        {/* Row 2: Main brand bar (hamburger, logo, search, subscribe) */}
+        <div className={`hdr-row hdr-row-2 ${hiddenRows.row2 ? "is-collapsed" : ""}`}>
+          <div className="hdr-clip">
+            <div className="hdr-content">
         <div className="wrap masthead relative">
           <MobileDrawer />
           <Link className="logo" href="/" aria-label="xSypher — home">
@@ -297,6 +336,14 @@ export default function SiteHeader() {
             <Link className="btn btn-solid" href="/page/newsletters#subscribe" id="subscribeBtn">Subscribe</Link>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Category navigation bar */}
+        <div className={`hdr-row hdr-row-3 ${hiddenRows.row3 ? "is-collapsed" : ""}`}>
+          <div className="hdr-clip">
+            <div className="hdr-content">
         <div className="navrow" id="navrow">
           <div className="wrap navrow-in md:justify-center items-center h-8.5 lg:h-[44px]" id="navrowIn" role="navigation" aria-label="Sections">
             {NAV_ROW.map((item) => {
@@ -316,6 +363,9 @@ export default function SiteHeader() {
                 </Link>
               );
             })}
+          </div>
+        </div>
+            </div>
           </div>
         </div>
       </header>
