@@ -148,6 +148,10 @@ export const article = pgTable('Article', {
   publishedAt: timestamp('publishedAt', { mode: 'date', precision: 3 }),
   scheduledFor: timestamp('scheduledFor', { mode: 'date', precision: 3 }),
   homepagePlacement: text('homepagePlacement'),
+  // When the article entered the Editor's Picks queue. Drives the rolling order:
+  // the newest pick leads, earlier picks shift down. Set only on the transition
+  // into "picks" (see app/actions/article.ts), never on unrelated saves.
+  editorPickedAt: timestamp('editorPickedAt', { mode: 'date', precision: 3 }),
   previousSlugs: text('previousSlugs').array().default(sql`ARRAY[]::text[]`).notNull(),
   approvedAt: timestamp('approvedAt', { mode: 'date', precision: 3 }),
   approvedById: text('approvedById'),

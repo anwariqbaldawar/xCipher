@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { canEditArticle } from "@/lib/permissions";
 import { sanitizeArticleHtml, isValidSafeUrl } from "@/lib/sanitize";
 import { calculateReadTime, deriveIsFeatured, slugify } from "@/lib/utils";
+import { nextEditorPickedAt } from "@/lib/editor-picks";
 import { authorize } from "@/lib/capabilities";
 import { handleServerError } from "@/lib/errors";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
@@ -123,7 +124,7 @@ export async function upsertArticle(data: any) {
     if (data.id) {
       existingArticle = await db.query.article.findFirst({
         where: eq(article.id, data.id),
-        columns: { id: true, authorId: true, author: true, role: true, isAnonymous: true, updatedAt: true, status: true, publishedAt: true, slug: true, previousSlugs: true, contentUrl: true }
+        columns: { id: true, authorId: true, author: true, role: true, isAnonymous: true, updatedAt: true, status: true, publishedAt: true, slug: true, previousSlugs: true, contentUrl: true, homepagePlacement: true, editorPickedAt: true }
       });
       if (!existingArticle) {
         return { success: false, error: "Article not found" };
@@ -231,6 +232,10 @@ export async function upsertArticle(data: any) {
       featuredImageCaption: data.featuredImageCaption || null,
       featuredImageCredit: data.featuredImageCredit || null,
       homepagePlacement: data.homepagePlacement || null,
+      // Rolling Editor's Picks queue: stamp the moment an article ENTERS the queue.
+      // Re-saving an article that is already a pick keeps its original stamp, so
+      // editing it does not reshuffle the queue. Other picks are never touched.
+      editorPickedAt: nextEditorPickedAt(data.homepagePlacement, existingArticle),
       categoryId: catRecord.id,
       scheduledFor,
       readingTime: calculateReadTime(sanitizedBodyHtml || data.bodyHtml),

@@ -117,7 +117,10 @@ export const getHomePicks = unstable_cache(
           or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
           eq(articleTable.homepagePlacement, "picks")
         ),
-        orderBy: (a, { desc }) => [desc(a.publishedAt)],
+        // Rolling queue: most recently picked leads. Legacy picks that predate
+        // editorPickedAt are backfilled in the migration; NULLS LAST keeps any
+        // stragglers behind real stamps. publishedAt breaks ties.
+        orderBy: (a, { desc }) => [sql`${a.editorPickedAt} DESC NULLS LAST`, desc(a.publishedAt)],
         limit: 6,
         columns: ARTICLE_CARD_COLUMNS,
         with: ARTICLE_CARD_WITH,
