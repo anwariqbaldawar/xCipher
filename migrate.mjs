@@ -78,6 +78,10 @@ async function migrate() {
       await tx`CREATE INDEX IF NOT EXISTS "Invitation_status_expires_idx" ON "Invitation" ("status", "expires")`;
       await tx`CREATE INDEX IF NOT EXISTS "ContactMessage_status_createdAt_idx" ON "ContactMessage" ("status", "createdAt")`;
 
+      // 0004_editor_picked_at.sql
+      await tx`ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "editorPickedAt" timestamp(3)`;
+      await tx`UPDATE "Article" SET "editorPickedAt" = COALESCE("publishedAt", "updatedAt") WHERE "homepagePlacement" = 'picks' AND "editorPickedAt" IS NULL`;
+
       // Record baseline migrations in ledger
       const drizzleDir = join(process.cwd(), "drizzle");
       const sqlFiles = readdirSync(drizzleDir)
