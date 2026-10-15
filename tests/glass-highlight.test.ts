@@ -44,33 +44,33 @@ const SEARCH_ACTIVE = [".search-row:hover .search-mark", '.search-row[data-activ
 const GLASS_SELECTORS = [...ARTICLE, ...SEARCH, ...SEARCH_ACTIVE];
 const FALLBACK = ["mark", ".ProseMirror mark", ".prose mark", ".ed-body mark"];
 
-const TOKENS = [
-  "--hl-glass-fill",
-  "--hl-glass-fill-strong",
-  "--hl-glass-fill-deep",
-  "--hl-glass-sheen",
-  "--hl-glass-edge",
-  "--hl-glass-specular",
-  "--hl-glass-glow",
-];
+const TOKENS = ["--hl-glass-fill", "--hl-glass-fill-strong", "--hl-glass-edge"];
 
 describe("glass highlight — article body and live search only", () => {
-  it("applies one glass material to article-body marks and live-search matches", () => {
+  it("applies one refined material — a soft tint and a delicate bottom edge — to article marks and search matches", () => {
     const material = find([...ARTICLE, ...SEARCH]);
     expect(material).toBeDefined();
     const body = material!.body;
 
     // !important because the solid fallback forces background-color with it.
     expect(body).toMatch(/background-color:\s*var\(--hl-glass-fill\)\s*!important/);
-    expect(body).toMatch(/background-image:[^;]*var\(--hl-glass-sheen\)[^;]*var\(--hl-glass-fill-deep\)/);
 
-    // Rim and specular edge are inset shadows, not borders: paint only, so a
-    // highlight never changes line height or where a line wraps.
-    expect(body).toMatch(/inset 0 1px 0 var\(--hl-glass-specular\)/);
-    expect(body).toMatch(/inset 0 0 0 1px var\(--hl-glass-edge\)/);
-    expect(body).not.toMatch(/(^|[\s;])border\s*:/);
+    // The one detail: an underline-weight edge along the bottom, drawn as an
+    // inset shadow rather than a border — paint only, so a highlight never
+    // changes line height or where a line wraps.
+    expect(body).toMatch(/box-shadow:\s*inset 0 -[\d.]+(em|px) 0 var\(--hl-glass-edge\)\s*;/);
+    expect(body).not.toMatch(/(^|[\s;])border(-bottom)?\s*:/);
 
-    // A highlight that wraps keeps its rim and radius on every line.
+    // What made the previous version look artificial must not creep back:
+    // no gloss gradients, no glow or other outer shadow, no rim.
+    expect(body).not.toMatch(/gradient\(/);
+    expect(body).not.toMatch(/background-image/);
+    const shadows = /box-shadow:\s*([^;]*);/.exec(body)![1].split(/,(?![^(]*\))/);
+    expect(shadows).toHaveLength(1);
+    expect(shadows[0].trim().startsWith("inset")).toBe(true);
+    expect(css).not.toMatch(/--hl-glass-(sheen|specular|glow|fill-deep)\b/);
+
+    // A highlight that wraps keeps its edge and radius on every line.
     expect(body).toMatch(/-webkit-box-decoration-break:\s*clone/);
     expect(body).toMatch(/(^|[\s;])box-decoration-break:\s*clone/);
 
@@ -144,7 +144,7 @@ describe("glass highlight — article body and live search only", () => {
     expect(find(['[data-theme="dark"]'])!.body).toMatch(/--accent:\s*#ff1a1a;/);
   });
 
-  it("defines every glass token in both themes, as translucent glass", () => {
+  it("defines every highlight token in both themes, with a very soft translucent tint", () => {
     for (const [theme, block] of [[":root", find([":root"])!.body], ["dark", find(['[data-theme="dark"]'])!.body]] as const) {
       for (const token of TOKENS) {
         const value = new RegExp(`${token}:\\s*rgba\\(([^)]*)\\)`).exec(block)?.[1];
@@ -152,6 +152,12 @@ describe("glass highlight — article body and live search only", () => {
         const alpha = Number(value!.split(",")[3]);
         expect(alpha, `${theme} ${token}`).toBeGreaterThan(0);
         expect(alpha, `${theme} ${token}`).toBeLessThan(1);
+      }
+      // "Never a solid block of colour": the reading tint stays highly
+      // transparent, even on the hovered/active search row.
+      for (const token of ["--hl-glass-fill", "--hl-glass-fill-strong"]) {
+        const alpha = Number(new RegExp(`${token}:\\s*rgba\\(([^)]*)\\)`).exec(block)![1].split(",")[3]);
+        expect(alpha, `${theme} ${token}`).toBeLessThanOrEqual(0.25);
       }
       expect(block, theme).toMatch(/--hl-glass-ink:\s*#[0-9a-f]{6};/i);
     }
