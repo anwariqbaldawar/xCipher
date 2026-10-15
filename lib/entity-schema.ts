@@ -40,9 +40,13 @@ export function generateOrganizationJsonLd() {
     // not invent handles (SCH-001). Add LinkedIn/YouTube/Wikidata here as
     // those profiles get created — each one strengthens the entity.
     sameAs: [
-      `https://x.com/${siteConfig.twitter.replace(/^@/, "")}`,
-      "https://github.com/anwariqbaldawar",
+      "https://www.facebook.com/profile.php?id=61594767646306",
+      "https://www.threads.net/@xsypher_tech",
+      "https://www.instagram.com/xsypher_tech/?hl=en",
       "https://www.linkedin.com/company/xsypher/",
+      `https://x.com/${siteConfig.twitter.replace(/^@/, "")}`,
+      "https://www.reddit.com/r/xsypher/",
+      "https://github.com/anwariqbaldawar",
     ],
   };
 }

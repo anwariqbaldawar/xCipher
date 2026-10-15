@@ -301,7 +301,10 @@ export default async function ArticlePage({ params }: Props) {
                   `preload` (Next 16's replacement for `priority`) writes the
                   <link rel="preload"> into <head>; fetchPriority="high" keeps it
                   ahead of every inline body image in the network queue. */}
-              <figure className="art-hero my-8 overflow-hidden rounded-xl border border-[var(--glass-border)]" data-image-role="featured">
+              {/* No card framing: the photograph and its caption sit directly
+                  in the article column — no border, background box or padded
+                  wrapper around them. */}
+              <figure className="art-hero my-8" data-image-role="featured">
                 <div className="ph r-169 relative w-full aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
                   <Image
                     src={resolveImageSrc(article.img, IMAGE_WIDTHS.articleHero, 788)}
@@ -313,7 +316,7 @@ export default async function ArticlePage({ params }: Props) {
                     className="object-cover"
                   />
                 </div>
-                <figcaption className="text-xs text-[var(--muted)] mt-3 px-4 pb-3">
+                <figcaption className="text-xs text-[var(--muted)] mt-3">
                   {article.featuredImageCaption || article.title}
                   {article.featuredImageCredit && (
                     <span className="credit block text-[10px] uppercase tracking-wider mt-1">

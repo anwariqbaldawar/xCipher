@@ -134,8 +134,15 @@ export default function SiteHeader() {
       if (y > 100) document.body.classList.add("scrolled");
       else if (y < 20) document.body.classList.remove("scrolled");
 
-      if (!isArticlePage) {
-        // Home / category / other routes: only the utility bar (Row 1) toggles.
+      // Desktop article pages use the exact homepage behaviour: only the
+      // utility bar (Row 1) toggles, hiding on scroll down and returning on a
+      // slight scroll up. The progressive 3-tier collapse below is the mobile
+      // article behaviour only and must not run on desktop viewports.
+      const isDesktop = window.matchMedia("(min-width: 768px)").matches;
+
+      if (!isArticlePage || isDesktop) {
+        // Home / category / other routes — and every article page on desktop:
+        // only the utility bar (Row 1) toggles.
         // Rows 2 and 3 stay sticky and visible at all times.
         setHiddenRows((prev) => {
           let row1 = prev.row1;
@@ -192,8 +199,13 @@ export default function SiteHeader() {
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
+    // Crossing the desktop breakpoint (rotation, window resize, docking a
+    // tablet) must re-evaluate which behaviour applies without waiting for
+    // the next scroll.
+    window.addEventListener("resize", handleScroll);
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
       if (frame) window.cancelAnimationFrame(frame);
       root.style.overflowAnchor = previousAnchor;
       document.body.classList.remove("scrolled");

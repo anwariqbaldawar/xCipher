@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 import { usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import Logo from "@/components/common/Logo";
+import SocialLinks from "@/components/common/SocialLinks";
 
 export default function MobileDrawer() {
   const [isOpen, setIsOpen] = useState(false);
@@ -127,6 +128,10 @@ export default function MobileDrawer() {
             </div>
           </nav>
           <div className="drawer-foot">
+            <SocialLinks
+              className="flex items-center gap-1.5 mb-3"
+              linkClassName="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--accent)] transition-colors"
+            />
             <Link className="btn btn-solid" href="/page/newsletters#subscribe">Subscribe to the daily brief</Link>
             <button 
               className="btn" 

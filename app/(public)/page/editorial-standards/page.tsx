@@ -7,7 +7,7 @@ import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 export const metadata: Metadata = constructMetadata({
   title: "Editorial Standards — xSypher",
   description:
-    "The four rules behind xSypher's reporting: independence from vendors, careful sourcing, no paid reviews, and attribution for work that is not ours.",
+    "The rules behind xSypher's reporting: independence from vendors, careful sourcing, transparent and clearly labelled sponsored partnerships, and attribution for work that is not ours.",
   canonical: `${siteConfig.url}/page/editorial-standards`,
   image: brandBannerUrl(),
   imageAlt: "xSypher editorial standards",
@@ -56,10 +56,10 @@ export default function EditorialStandardsPage() {
               </h2>
               <div className="font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed space-y-4">
                 <p>
-                  We report the facts. Our editorial process is entirely shielded from corporate influence, advertising partnerships, or investor pressures.
+                  We report the facts. Editorial decisions — what we cover, what we conclude and what score we give — are shielded from commercial influence: no advertiser, sponsor or investor gets preview access, copy approval or a veto over our journalism.
                 </p>
                 <p>
-                  If a major tech conglomerate makes a misstep, we cover it critically and fairly. Our loyalty lies exclusively with our readers—to provide them with accurate, noise-free analysis so they can form their own conclusions.
+                  That independence is funded, not compromised, by commercial partnerships: clearly labelled Sponsored Deep-Dives, Partner Content and display/newsletter sponsorships support the publication, and every paid format is disclosed as such. If a major tech conglomerate — including a sponsor — makes a misstep, we cover it critically and fairly. Our loyalty lies exclusively with our readers: accurate, noise-free analysis so they can form their own conclusions.
                 </p>
               </div>
             </div>
@@ -104,7 +104,7 @@ export default function EditorialStandardsPage() {
               </h2>
               <div className="font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed space-y-4">
                 <p>
-                  Gadgets and software are reviewed honestly. We do not do paid positive reviews, or &ldquo;sponsored reviews&rdquo; disguised as editorial content. 
+                  Gadgets and software are reviewed honestly, and a review verdict can never be bought: we do not sell positive reviews, scores or rankings. Sponsored Deep-Dives and Partner Content are separate, clearly labelled formats — tagged &ldquo;Sponsored&rdquo; or &ldquo;Partner&rdquo; before the first paragraph — and are never disguised as independent reviews or allowed to influence one.
                 </p>
                 <p>
                   Hardware sent to us by manufacturers is either returned after the review period or kept purely in a secure editorial vault for future benchmark comparisons. We never sell review units, and accepting a review unit never guarantees coverage—let alone positive coverage.

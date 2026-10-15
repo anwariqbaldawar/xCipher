@@ -984,8 +984,9 @@ body.scrolled .masthead {
 
 /* ── Progressive 3-tier header rows ──
    Rows are never unmounted or display:none'd. A collapsed row shrinks its grid track to 0fr,
-   fades out, and slides its content up by 100%. Only applies below 768px; desktop keeps
-   the full header sticky (see the min-width:768px override below). */
+   fades out, and slides its content up by 100%. The full 3-tier collapse is the mobile
+   article behaviour; on desktop (min-width:768px) only the utility bar (Row 1) collapses,
+   on article pages exactly as it does on the homepage — see the override below. */
 .hdr-row {
     display: grid;
     grid-template-rows: 1fr;
@@ -1023,8 +1024,16 @@ body.scrolled .masthead {
 }
 
 @media (min-width: 768px) {
-    .site-head[data-article="true"] .hdr-row,
-    .site-head[data-article="true"] .hdr-row.is-collapsed {
+
+    /* Desktop article pages share the homepage smart-scroll behaviour: the
+       utility bar (Row 1) hides on scroll down and returns on scroll up,
+       exactly as it does on listing pages. Rows 2 (brand) and 3 (sections)
+       stay pinned at every scroll position, so only they are forced visible
+       here — Row 1 deliberately follows the normal collapse rules above. */
+    .site-head[data-article="true"] .hdr-row-2,
+    .site-head[data-article="true"] .hdr-row-2.is-collapsed,
+    .site-head[data-article="true"] .hdr-row-3,
+    .site-head[data-article="true"] .hdr-row-3.is-collapsed {
         grid-template-rows: 1fr !important;
         opacity: 1 !important;
         visibility: visible !important;
@@ -1032,8 +1041,10 @@ body.scrolled .masthead {
         transition: none !important;
     }
 
-    .site-head[data-article="true"] .hdr-content,
-    .site-head[data-article="true"] .hdr-row.is-collapsed .hdr-content {
+    .site-head[data-article="true"] .hdr-row-2 .hdr-content,
+    .site-head[data-article="true"] .hdr-row-2.is-collapsed .hdr-content,
+    .site-head[data-article="true"] .hdr-row-3 .hdr-content,
+    .site-head[data-article="true"] .hdr-row-3.is-collapsed .hdr-content {
         transform: none !important;
         transition: none !important;
     }
@@ -8590,24 +8601,32 @@ body.is-article .prose pre {
     appearance: none;
 }
 
+/* Clear is a labelled eraser pill, visually distinct from the circular
+   close button next to it; it only renders while the input has text. */
 .search-input-clear {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
+    gap: 6px;
     height: 28px;
+    padding: 0 11px;
     flex: none;
     border-radius: 999px;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
     color: var(--muted);
     background: color-mix(in srgb, var(--ink) 6%, transparent);
     border: 1px solid var(--glass-border);
-    transition: color .14s ease, background .14s ease, transform .14s ease;
+    transition: color .14s ease, background .14s ease, border-color .14s ease;
 }
 
 .search-input-clear:hover {
-    color: var(--ink);
-    background: color-mix(in srgb, var(--ink) 12%, transparent);
-    transform: scale(1.06);
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--glass-border));
+    background: var(--accent-soft);
 }
 
 /* The close affordance for touch devices: a phone has no Esc key, and the
@@ -8622,17 +8641,18 @@ body.is-article .prose pre {
     width: 44px;
     height: 44px;
     flex: none;
-    margin-left: 4px;
+    margin-left: 6px;
     border-radius: 999px;
-    color: var(--muted);
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-    border: 1px solid var(--glass-border);
-    transition: color .14s ease, background .14s ease, transform .14s ease;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    border: 1px solid var(--line-2);
+    transition: color .14s ease, background .14s ease, border-color .14s ease, transform .14s ease;
 }
 
 .search-close:hover {
-    color: var(--ink);
-    background: color-mix(in srgb, var(--ink) 12%, transparent);
+    color: var(--on-accent);
+    background: var(--accent);
+    border-color: var(--accent);
 }
 
 .search-close:active {
@@ -8644,26 +8664,6 @@ body.is-article .prose pre {
         width: 34px;
         height: 34px;
     }
-}
-
-.search-kbd,
-.search-kbd-sm {
-    font-family: var(--f-mono);
-    font-size: 10px;
-    line-height: 1;
-    color: var(--muted);
-    background: color-mix(in srgb, var(--ink) 5%, transparent);
-    border: 1px solid var(--glass-border);
-    border-radius: 6px;
-    padding: 5px 7px;
-    flex: none;
-    letter-spacing: .04em;
-}
-
-.search-kbd-sm {
-    padding: 3px 5px;
-    font-size: 9.5px;
-    margin-right: 3px;
 }
 
 .search-spinner {
@@ -8779,20 +8779,6 @@ body.is-article .prose pre {
     padding: 2px 6px;
 }
 
-.search-row-match {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-family: var(--f-mono);
-    font-size: 9px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border: 1px solid var(--glass-border);
-    border-radius: 5px;
-    padding: 2px 6px;
-}
-
 .search-row-title {
     font-family: var(--f-ui);
     font-size: .95rem;
@@ -8857,15 +8843,12 @@ body.is-article .prose pre {
     height: 54px;
 }
 
-/* The characters the reader actually typed. */
+/* The characters the reader actually typed: brand-red text, no highlight
+   box behind them. */
 .search-mark {
-    background: var(--accent-soft);
+    background: transparent;
     color: var(--accent);
-    border-radius: 3px;
-    padding: 0 1px;
-    font-weight: 760;
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
+    font-weight: 700;
 }
 
 /* ── Footer, empty and hint states ─────────────────────────────────────── */
@@ -8974,22 +8957,6 @@ body.is-article .prose pre {
     color: var(--accent);
 }
 
-/* Keyboard legend pinned to the bottom of the ⌘K panel. */
-.search-panel-foot {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 9px 16px;
-    border-top: 1px solid var(--glass-border);
-    background: color-mix(in srgb, var(--ink) 3%, transparent);
-    font-family: var(--f-mono);
-    font-size: 9.5px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    flex: none;
-}
-
 @media (max-width: 640px) {
     .search-overlay {
         padding: 0;
@@ -9020,14 +8987,6 @@ body.is-article .prose pre {
 
     .search-row-excerpt {
         -webkit-line-clamp: 1;
-    }
-
-    .search-panel-foot {
-        display: none;
-    }
-
-    .search-kbd {
-        display: none;
     }
 }
 

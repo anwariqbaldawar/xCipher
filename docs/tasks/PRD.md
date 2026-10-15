@@ -30,8 +30,68 @@ xSypher is a premium editorial newsroom CMS and publication built with modern we
 * [x] Task 7 — ghost test data: purge it from the database and the R2 bucket, and fix the
       deletion pipeline that let it survive (asset purge, cache invalidation, real 404s).
       The `--apply` run itself needs the live database and bucket.
+* [x] Task 9 — UI/UX refinements: desktop smart-scroll header on article pages, unboxed
+      article hero, live-search modal fixes (no shortcut hints, close on navigation,
+      red-text match highlighting incl. author names, no match badges, distinct
+      Clear/Close), monetization-friendly editorial copy, the 6-profile social set
+      (with Reddit) in strict order, and system-aware theme synchronisation.
 
 ## 5. Task log
+
+### Task 9 — UI/UX refinements, search modal, social set, theme sync
+Six workstreams, each inspected in the live components before editing:
+
+**Desktop header on article pages.** `SiteHeader` ran the mobile 3-tier collapse on article
+pages at every width and a `min-width:768px` CSS override then forced all rows visible, so
+desktop articles never got the homepage's utility-bar behaviour. The scroll handler now
+branches on `matchMedia("(min-width: 768px)")` (re-evaluated on resize): desktop articles —
+like every listing page — toggle only Row 1 (hide on scroll down, return on slight scroll
+up), while Rows 2/3 stay pinned. Below 768px the article behaviour is byte-for-byte the old
+progressive collapse; mobile was not touched. The CSS override now force-pins only
+`.hdr-row-2`/`.hdr-row-3` on desktop article pages.
+
+**Article hero.** The featured `<figure>` lost its `border`/`overflow-hidden`/rounded card
+wrapper and the caption's box padding — the image and caption now sit directly in the
+column (`.art-hero .ph` keeps the image's own rounding). `data-image-role="featured"` and
+the preload/fetchPriority behaviour are unchanged.
+
+**Live search modal.** Removed the `⌘K` badge in the input and the `↑↓ / ↵ / esc` legend
+bar (markup and CSS), match-type badges (`TITLE MATCH`, `AUTHOR MATCH`, …) next to the
+category pill, and the red highlight pill: `.search-mark` is now brand-red bold text on a
+transparent background, applied to the author name in the meta line as well as the title.
+"See all results" now goes through the modal's close-then-navigate path (and any pathname
+change closes the panel), fixing the modal staying open over `/search`. Clear became a
+labelled eraser pill shown only while text is typed; Close is a distinct circular button
+that fills accent-red on hover.
+
+**Editorial copy.** The homepage/sidebar "How we work" cards, About promise 2,
+Editorial Standards and Editorial Policy no longer claim payment for coverage is refused:
+core reporting/benchmarks stay independent while clearly labelled Sponsored Deep-Dives,
+Partner Content and display/newsletter sponsorships fund the publication (sponsorship
+buys placement, never conclusions; no preview/veto). Editorial Policy is expanded to
+executive-grade sections: Technical Verification & Benchmarking Methodology, Sponsored
+Content & Native Advertising Disclosure, Affiliate & Partner Links, AI Assistance &
+Human Engineering Review, and Corrections Protocol (two-business-day response). About's
+metric strip: "2025 Founded & Independent" → "Independent — Engineering & Security
+Publication", "Zero Sponsored Clickbait" → "100% Transparent & Labelled Partnerships".
+
+**Social set.** New shared `components/common/SocialLinks.tsx` renders the six official
+profiles in one strict order — Facebook, Threads, Instagram, LinkedIn, X, Reddit
+(`https://www.reddit.com/r/xsypher/`, new tab, `noopener noreferrer`) — now used by the
+footer, About CTA, Contact Desk and the mobile drawer. `SocialIcon` gained Threads and
+Reddit glyphs; the Organization `sameAs` in `lib/entity-schema.ts` lists the same set.
+
+**Theme sync.** `ThemeProvider` now sets the system-aware contract explicitly
+(`defaultTheme="system"`, `enableSystem`, `enableColorScheme`, `data-theme` attribute):
+first visit follows `prefers-color-scheme` with no FOUC (pre-paint script), OS changes
+are followed live while no override is saved, and the header toggle stores an explicit
+override (Shift-click returns to following the system).
+
+Verified: `npx tsc --noEmit`, full `npx vitest run`, ESLint on touched files — see the
+commit message. `tests/live-search-ui.test.tsx` gained no-hints / author-highlight /
+see-all-closes / clear-action cases plus a red-text CSS contract;
+`tests/site-header-headroom.test.ts` gained the desktop source contract;
+new `tests/social-links.test.tsx` and `tests/theme-system.test.ts`.
 
 ### Task 7 — ghost test data: purge it everywhere, and fix what let it survive
 Reported symptom: test articles deleted from the admin dashboard were still being found and

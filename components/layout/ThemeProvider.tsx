@@ -20,5 +20,25 @@ if (typeof window !== "undefined") {
 }
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  // System-aware by default: with no saved choice, next-themes resolves
+  // `prefers-color-scheme` before first paint (its inline script runs in the
+  // document head flow, so there is no flash of the wrong theme) and keeps
+  // listening — an OS theme change on mobile or desktop is followed live.
+  // A manual toggle in the header stores an explicit "dark"/"light" choice
+  // under the same storage key, and that saved override wins until the
+  // reader changes it. `enableColorScheme` keeps the browser's own chrome
+  // (scrollbars, form controls) in step with the resolved theme.
+  return (
+    <NextThemesProvider
+      attribute="data-theme"
+      defaultTheme="system"
+      enableSystem
+      enableColorScheme
+      disableTransitionOnChange
+      storageKey="xsypher-theme"
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

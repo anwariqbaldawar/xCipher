@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Eraser, Search } from "lucide-react";
 import SearchResultList, { type SearchListState } from "./SearchResultList";
 import { useInstantSearch, useRecentSearches } from "./useInstantSearch";
 import type { LiveSearchResult } from "@/lib/search-types";
@@ -141,7 +141,8 @@ export default function InstantSearchInput({
             aria-label="Clear search"
             onClick={() => { search.reset(); inputRef.current?.focus(); }}
           >
-            <X className="h-4 w-4" />
+            <Eraser className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Clear</span>
           </button>
         ) : null}
         <button type="submit" className="btn-cs primary search-submit">Search</button>
@@ -167,6 +168,13 @@ export default function InstantSearchInput({
             onHighlight={search.setActiveIndex}
             onPickRecent={(term) => { search.setQuery(term); inputRef.current?.focus(); }}
             onClearRecent={clear}
+            onSeeAllResults={() => {
+              const term = search.query.trim();
+              if (!term) return;
+              remember(term);
+              setOpen(false);
+              router.push(`${action}?q=${encodeURIComponent(term)}`);
+            }}
           />
         </div>
       )}

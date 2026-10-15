@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { ArrowUpRight, CornerDownLeft, SearchX, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, CornerDownLeft, SearchX, TriangleAlert } from "lucide-react";
 import type { LiveSearchResult } from "@/lib/search-types";
 import { highlightSegments } from "@/lib/search-query";
 import RelativeTime from "@/components/common/RelativeTime";
@@ -36,6 +36,12 @@ interface Props {
   onHighlight: (index: number) => void;
   onPickRecent?: (term: string) => void;
   onClearRecent?: () => void;
+  /**
+   * Called when the reader chooses "See all results". The modal passes a
+   * handler that closes the panel before navigating; without one the footer
+   * link navigates on its own (the inline /search dropdown).
+   */
+  onSeeAllResults?: () => void;
   /**
    * Called when the reader taps the list's own empty space — the area under the
    * last row, or the padding around it. On a phone the overlay fills the
@@ -130,12 +136,6 @@ function ResultRow({
           {result.categoryName && (
             <span className="search-row-cat">{result.categoryName}</span>
           )}
-          {result.matchLabel && (
-            <span className="search-row-match">
-              <Sparkles className="h-2.5 w-2.5" aria-hidden="true" />
-              {result.matchLabel}
-            </span>
-          )}
         </div>
 
         <span className="search-row-title">
@@ -145,7 +145,11 @@ function ResultRow({
         {result.excerpt && <span className="search-row-excerpt">{result.excerpt}</span>}
 
         <span className="search-row-meta">
-          {result.authorName && <span className="font-semibold">{result.authorName}</span>}
+          {result.authorName && (
+            <span className="font-semibold">
+              <Highlighted text={result.authorName} tokens={tokens} />
+            </span>
+          )}
           {result.authorName && result.publishedAt && <span className="search-dot">·</span>}
           {result.publishedAt && <RelativeTime dateTime={result.publishedAt} />}
           <span className="search-dot">·</span>
@@ -174,6 +178,7 @@ export default function SearchResultList({
   onHighlight,
   onPickRecent,
   onClearRecent,
+  onSeeAllResults,
   onDismiss,
 }: Props) {
   return (
@@ -247,7 +252,17 @@ export default function SearchResultList({
               {results.length} result{results.length === 1 ? "" : "s"}
               {typeof took === "number" && took > 0 ? ` · ${took} ms` : ""}
             </span>
-            <Link href={`/search?q=${encodeURIComponent(query)}`} className="search-footer-link">
+            <Link
+              href={`/search?q=${encodeURIComponent(query)}`}
+              className="search-footer-link"
+              onClick={(event) => {
+                if (!onSeeAllResults) return;
+                // The handler owns navigation so the modal can close first —
+                // following the link alone left the panel open over /search.
+                event.preventDefault();
+                onSeeAllResults();
+              }}
+            >
               See all results
             </Link>
           </div>

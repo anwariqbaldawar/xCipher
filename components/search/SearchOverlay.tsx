@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Eraser, Search, X } from "lucide-react";
 import SearchResultList, { type SearchListState } from "./SearchResultList";
 import { useInstantSearch, useRecentSearches } from "./useInstantSearch";
 import type { LiveSearchResult } from "@/lib/search-types";
@@ -101,6 +101,7 @@ function releaseHistoryEntry(
 function SearchModal() {
   const { isOpen, setIsOpen } = useSearch();
   const router = useRouter();
+  const pathname = usePathname();
   const inputRef = useRef<HTMLInputElement>(null);
   /** True while this overlay owns the extra history entry it pushed on open. */
   const historyEntryRef = useRef(false);
@@ -138,6 +139,19 @@ function SearchModal() {
     remember(term);
     close(() => router.push(`/search?q=${encodeURIComponent(term)}`));
   }, [close, remember, router, search.query]);
+
+  // Any route change closes the panel. Result clicks and "See all results"
+  // already close before they navigate; this covers every other way the route
+  // can move under an open panel (a header link tapped behind it, a redirect),
+  // so the modal can never be left floating over the page it navigated to.
+  const lastPathnameRef = useRef(pathname);
+  useEffect(() => {
+    if (lastPathnameRef.current === pathname) return;
+    lastPathnameRef.current = pathname;
+    if (!isOpen) return;
+    releaseHistoryEntry(historyEntryRef, unwindingRef, true);
+    setIsOpen(false);
+  }, [pathname, isOpen, setIsOpen]);
 
   // Enter is handled explicitly rather than relying on the browser's implicit
   // form submission: `useInstantSearch` already consumed the key when a row was
@@ -273,6 +287,10 @@ function SearchModal() {
             aria-label="Search xSypher"
           />
 
+          {/* Clear and close are deliberately different shapes: a labelled
+              eraser pill that only exists while there is text to clear, and
+              a plain circular close. Two identical X buttons side by side
+              read as the same action twice. */}
           {search.isLoading ? (
             <span className="search-spinner" aria-hidden="true" />
           ) : search.query ? (
@@ -285,11 +303,10 @@ function SearchModal() {
                 inputRef.current?.focus();
               }}
             >
-              <X className="h-4 w-4" />
+              <Eraser className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Clear</span>
             </button>
-          ) : (
-            <kbd className="search-kbd">⌘K</kbd>
-          )}
+          ) : null}
 
           {/* The close affordance a touch device needs: no Esc key, and on a
               phone the panel fills the viewport so there is no visible
@@ -322,14 +339,9 @@ function SearchModal() {
             inputRef.current?.focus();
           }}
           onClearRecent={clear}
+          onSeeAllResults={submitFullSearch}
           onDismiss={() => close()}
         />
-
-        <div className="search-panel-foot">
-          <span><kbd className="search-kbd-sm">↑</kbd><kbd className="search-kbd-sm">↓</kbd> navigate</span>
-          <span><kbd className="search-kbd-sm">↵</kbd> open</span>
-          <span><kbd className="search-kbd-sm">esc</kbd> close</span>
-        </div>
       </div>
     </div>
   );
