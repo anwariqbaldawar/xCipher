@@ -83,6 +83,13 @@ function createDatabase(connectionString: string) {
   const pool = new Pool({
     connectionString: withNeonPooler(connectionString),
     max: POOL_MAX_CONNECTIONS,
+    // Neon serverless compute can take 1-3 seconds to wake from scale-to-zero.
+    // 10 seconds is generous enough for the slowest cold start without letting
+    // the process hang indefinitely when the proxy is unreachable.
+    connectionTimeoutMillis: 10_000,
+    // Reclaim idle connections so the pooler doesn't run out under sustained
+    // concurrency (SSG, live search bursts).
+    idleTimeoutMillis: 30_000,
   });
   return drizzle(pool, { schema });
 }

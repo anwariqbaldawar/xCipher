@@ -144,46 +144,69 @@ export function useInstantSearch(options: UseInstantSearchOptions = {}): Instant
       const controller = new AbortController();
       abortRef.current = controller;
 
-      try {
-        const response = await fetch(
-          `/api/search?q=${encodeURIComponent(requested)}&limit=${limit}`,
-          { signal: controller.signal, headers: { Accept: "application/json" } },
-        );
+      // Single client-side retry for transient 503 (Neon cold start that
+      // exhausted the server-side retry budget). By the time we retry, the
+      // compute is almost certainly awake.
+      const CLIENT_RETRY_DELAY_MS = 2_000;
+      const MAX_CLIENT_RETRIES = 1;
 
-        if (!response.ok && response.status !== 429) {
-          throw new Error(`Search failed with status ${response.status}`);
-        }
+      for (let attempt = 0; attempt <= MAX_CLIENT_RETRIES; attempt++) {
+        try {
+          const response = await fetch(
+            `/api/search?q=${encodeURIComponent(requested)}&limit=${limit}`,
+            { signal: controller.signal, headers: { Accept: "application/json" } },
+          );
 
-        const payload: LiveSearchResponse = await response.json();
+          // Rate-limited: show rate-limit message, no retry needed
+          if (response.status === 429) {
+            if (sequence !== sequenceRef.current) return;
+            const payload: LiveSearchResponse = await response.json();
+            setSnapshot({ query: requested, results: [], took: null });
+            setActiveIndex(-1);
+            setError(payload.error === "rate_limited"
+              ? "Too many searches just now. Give it a second."
+              : "Search is unavailable right now.");
+            return;
+          }
 
-        // A response for an older query is discarded rather than rendered.
-        if (sequence !== sequenceRef.current) return;
+          // Transient 503: retry once after a delay
+          if (response.status === 503 && attempt < MAX_CLIENT_RETRIES) {
+            console.warn(`[search] 503 on attempt ${attempt + 1}, retrying in ${CLIENT_RETRY_DELAY_MS}ms`);
+            await new Promise(r => setTimeout(r, CLIENT_RETRY_DELAY_MS));
+            continue;
+          }
 
-        if (!response.ok) {
-          setSnapshot({ query: requested, results: [], took: null });
-          setActiveIndex(-1);
-          setError(payload.error === "rate_limited"
-            ? "Too many searches just now. Give it a second."
-            : "Search is unavailable right now.");
+          if (!response.ok) {
+            throw new Error(`Search failed with status ${response.status}`);
+          }
+
+          const payload: LiveSearchResponse = await response.json();
+
+          // A response for an older query is discarded rather than rendered.
+          if (sequence !== sequenceRef.current) return;
+
+          const nextResults = payload.results || [];
+          setSnapshot({
+            query: requested,
+            results: nextResults,
+            took: typeof payload.took === "number" ? payload.took : null,
+          });
+          // Highlight the top result so Enter needs no arrow key first.
+          setActiveIndex(nextResults.length ? 0 : -1);
+          setHasSearched(true);
           return;
-        }
+        } catch (caught) {
+          if ((caught as Error)?.name === "AbortError") return;
+          if (sequence !== sequenceRef.current) return;
 
-        const nextResults = payload.results || [];
-        setSnapshot({
-          query: requested,
-          results: nextResults,
-          took: typeof payload.took === "number" ? payload.took : null,
-        });
-        // Highlight the top result so Enter needs no arrow key first.
-        setActiveIndex(nextResults.length ? 0 : -1);
-        setHasSearched(true);
-      } catch (caught) {
-        if ((caught as Error)?.name === "AbortError") return;
-        if (sequence !== sequenceRef.current) return;
-        console.error("[search] live query failed:", caught);
-        setSnapshot({ query: requested, results: [], took: null });
-        setActiveIndex(-1);
-        setError("Search is unavailable right now.");
+          // On last attempt, surface the error
+          if (attempt >= MAX_CLIENT_RETRIES) {
+            console.error("[search] live query failed:", caught);
+            setSnapshot({ query: requested, results: [], took: null });
+            setActiveIndex(-1);
+            setError("Search is unavailable right now.");
+          }
+        }
       }
     }, LIVE_SEARCH_DEBOUNCE_MS);
 

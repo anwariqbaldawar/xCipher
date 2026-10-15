@@ -112,75 +112,128 @@ export async function searchArticlesLive(
     WHERE j."A" = a."id" AND (t.name ILIKE ${pattern} OR t.slug ILIKE ${pattern})
   )`;
 
-  const result = await db.execute(sql`
-    SELECT
-      a."id",
-      a."slug",
-      a."title",
-      a."deck",
-      a."img",
-      a."publishedAt",
-      a."readingTime",
-      a."author"      AS "legacyAuthor",
-      a."isAnonymous",
-      c."name"        AS "categoryName",
-      c."slug"        AS "categorySlug",
-      au."name"       AS "authorName",
-      au."slug"       AS "authorSlug",
-      au."avatar"     AS "authorAvatar",
-      tags.matched    AS "matchedTags",
-      CASE
-        WHEN lower(a."title") = lower(${query})                 THEN 'title'
-        WHEN a."title" ILIKE ${pattern}                          THEN 'title'
-        WHEN a."slug" ILIKE ${pattern}                           THEN 'slug'
-        WHEN tags.matched IS NOT NULL                            THEN 'tag'
-        WHEN coalesce(a."deck", '') ILIKE ${pattern}             THEN 'summary'
-        WHEN c."name" ILIKE ${pattern}                           THEN 'category'
-        WHEN au."name" ILIKE ${pattern}                          THEN 'author'
-        WHEN coalesce(a."textContent", '') ILIKE ${pattern}      THEN 'content'
-        WHEN ${ftsMatches}                                       THEN 'content'
-        ELSE 'none'
-      END AS "matchField",
-      (
+  // ─── Retry wrapper ──────────────────────────────────────────────────────────
+  // Neon serverless compute scales to zero after ~5 minutes of inactivity.
+  // The first query after a cold start can take 1-3 seconds for the compute to
+  // wake. If the WebSocket handshake doesn't complete within the pool's
+  // connectionTimeoutMillis, the driver surfaces an ETIMEDOUT. A single retry
+  // after a short backoff is almost always enough because the compute is fully
+  // warm by the second attempt.
+  // ────────────────────────────────────────────────────────────────────────────
+  const MAX_RETRIES = 1;
+  const RETRY_DELAY_MS = 1_500;
+
+  async function executeSearchQuery() {
+    return db.execute(sql`
+      SELECT
+        a."id",
+        a."slug",
+        a."title",
+        a."deck",
+        a."img",
+        a."publishedAt",
+        a."readingTime",
+        a."author"      AS "legacyAuthor",
+        a."isAnonymous",
+        c."name"        AS "categoryName",
+        c."slug"        AS "categorySlug",
+        au."name"       AS "authorName",
+        au."slug"       AS "authorSlug",
+        au."avatar"     AS "authorAvatar",
+        tags.matched    AS "matchedTags",
         CASE
-          WHEN lower(a."title") = lower(${query})             THEN 100
-          WHEN a."title" ILIKE ${`${query}%`}                 THEN 80
-          WHEN a."title" ILIKE ${pattern}                     THEN 65
-          WHEN a."slug" ILIKE ${pattern}                      THEN 50
-          WHEN tags.matched IS NOT NULL                       THEN 40
-          WHEN coalesce(a."deck", '') ILIKE ${pattern}        THEN 30
-          WHEN c."name" ILIKE ${pattern}                      THEN 22
-          WHEN au."name" ILIKE ${pattern}                     THEN 22
-          WHEN coalesce(a."textContent", '') ILIKE ${pattern} THEN 14
-          ELSE 0
-        END
-        + (${ftsRank} * 12)
-        + LEAST(coalesce(a."views", 0) / 1000.0, 5)
-      ) AS "score"
-    FROM "Article" a
-    LEFT JOIN "Category" c  ON c."id" = a."categoryId"
-    LEFT JOIN "Author"   au ON au."id" = a."authorId"
-    LEFT JOIN LATERAL (
-      SELECT array_agg(t."name" ORDER BY t."name") AS matched
-      FROM "_ArticleToTag" j JOIN "Tag" t ON t."id" = j."B"
-      WHERE j."A" = a."id" AND (t."name" ILIKE ${pattern} OR t."slug" ILIKE ${pattern})
-    ) tags ON true
-    WHERE a."status" = 'PUBLISHED'::"ArticleStatus"
-      AND (a."publishedAt" IS NULL OR a."publishedAt" <= now())
-      AND (
-        a."title" ILIKE ${pattern}
-        OR a."slug" ILIKE ${pattern}
-        OR coalesce(a."deck", '') ILIKE ${pattern}
-        OR coalesce(a."textContent", '') ILIKE ${pattern}
-        OR c."name" ILIKE ${pattern}
-        OR au."name" ILIKE ${pattern}
-        OR ${tagMatch}
-        OR ${legacyTagClause(pattern)}
-        OR ${ftsMatches}
-      )
-    ORDER BY "score" DESC, a."publishedAt" DESC NULLS LAST, a."id" ASC
-    LIMIT ${limit} OFFSET ${offset}
-  `);
+          WHEN lower(a."title") = lower(${query})                 THEN 'title'
+          WHEN a."title" ILIKE ${pattern}                          THEN 'title'
+          WHEN a."slug" ILIKE ${pattern}                           THEN 'slug'
+          WHEN tags.matched IS NOT NULL                            THEN 'tag'
+          WHEN coalesce(a."deck", '') ILIKE ${pattern}             THEN 'summary'
+          WHEN c."name" ILIKE ${pattern}                           THEN 'category'
+          WHEN au."name" ILIKE ${pattern}                          THEN 'author'
+          WHEN coalesce(a."textContent", '') ILIKE ${pattern}      THEN 'content'
+          WHEN ${ftsMatches}                                       THEN 'content'
+          ELSE 'none'
+        END AS "matchField",
+        (
+          CASE
+            WHEN lower(a."title") = lower(${query})             THEN 100
+            WHEN a."title" ILIKE ${`${query}%`}                 THEN 80
+            WHEN a."title" ILIKE ${pattern}                     THEN 65
+            WHEN a."slug" ILIKE ${pattern}                      THEN 50
+            WHEN tags.matched IS NOT NULL                       THEN 40
+            WHEN coalesce(a."deck", '') ILIKE ${pattern}        THEN 30
+            WHEN c."name" ILIKE ${pattern}                      THEN 22
+            WHEN au."name" ILIKE ${pattern}                     THEN 22
+            WHEN coalesce(a."textContent", '') ILIKE ${pattern} THEN 14
+            ELSE 0
+          END
+          + (${ftsRank} * 12)
+          + LEAST(coalesce(a."views", 0) / 1000.0, 5)
+        ) AS "score"
+      FROM "Article" a
+      LEFT JOIN "Category" c  ON c."id" = a."categoryId"
+      LEFT JOIN "Author"   au ON au."id" = a."authorId"
+      LEFT JOIN LATERAL (
+        SELECT array_agg(t."name" ORDER BY t."name") AS matched
+        FROM "_ArticleToTag" j JOIN "Tag" t ON t."id" = j."B"
+        WHERE j."A" = a."id" AND (t."name" ILIKE ${pattern} OR t."slug" ILIKE ${pattern})
+      ) tags ON true
+      WHERE a."status" = 'PUBLISHED'::"ArticleStatus"
+        AND (a."publishedAt" IS NULL OR a."publishedAt" <= now())
+        AND (
+          a."title" ILIKE ${pattern}
+          OR a."slug" ILIKE ${pattern}
+          OR coalesce(a."deck", '') ILIKE ${pattern}
+          OR coalesce(a."textContent", '') ILIKE ${pattern}
+          OR c."name" ILIKE ${pattern}
+          OR au."name" ILIKE ${pattern}
+          OR ${tagMatch}
+          OR ${legacyTagClause(pattern)}
+          OR ${ftsMatches}
+        )
+      ORDER BY "score" DESC, a."publishedAt" DESC NULLS LAST, a."id" ASC
+      LIMIT ${limit} OFFSET ${offset}
+    `);
+  }
+
+  function isTransientError(err: unknown): boolean {
+    if (!err || typeof err !== "object") return false;
+    const msg = String((err as { message?: string }).message || "");
+    const code = (err as { code?: string }).code || "";
+    return (
+      msg.includes("ETIMEDOUT") ||
+      msg.includes("ECONNRESET") ||
+      msg.includes("ECONNREFUSED") ||
+      msg.includes("terminating connection") ||
+      msg.includes("Connection terminated") ||
+      code === "ETIMEDOUT" ||
+      code === "ECONNRESET" ||
+      code === "ECONNREFUSED" ||
+      // AggregateError wraps multiple connection failures
+      err instanceof AggregateError
+    );
+  }
+
+  let result;
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      result = await executeSearchQuery();
+      break;
+    } catch (err) {
+      lastError = err;
+      if (attempt < MAX_RETRIES && isTransientError(err)) {
+        console.warn(
+          `[search] transient error on attempt ${attempt + 1}, retrying in ${RETRY_DELAY_MS}ms:`,
+          (err as Error).message || err,
+        );
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  if (!result) throw lastError;
 
   const rows = (result.rows || []) as unknown as RawSearchRow[];
 
