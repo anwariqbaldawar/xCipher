@@ -9,7 +9,7 @@ export const siteConfig = {
   tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
-  twitter: "@xSypherTech",
+  twitter: "@ThexSypher",
   locale: "en_US",
   publisher: "xSypher Media",
   logoUrl: new URL('/xsypher-logo-full.png', process.env.NEXT_PUBLIC_SITE_URL || 'https://xsypher.com').href,

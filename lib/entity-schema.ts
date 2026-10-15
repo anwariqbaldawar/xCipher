@@ -41,8 +41,8 @@ export function generateOrganizationJsonLd() {
     // those profiles get created — each one strengthens the entity.
     sameAs: [
       "https://www.facebook.com/profile.php?id=61594767646306",
-      "https://www.threads.net/@xsypher_tech",
-      "https://www.instagram.com/xsypher_tech/?hl=en",
+      "https://www.threads.net/@thexsypher",
+      "https://www.instagram.com/thexsypher",
       "https://www.linkedin.com/company/xsypher/",
       `https://x.com/${siteConfig.twitter.replace(/^@/, "")}`,
       "https://www.reddit.com/r/xsypher/",
