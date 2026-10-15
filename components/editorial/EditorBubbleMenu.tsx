@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { useEditorState, type Editor } from "@tiptap/react";
 import { getEditorFormattingState } from "@/lib/editor/document-state";
@@ -91,7 +91,7 @@ function MarkButton({
   );
 }
 
-export function EditorBubbleMenu({ editor }: Props) {
+function EditorBubbleMenuView({ editor }: Props) {
   useEditorState({ editor, selector: ({ editor }) => editor ? getEditorFormattingState(editor) : null });
   const [linkMode, setLinkMode] = useState(false);
   const [draft, setDraft] = useState("");
@@ -370,3 +370,6 @@ export function EditorBubbleMenu({ editor }: Props) {
     </>
   );
 }
+
+// Memoised: depends only on the editor instance and its own subscription.
+export const EditorBubbleMenu = memo(EditorBubbleMenuView);

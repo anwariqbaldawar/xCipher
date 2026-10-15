@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, startTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,7 +31,7 @@ import { getAllowedMediaDomains } from "@/lib/sanitize";
 import { isStaleAsset } from "@/lib/stale-assets";
 import SeoPreview from "./SeoPreview";
 import ReviewWorkspace from "./ReviewWorkspace";
-import TableOfContents from "../article/TableOfContents";
+import TocPreview from "./TocPreview";
 import { EditorToolbar } from "./EditorToolbar";
 import { Markdown } from "tiptap-markdown";
 import { Figure } from "./extensions/AdvancedImage";
@@ -56,7 +56,8 @@ import { authorize } from "@/lib/capabilities";
 import { EditorialBlock } from "./extensions/EditorialBlock";
 import { parseEditorialBlock } from "@/lib/editorial-blocks";
 import DocumentOutline from "./DocumentOutline";
-import DocumentStatus from "./DocumentStatus";
+import DocumentStatus, { WordCountBadge } from "./DocumentStatus";
+import { countWords } from "@/lib/editor/document-state";
 import PublishingPanel from "./PublishingPanel";
 import EditorialPersonaSettings from "./EditorialPersonaSettings";
 import { getPersonaForCategory } from "@/lib/personas";
@@ -167,6 +168,11 @@ interface ArticleEditorProps {
   initialRevisions?: any[];
 }
 
+/** Pause after the last keystroke before the form copy of the body is refreshed. */
+const BODY_SYNC_DEBOUNCE_MS = 300;
+/** Upper bound on how far the form copy may lag during uninterrupted typing. */
+const BODY_SYNC_MAX_WAIT_MS = 2000;
+
 const slugify = (text: string) => {
   return text
     .toString()
@@ -231,6 +237,11 @@ export default function ArticleEditor({
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  // Stable identities so the memoised toolbar and outline skip re-rendering
+  // when this page re-renders for unrelated reasons (title typing, autosave).
+  const toggleFullscreen = useCallback(() => setIsFullscreen(value => !value), []);
+  const toggleOutline = useCallback(() => setOutlineOpen(value => !value), []);
+  const closeOutline = useCallback(() => setOutlineOpen(false), []);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const router = useRouter();
@@ -415,8 +426,13 @@ export default function ArticleEditor({
     defaultValues,
   });
 
-  const editor = useEditor({
-    extensions: [
+  // Created exactly once. useEditor compares options by reference after every
+  // render of this component and calls editor.setOptions() — a full
+  // ProseMirror view update (every plugin's decorations, every plugin view)
+  // — whenever they differ. Every `.configure()`/`.extend()` returns a new
+  // instance, so an inline array made each render (a keystroke in the title,
+  // an autosave status change) look like a brand-new configuration.
+  const [editorExtensions] = useState(() => [
       Markdown,
       StarterKit.configure({
         codeBlock: false, // Replaced by CodeBlockLowlight for syntax highlighting
@@ -470,7 +486,8 @@ export default function ArticleEditor({
       TableHeader,
       CharacterCount.configure({
         limit: 50000,
-        wordCounter: (text: string) => Array.from(text.matchAll(/\w+/g)).length,
+        // Same count as /\w+/g, without allocating a match object per word.
+        wordCounter: countWords,
       }),
       SlashMenu.configure({
         suggestion: {
@@ -525,20 +542,54 @@ export default function ArticleEditor({
           },
         }
       })
-    ],
-    editorProps: {
-      attributes: {
-        class: 'prose ed-body-content',
-        'aria-label': 'Article body',
-        'data-placeholder': 'Start your story, or type / to insert a block…',
-        spellcheck: 'true',
-      },
+    ]);
+
+  const [editorProps] = useState(() => ({
+    attributes: {
+      class: 'prose ed-body-content',
+      'aria-label': 'Article body',
+      'data-placeholder': 'Start your story, or type / to insert a block…',
+      spellcheck: 'true',
     },
+  }));
+
+  // Serialising the whole document to HTML is O(article length), so it does
+  // not run per keystroke. The form copy (which drives autosave and the local
+  // draft cache through `watch`) follows the editor once typing pauses, and
+  // never lags more than BODY_SYNC_MAX_WAIT_MS behind during a long run.
+  // Saves read editor.getHTML() directly and are never stale.
+  const bodySyncRef = useRef<{ timer: ReturnType<typeof setTimeout> | null; since: number }>({ timer: null, since: 0 });
+
+  const syncBodyHtml = (instance: { isDestroyed: boolean; getHTML: () => string } | null) => {
+    const sync = bodySyncRef.current;
+    if (sync.timer) clearTimeout(sync.timer);
+    sync.timer = null;
+    sync.since = 0;
+    if (!instance || instance.isDestroyed) return;
+    setValue("bodyHtml", instance.getHTML(), { shouldDirty: true });
+  };
+
+  const editor = useEditor({
+    extensions: editorExtensions,
+    editorProps,
+    // Explicit: a transaction must never re-render this whole page. The
+    // toolbar, outline and status bar subscribe to exactly what they show.
+    shouldRerenderOnTransaction: false,
     content: defaultValues.bodyHtml,
-    onUpdate: ({ editor }: any) => {
-      setValue("bodyHtml", editor.getHTML(), { shouldDirty: true });
+    onUpdate: ({ editor: instance }) => {
+      const sync = bodySyncRef.current;
+      const now = Date.now();
+      if (!sync.since) sync.since = now;
+      if (sync.timer) clearTimeout(sync.timer);
+      const wait = Math.max(0, Math.min(BODY_SYNC_DEBOUNCE_MS, sync.since + BODY_SYNC_MAX_WAIT_MS - now));
+      sync.timer = setTimeout(() => syncBodyHtml(instance), wait);
     },
   });
+
+  // A pending sync must not outlive the editor it reads from.
+  useEffect(() => () => {
+    if (bodySyncRef.current.timer) clearTimeout(bodySyncRef.current.timer);
+  }, []);
 
   useEffect(() => {
     if (initialData && editor && !isInitializedRef.current) {
@@ -601,12 +652,22 @@ export default function ArticleEditor({
   };
 
   useEffect(() => {
+    // Push a body edit that is still waiting on the sync debounce into the
+    // form, so the draft cache (flushed on pagehide/hidden) holds it.
+    const flushPendingBody = () => {
+      if (bodySyncRef.current.timer !== null) syncBodyHtml(editor);
+    };
+    const onHidden = () => { if (document.visibilityState === "hidden") flushPendingBody(); };
+
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const bodyPending = bodySyncRef.current.timer !== null;
+      flushPendingBody();
       // Warn whenever the server copy is behind the editor: a debounce still
       // pending, a request on the wire, or a failed/deferred save. "offline"
       // counts -- the text is in localStorage and recoverable, but leaving now
       // still means it never reached the server, which is worth a prompt.
       const unsynced =
+        bodyPending ||
         typingTimeoutRef.current !== null ||
         saveInFlightRef.current ||
         resaveQueuedRef.current ||
@@ -620,8 +681,16 @@ export default function ArticleEditor({
       }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [autosaveStatus]);
+    window.addEventListener("pagehide", flushPendingBody);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", flushPendingBody);
+      document.removeEventListener("visibilitychange", onHidden);
+    };
+    // syncBodyHtml only touches refs and the stable setValue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaveStatus, editor]);
 
   useEffect(() => {
     const subscription = watch(() => {
@@ -630,8 +699,10 @@ export default function ArticleEditor({
       // must keep pace with the keystrokes rather than with the server.
       cacheDraft(() => ({
         values: getValues(),
-        // onUpdate already serialized the current HTML into the form.
-        bodyHtml: getValues("bodyHtml") || "",
+        // Read the live document: the form copy trails the editor by the sync
+        // debounce. This snapshot is lazy and throttled (≤1/s), so serialising
+        // here costs nothing per keystroke.
+        bodyHtml: editor && !editor.isDestroyed ? editor.getHTML() : getValues("bodyHtml") || "",
         bodyJson: editor && !editor.isDestroyed ? editor.getJSON() : null,
       }));
 
@@ -1192,16 +1263,11 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
               {currentFormStatus === 'SUBMITTED' ? 'In Review' : currentFormStatus}
             </span>
 
-            {(() => {
-              const words = editor.storage.characterCount.words();
-              const isBelowMin = words < 50;
-              return (
-                <span className={`text-xs ml-2 font-medium flex items-center gap-1 ${isBelowMin ? 'text-[var(--warn)] hidden sm:flex' : 'text-[var(--muted)] hidden md:flex'}`}>
-                  Word count: {words}
-                  {isBelowMin && <span className="hidden sm:inline">(Min 50)</span>}
-                </span>
-              );
-            })()}
+            {/* Subscribes to the editor itself: counting words here would walk
+                the whole document on every render of this page and still go
+                stale between renders. */}
+            <WordCountBadge editor={editor} />
+
 
             <span
               role="status"
@@ -1384,8 +1450,8 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
             <EditorToolbar
               editor={editor}
               isFullscreen={isFullscreen}
-              toggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-              onToggleOutline={() => setOutlineOpen(!outlineOpen)}
+              toggleFullscreen={toggleFullscreen}
+              onToggleOutline={toggleOutline}
               outlineOpen={outlineOpen}
             />
           </div>
@@ -1454,7 +1520,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
       {/* ── 2-Column Workspace ── */}
       <div className="studio-workspace flex flex-row flex-1 w-full relative">
 
-        {outlineOpen && !isFullscreen && <DocumentOutline editor={editor} close={() => setOutlineOpen(false)} />}
+        {outlineOpen && !isFullscreen && <DocumentOutline editor={editor} close={closeOutline} />}
 
         {/* ── Main Writing Canvas (Left/Center) ── */}
         <main className="studio-canvas flex-1 min-w-0">
@@ -1988,7 +2054,11 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
           <section className="pt-6 border-t border-[var(--line-2)] mt-4">
             <h3 className="ed-rail-h mb-2">TOC Preview</h3>
             <div className="bg-[var(--surface-3)] p-4 rounded-md border border-[var(--line-2)]">
-              <TableOfContents containerSelector=".ProseMirror" />
+              {/* Built from editor state, never from the editable DOM: the
+                  public TableOfContents assigns heading ids, and writing ids
+                  into ProseMirror's DOM made it re-render those headings,
+                  which re-triggered the observer — a loop on every frame. */}
+              <TocPreview editor={editor} />
             </div>
           </section>
         </PublishingPanel>

@@ -17,9 +17,30 @@ export function getDocumentOutline(editor: Editor): Heading[] {
     if (node.type.name === 'heading' && node.textContent.trim()) {
       headings.push({ text: node.textContent, level: node.attrs.level, pos });
     }
+    // A heading never sits inside a textblock: skip every paragraph's inline
+    // content, so this walks blocks rather than every text node.
+    return !node.isTextblock;
   });
   outlines.set(doc, headings);
   return headings;
+}
+
+/**
+ * Number of `/\w+/g` runs in `text` — the editor's definition of a word —
+ * counted without allocating a match object per word. CharacterCount runs
+ * this on every document change, so on a long article the allocation-free
+ * loop matters. `\w` without the `u` flag is exactly [A-Za-z0-9_].
+ */
+export function countWords(text: string): number {
+  let words = 0;
+  let inWord = false;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    const isWordChar = (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 95;
+    if (isWordChar && !inWord) words++;
+    inWord = isWordChar;
+  }
+  return words;
 }
 
 export function getDocumentCounts(editor: Editor) {

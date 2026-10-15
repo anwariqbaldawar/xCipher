@@ -8,6 +8,11 @@ export default function FigureBlock({ node, updateAttributes, deleteNode, select
   const [editing, setEditing] = useState(false);
   const [cropping, setCropping] = useState(false);
   const [cropBusy, setCropBusy] = useState(false);
+  // Which src has finished loading. Until the current one has, the image
+  // keeps a reserved frame (see .is-loading) instead of collapsing to zero
+  // height and then snapping open, which shoved the text below it down.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const isLoading = Boolean(node.attrs.src) && loadedSrc !== node.attrs.src;
 
   const handleCanvasCrop = async (croppedFile: File) => {
     setCropBusy(true);
@@ -33,7 +38,7 @@ export default function FigureBlock({ node, updateAttributes, deleteNode, select
   };
 
   return (
-    <NodeViewWrapper className={`editorial-node ${selected ? 'is-selected' : ''}`}>
+    <NodeViewWrapper className={`editorial-node editorial-node--figure ${selected ? 'is-selected' : ''}`}>
       <div className="editorial-node-bar" contentEditable={false}>
         <span data-drag-handle>⠿ &nbsp; Single Image</span>
         <div className="flex items-center gap-1.5">
@@ -44,7 +49,22 @@ export default function FigureBlock({ node, updateAttributes, deleteNode, select
       </div>
       
       <figure className="ed-figure" data-credit={node.attrs.credit}>
-        <img src={node.attrs.src} alt={node.attrs.alt} title={node.attrs.title} />
+        {/* draggable={false}: a native image drag bypasses ProseMirror, so a
+            click with a little mouse movement dropped a copy of the photo
+            into the empty space below. The block moves only by its ⠿ handle.
+            A plain <img> on purpose: this is editable ProseMirror content,
+            where next/image's optimisation and layout wrapper do not apply. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={node.attrs.src}
+          alt={node.attrs.alt}
+          title={node.attrs.title}
+          draggable={false}
+          decoding="async"
+          className={isLoading ? 'is-loading' : undefined}
+          onLoad={() => setLoadedSrc(node.attrs.src)}
+          onError={() => setLoadedSrc(node.attrs.src)}
+        />
         <figcaption>
           <NodeViewContent className="inline" />
           {node.attrs.credit && (

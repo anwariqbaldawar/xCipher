@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
 import { Undo, Redo, Bold, Italic, Underline, Strikethrough, Code, List, ListOrdered, Quote, ImagePlus, Link2, FileCode, Minus, Maximize2, Minimize2, RemoveFormatting, MonitorPlay, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Subscript, Superscript, Highlighter, Search, ChevronDown, BarChart3, Workflow, ListChecks, ClipboardList, Star, Download, PanelLeft } from 'lucide-react';
 import { InsertMediaDialog, type MediaKind } from './InsertMediaDialog';
@@ -36,7 +36,7 @@ function Item({ children, onClick, disabled = false }: { children: ReactNode; on
   return <button type="button" disabled={disabled} onMouseDown={event => event.preventDefault()} onClick={onClick}>{children}</button>;
 }
 
-export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggleOutline, outlineOpen }: EditorToolbarProps) {
+function EditorToolbarView({ editor, isFullscreen, toggleFullscreen, onToggleOutline, outlineOpen }: EditorToolbarProps) {
   useEditorState({ editor, selector: ({ editor }) => getEditorFormattingState(editor) });
   const [tab, setTab] = useState<'write' | 'insert'>('write');
   const [findOpen, setFindOpen] = useState(false);
@@ -146,3 +146,7 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     }} onInsertVideo={value => editor.chain().focus().setYouTubeVideo(value).run()} />
   </div>;
 }
+
+// Memoised with stable callbacks from the editor page: it re-renders when its
+// own formatting-state subscription changes, not on every page render.
+export const EditorToolbar = memo(EditorToolbarView);

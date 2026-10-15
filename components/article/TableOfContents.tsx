@@ -12,6 +12,10 @@ export default function TableOfContents({ containerSelector = '.prose', title = 
   useEffect(() => {
     const container = root.current?.closest(containerSelector) || document.querySelector(containerSelector);
     if (!container) return;
+    // Never write into an editable host (the article editor). ProseMirror owns
+    // that DOM and redraws a heading whose attributes change under it, which
+    // re-fires the observer below: an endless loop on every frame.
+    const editableHost = container.closest('[contenteditable]:not([contenteditable="false"])') !== null;
     let frame = 0;
     const update = () => {
       const seen = new Set<string>();
@@ -21,7 +25,7 @@ export default function TableOfContents({ containerSelector = '.prose', title = 
         let suffix = 2;
         while (seen.has(id)) id = `${base}-${suffix++}`;
         seen.add(id);
-        if (el.id !== id) el.id = id;
+        if (el.id !== id && !editableHost) el.id = id;
         return { id, text: el.textContent || '', level: Number(el.tagName[1]) };
       }).filter(item => item.text.trim());
       setItems(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
@@ -131,7 +135,9 @@ export default function TableOfContents({ containerSelector = '.prose', title = 
     {items.length ? <nav ref={navRef} aria-label={title} className="relative flex flex-col max-h-[65vh] overflow-y-auto no-scrollbar">{items.map(item => <a key={item.id} href={`#${item.id}`} className={`block relative text-sm transition-all duration-300 py-1.5 pr-2 border-l-[3px] rounded-r-lg ${item.id === activeId ? 'text-[var(--accent)] font-semibold border-[var(--accent)] bg-red-500/10 dark:bg-red-500/15 backdrop-blur-sm' : 'text-[var(--muted)] hover:text-[var(--ink)] border-transparent hover:border-neutral-300 dark:hover:border-neutral-700 hover:bg-[var(--surface-3)]/50'} ${item.level === 3 ? 'pl-6' : item.level === 4 ? 'pl-8' : 'pl-3'}`} onClick={event => {
       event.preventDefault();
       const container = root.current?.closest(containerSelector) || document.querySelector(containerSelector);
-      const target = Array.from(container?.querySelectorAll('h2, h3, h4') || []).find(el => el.id === item.id);
+      const headings = Array.from(container?.querySelectorAll('h2, h3, h4') || []);
+      // Ids are only assigned outside editable hosts; fall back to the text.
+      const target = headings.find(el => el.id === item.id) || headings.find(el => (el.textContent || '') === item.text);
       target?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
     }}>{(item.level === 3 || item.level === 4) && <span className="inline-block w-1.5 h-1.5 rounded-full bg-red-500 mr-2 -translate-y-[1px]"></span>}{item.text}</a>)}</nav> : <p className="text-xs text-[var(--muted)]">Add section headings to build an outline.</p>}
   </div>;

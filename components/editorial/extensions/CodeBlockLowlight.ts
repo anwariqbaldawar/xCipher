@@ -86,6 +86,24 @@ function parseNodes(nodes: any[], className: string[] = []): { text: string; cla
   })
 }
 
+/** Every code block in document order. Skips textblock content, where a code
+ *  block cannot occur, so this walks blocks rather than every text node. */
+function collectCodeBlocks(doc: ProseMirrorNode, name: string): ProseMirrorNode[] {
+  const blocks: ProseMirrorNode[] = []
+  doc.descendants((node) => {
+    if (node.type.name === name) {
+      blocks.push(node)
+      return false
+    }
+    return !node.isTextblock
+  })
+  return blocks
+}
+
+function sameNodes(a: ProseMirrorNode[], b: ProseMirrorNode[]): boolean {
+  return a.length === b.length && a.every((node, index) => node === b[index])
+}
+
 function getDecorations({
   doc,
   name,
@@ -103,7 +121,8 @@ function getDecorations({
 
   doc.descendants((node, pos) => {
     if (node.type.name !== name) {
-      return
+      // Paragraphs and headings cannot contain a code block.
+      return !node.isTextblock
     }
 
     let from = pos + 1
@@ -405,17 +424,22 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
               defaultLanguage: this.options.defaultLanguage,
               cache,
             }),
-          apply: (transaction, decorationSet, oldState, newState) => {
-            const oldNodeName = oldState.selection.$head.parent.type.name
-            const newNodeName = newState.selection.$head.parent.type.name
-            const oldNodes = oldState.doc.content
-            const newNodes = newState.doc.content
+          apply: (transaction, decorationSet, oldState) => {
+            if (!transaction.docChanged) return decorationSet
 
-            if (
-              transaction.docChanged &&
-              ([oldNodeName, newNodeName].includes(this.name) ||
-                newNodes !== oldNodes)
-            ) {
+            // Unchanged code blocks are the very same immutable node objects
+            // in both documents, so the decorations only need rebuilding when
+            // a code block was added, removed, reordered or edited; an edit
+            // anywhere else just shifts them. (The previous test compared the
+            // root fragments, which differ after every edit, so each
+            // keystroke in a paragraph rebuilt the decorations of every code
+            // block in the article.)
+            const unchanged = sameNodes(
+              collectCodeBlocks(oldState.doc, this.name),
+              collectCodeBlocks(transaction.doc, this.name),
+            )
+
+            if (!unchanged) {
               return getDecorations({
                 doc: transaction.doc,
                 name: this.name,
