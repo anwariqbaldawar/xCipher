@@ -112,13 +112,16 @@ describe("request-time backend configuration", () => {
   it("caps the pool and gives the driver a WebSocket constructor", async () => {
     const { POOL_MAX_CONNECTIONS } = await import("@/lib/db");
     const { neonConfig } = await import("@neondatabase/serverless");
+    const { default: ws } = await import("ws");
 
     // A production build runs many workers at once; each pool is capped so a
     // burst of in-flight queries cannot exhaust the compute.
     expect(POOL_MAX_CONNECTIONS).toBe(5);
-    // Node has no implicit constructor: without one the first query rejects with
-    // a bare `ErrorEvent { type: "error" }` and no Postgres message.
-    expect(typeof neonConfig.webSocketConstructor).toBe("function");
+    // The constructor has to be `ws`. Node's platform global also constructs,
+    // but its connection to the Neon proxy never opens, so the driver rejects
+    // every query with a bare `ErrorEvent { type: "error" }` — which breaks
+    // `next dev`, SSG during `next build` and every CLI script.
+    expect(neonConfig.webSocketConstructor).toBe(ws);
   });
 
   it("resolves Auth.js secrets, cookies and adapter only when requested", async () => {

@@ -19,10 +19,15 @@
  *   Apply:
  *     npx tsx scripts/purge-stale-assets.ts --apply
  *
+ *   `DATABASE_URL` and `NEXT_PUBLIC_R2_PUBLIC_BASE` are read from `.env` in the
+ *   working directory — the script loads it itself, because a bare `tsx`
+ *   process does not get it the way `next dev` / `next build` do.
+ *
  * Exit codes: 0 = success (including "nothing to do"), 1 = failure. A failed
  * run must never look like a successful one in CI (AGENTS.md §6).
  */
 
+import "dotenv/config";
 import { readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { and, isNotNull, ne, or, sql } from "drizzle-orm";

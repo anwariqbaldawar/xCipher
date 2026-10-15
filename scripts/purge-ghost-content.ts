@@ -38,6 +38,9 @@
  *     npx tsx scripts/purge-ghost-content.ts --match "homepage demo" --slug roman-urdu-test
  *
  * Notes for the operator:
+ *   • `DATABASE_URL` and the R2 credentials are read from `.env` in the working
+ *     directory. A bare `tsx` process does not get that for free the way
+ *     `next dev` / `next build` do, so the script loads it itself.
  *   • This script cannot invalidate the site's ISR cache — Next.js only exposes
  *     revalidation inside a request. Delete from the admin dashboard when you
  *     need the 404 to be instant; after running this, the public caches also
@@ -62,6 +65,7 @@
  * must never look like a successful one in CI (AGENTS.md §6).
  */
 
+import "dotenv/config";
 import { inArray, eq, isNotNull } from "drizzle-orm";
 import { db } from "../lib/db";
 import {

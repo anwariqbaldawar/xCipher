@@ -1,30 +1,38 @@
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 import * as schema from './db/schema';
 
 type Database = ReturnType<typeof createDatabase>;
 
 /**
- * WebSocket implementation for the Neon driver — the platform's own.
+ * WebSocket implementation for the Neon driver — `ws`, explicitly.
  *
  * The driver speaks Postgres over a WebSocket, so it needs a constructor. In
- * a browser and in workerd that global is always present; in Node it exists
- * from v22, which is the floor this project builds and deploys on
- * (`node:22-alpine` in both Dockerfiles, Node 22 in CI). When neither the
- * configured constructor nor the global resolves, the first query rejects with
- * a bare `ErrorEvent { type: "error" }` and no Postgres message at all, which
- * is the failure this assignment exists to prevent.
+ * Node the one it would otherwise pick up is the wrong one: the platform
+ * global (`globalThis.WebSocket`, Undici-backed) *constructs*, but its
+ * connection to the Neon proxy never completes, and the driver surfaces that
+ * as a bare `ErrorEvent { type: "error" }` with no Postgres message at all.
+ * Every query then rejects — the symptom was `next dev` failing to render
+ * (listings empty, `[cached-queries] Failed to fetch …`), SSG aborting during
+ * `next build`, and the CLI scripts dying on their first `SELECT`. It also
+ * showed up as "Only plain objects … can be passed to Client Components",
+ * because Next tried to serialise that ErrorEvent across the server/client
+ * boundary.
  *
- * Assigning it explicitly rather than leaving the driver to find the global is
- * also what makes the behaviour identical between `next dev`, the worker
- * bundle and the container. The driver only uses standard APIs on it
- * (`binaryType = "arraybuffer"`, `addEventListener("open" | "message" |
- * "error" | "close")` — see `@neondatabase/serverless`'s `connect()`), so a
- * compliant WebSocket is all that is required; no polyfill dependency is
- * pulled in for it.
+ * `ws` is the implementation the driver documents for Node, and the one this
+ * app used before the assignment below was changed to the global.
+ *
+ * Assigned only when nothing has claimed it, so a deployment that sets its own
+ * constructor — or a test that stubs one — still wins.
+ *
+ * Note for a future Cloudflare Workers / workerd bundle: `ws` is a Node
+ * package and must not be imported there. This file targets the Node server
+ * runtime (`next dev`, `next build`, `next start`, the Docker worker); a
+ * workerd build has to take the constructor from the platform global instead.
  */
-if (!neonConfig.webSocketConstructor && typeof globalThis.WebSocket === 'function') {
-  neonConfig.webSocketConstructor = globalThis.WebSocket;
+if (!neonConfig.webSocketConstructor) {
+  neonConfig.webSocketConstructor = ws as unknown as typeof neonConfig.webSocketConstructor;
 }
 
 /**

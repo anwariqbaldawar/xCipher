@@ -116,10 +116,21 @@ so they cannot drift apart again):
   homepage title; the preview route no longer hands an unpublished draft's headline and deck
   to an anonymous request; and `getRecentArticleSlugs()` no longer pre-builds scheduled
   articles that would immediately 404.
-* `lib/db.ts` no longer needs `ws`: the Neon driver only uses standard WebSocket APIs
-  (`binaryType`, `addEventListener` for open/message/error/close), workerd and Node 22 both
-  provide them, and assigning the global explicitly keeps dev, worker and container identical.
-  `ws` and `@types/ws` are gone from `package.json` and the lockfile.
+* `lib/db.ts` gives the driver `ws`, explicitly. An earlier pass here removed `ws` and
+  assigned `globalThis.WebSocket` instead, reasoning that Node 22's built-in WebSocket is a
+  compliant implementation. It is not: it constructs, but the connection to the Neon proxy never
+  opens, and the driver turns that into a bare `ErrorEvent { type: "error" }` with no Postgres
+  message. Every query rejected — `next dev` rendered empty listings, `next build` failed
+  prerendering article pages, and `scripts/purge-ghost-content.ts` died on its first `SELECT`;
+  in the app the same failure surfaced as "Only plain objects … can be passed to Client
+  Components", because Next tried to serialise that ErrorEvent across the server/client
+  boundary. `ws` (plus `@types/ws`) is back in `package.json`, the constructor is assigned from
+  it when nothing else has claimed it, and `tests/backend-runtime.test.ts` now asserts the
+  constructor *is* `ws` rather than merely being a function.
+* The two operator scripts load `.env` themselves (`import "dotenv/config"`). `next dev` and
+  `next build` read it for the app; a bare `tsx` process does not, which is why
+  `npx tsx scripts/purge-ghost-content.ts` used to fail with `DATABASE_URL is not set` before it
+  could even print the dry-run report.
 
 Verified in this repository: `npx tsc --noEmit`, `npx eslint` clean on every new module,
 `npx vitest run` (61 files / 733 tests; the two new suites pin the false-positive side of both
@@ -166,6 +177,22 @@ Verified after the pass: `npx tsc --noEmit`, `npx eslint` clean on the touched f
 asserts the `DeleteObjects` body carries the content blob, the featured and social images and
 the inline keys, and that a refused batch still reports per-key failures instead of claiming
 success.
+
+**Regression fix (same task, integration-tested on a real database).** Two things the sandbox
+could not catch, found by running `next dev`, `next build` and the scripts against the real
+database:
+
+1. **The driver must be given `ws`.** Removing it (see the `lib/db.ts` note above) traded a
+   dependency for a broken database layer. Node's built-in WebSocket is not a drop-in for the
+   Neon proxy: it constructs, the handshake never completes, and the driver reports only
+   `ErrorEvent { type: "error" }`. `ws` and `@types/ws` are back, the constructor is assigned
+   from `ws`, and the runtime test asserts identity with `ws` rather than "is a function".
+2. **The operator scripts never loaded `.env`.** `next dev` and `next build` load it for the
+   app; a bare `tsx` process does not, so
+   `npx tsx scripts/purge-ghost-content.ts` exited with `Error: DATABASE_URL is not set` before
+   it could print the dry-run report. Both purge scripts now start with
+   `import "dotenv/config"` (declared as a devDependency, so it does not rely on a transitive
+   copy).
 
 ### Task 6 — independent-publication identity and cross-site consistency
 The policy pages were written in the voice of an organisation xSypher is not: a
