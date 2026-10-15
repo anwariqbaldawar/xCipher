@@ -9,10 +9,10 @@ import { SocialIcon } from "./SocialIcon";
 
 export const SOCIAL_LINKS = [
   { platform: "facebook", label: "Facebook", href: "https://www.facebook.com/profile.php?id=61594767646306" },
-  { platform: "threads", label: "Threads", href: "https://www.threads.net/@xsypher_tech" },
-  { platform: "instagram", label: "Instagram", href: "https://www.instagram.com/xsypher_tech/?hl=en" },
+  { platform: "threads", label: "Threads", href: "https://www.threads.net/@thexsypher" },
+  { platform: "instagram", label: "Instagram", href: "https://www.instagram.com/thexsypher" },
   { platform: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/company/xsypher/" },
-  { platform: "x", label: "X", href: "https://x.com/xSypher_tech" },
+  { platform: "x", label: "X", href: "https://x.com/ThexSypher" },
   { platform: "reddit", label: "Reddit", href: "https://www.reddit.com/r/xsypher/" },
 ] as const;
 
