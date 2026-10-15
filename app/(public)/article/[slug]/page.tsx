@@ -18,6 +18,7 @@ import ArticleBody from "@/components/article/ArticleBody";
 import StoryCard from "@/components/article/StoryCard";
 import ProgressBar from "@/components/article/ProgressBar";
 import ListenButton from "@/components/article/ListenButton";
+import ArticleAudioPlayer from "@/components/article/ArticleAudioPlayer";
 import { fetchFromR2 } from "@/lib/storage";
 import ArticleMobileToolbar from "@/components/article/ArticleMobileToolbar";
 import ViewCounter from "@/components/article/ViewCounter";
@@ -404,6 +405,7 @@ export default async function ArticlePage({ params }: Props) {
 
       </div>
       <ArticleMobileToolbar />
+      <ArticleAudioPlayer />
     </article>
   </>
   );

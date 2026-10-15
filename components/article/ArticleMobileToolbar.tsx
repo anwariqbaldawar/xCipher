@@ -13,7 +13,7 @@ export default function ArticleMobileToolbar() {
   useEffect(() => {
     document.body.classList.add("is-article");
     const unsubscribe = subscribeSpeech((state) => {
-      setSpeaking(state);
+      setSpeaking(state.status !== "idle");
     });
     return () => {
       unsubscribe();
@@ -50,12 +50,12 @@ export default function ArticleMobileToolbar() {
         id="mListen"
         className={speaking ? "on" : ""}
         onClick={toggleSpeech}
-        aria-label={speaking ? "Stop narration" : "Listen to article"}
+        aria-label={speaking ? "Pause narration" : "Listen to article"}
       >
         <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <path d="M11 5 6 9H3v6h3l5 4V5z" />
           <path d="M15.5 8.5a5 5 0 0 1 0 7" />
-        </svg>{speaking ? "Stop" : "Listen"}
+        </svg>{speaking ? "Pause" : "Listen"}
       </button>
       <button id="mFsDown" onClick={() => stepFs(-1)} aria-label="Smaller text">
         <span style={{ font: "700 14px var(--f-ui)" }}>A−</span>Text
