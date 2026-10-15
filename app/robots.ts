@@ -31,7 +31,12 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
+        // /api/og is the generated social card an article shares with when it
+        // has no usable featured image. Twitterbot obeys robots.txt for card
+        // images, so under `Disallow: /api/` those shares lost their image.
+        // The longer Allow wins over the shorter Disallow; the rest of /api/
+        // stays blocked.
+        allow: ['/', '/api/og'],
         disallow: DISALLOWED_PATHS,
       },
       // AI search / retrieval bots — these are what produce AI citations.

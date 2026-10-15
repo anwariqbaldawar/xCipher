@@ -9,8 +9,8 @@ import { db } from "@/lib/db";
 import { getArticleRecommendations, getBenchmarkLeaderboard, getRecentArticleSlugs } from "@/lib/cached-queries";
 import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
-import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
-import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
+import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd, siteConfig } from "@/lib/seo";
+import { IMAGE_WIDTHS, SOCIAL_CARD_SIZE, resolveImageSrc, socialCardImageUrl } from "@/lib/image-url";
 import { getArticleAuthor } from "@/lib/personas";
 import nextDynamic from "next/dynamic";
 import { serializeJsonLd, withEditorialSchema } from "@/lib/article-schema";
@@ -104,15 +104,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ogParams.set("title", article.metaTitle || article.seoTitle || article.title);
   ogParams.set("author", authorName);
   ogParams.set("category", catName);
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
-  const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
+  // Same origin as metadataBase (siteConfig.url → the production apex).
+  const ogUrl = `${siteConfig.url}/api/og?${ogParams.toString()}`;
 
   // The article's own featured image is the ONLY editorial image this route may
   // present. A stale placeholder resolves to undefined and the generated card
   // below covers social sharing; the brand banner is never substituted, because
   // that is what made article pages claim an image that is not theirs.
   const featuredImage = articleFeaturedImageUrl(article);
-  const resolvedImage = featuredImage || ogUrl;
+  // Social networks get a 1200×630 JPEG of that same image (socialCardImageUrl):
+  // the stored file is WebP — which WhatsApp and LinkedIn previews do not
+  // reliably render — and can be several MB. JSON-LD keeps its own image.
+  const socialCard = socialCardImageUrl(featuredImage);
+  const resolvedImage = socialCard || featuredImage || ogUrl;
+  // Declare dimensions only when they are guaranteed: the social card and the
+  // generated /api/og card are exactly 1200×630; a raw original's size is not
+  // known here, so nothing is claimed for it.
+  const imageSize = socialCard || !featuredImage ? SOCIAL_CARD_SIZE : null;
+  const imageType = socialCard ? "image/jpeg" : !featuredImage ? "image/png" : undefined;
 
   return constructMetadata({
     // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription
@@ -123,6 +132,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: article.metaTitle || article.seoTitle || article.title,
     description: article.metaDescription || article.seoDesc || article.deck || "",
     image: resolvedImage,
+    imageSize,
+    imageType,
     // Alt text: the editor's description when set (better for screen readers),
     // otherwise the exact headline, so the image is unambiguously tied to it.
     imageAlt: article.featuredImageAlt?.trim() || article.title,

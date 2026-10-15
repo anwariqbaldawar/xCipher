@@ -2,17 +2,28 @@ import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 import { isStaleAsset } from "@/lib/stale-assets";
 import { BRAND_BANNER_PATH, optimizeImageUrl, resolveImageSrc } from "@/lib/image-url";
 
+/**
+ * The production origin, used whenever NEXT_PUBLIC_SITE_URL is not set.
+ *
+ * Apex, not www: middleware.ts permanently redirects www.xsypher.com to this
+ * host (tests/middleware-cpu.test.ts pins it) and the production build sets
+ * NEXT_PUBLIC_SITE_URL to it. Canonical, og:url and og:image URLs must name
+ * the host that answers 200 — a URL on the redirecting host is a soft error
+ * for crawlers, and WhatsApp does not follow redirects for preview images.
+ */
+export const PRODUCTION_SITE_URL = "https://xsypher.com";
+
 export const siteConfig = {
   name: "xSypher",
   // Single source of truth for the brand line: used by the <title> template,
   // the RSS channel and anywhere else the positioning is quoted (CON-002).
   tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
+  url: process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_SITE_URL,
   twitter: "@ThexSypher",
   locale: "en_US",
   publisher: "xSypher Media",
-  logoUrl: new URL('/xsypher-logo-full.png', process.env.NEXT_PUBLIC_SITE_URL || 'https://xsypher.com').href,
+  logoUrl: new URL('/xsypher-logo-full.png', process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_SITE_URL).href,
 };
 
 /* ───────────────────────────────────────────────────────────────────────────────
@@ -56,6 +67,8 @@ export function constructMetadata({
   description = siteConfig.description,
   image,
   imageAlt,
+  imageSize,
+  imageType,
   twitterImage,
   noIndex = false,
   index,
@@ -72,6 +85,15 @@ export function constructMetadata({
   description?: string;
   image?: string;
   imageAlt?: string;
+  /**
+   * The real pixel size of `image`, emitted as og:image:width/height. Facebook
+   * uses these to draw the image on the first share, so they must describe the
+   * actual file: pass `null` when it is unknown and nothing is declared.
+   * Omitted: the legacy 1200×630 declaration.
+   */
+  imageSize?: { width: number; height: number } | null;
+  /** og:image:type, when the format is known (e.g. "image/jpeg"). */
+  imageType?: string;
   /** Optional distinct card for X/Twitter. Defaults to `image`. */
   twitterImage?: string;
   /** Legacy switch: sets both index and follow to false. */
@@ -98,6 +120,7 @@ export function constructMetadata({
 
   const absoluteImage = absoluteImageUrl(image);
   const absoluteTwitterImage = twitterImage ? absoluteImageUrl(twitterImage) : absoluteImage;
+  const imageDimensions = imageSize === undefined ? { width: 1200, height: 630 } : imageSize;
 
   // A story with no usable featured image simply has no og:image. Pointing it
   // at the brand banner would make the banner the photograph Google associates
@@ -120,8 +143,8 @@ export function constructMetadata({
         ? [
             {
               url: absoluteImage,
-              width: 1200,
-              height: 630,
+              ...(imageDimensions ? { width: imageDimensions.width, height: imageDimensions.height } : {}),
+              ...(imageType ? { type: imageType } : {}),
               alt: imageAlt || title,
             },
           ]

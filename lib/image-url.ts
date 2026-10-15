@@ -90,6 +90,43 @@ export function optimizeImageUrl(src: string, width: number): string {
   }
 }
 
+/** Open Graph / X card size (1.91:1) — what every major network renders as a large preview. */
+export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/**
+ * Social-card copy of a public R2 image: exactly 1200×630, cropped around the
+ * subject, re-encoded as JPEG through Cloudflare Image Transformations.
+ *
+ * Why a dedicated copy rather than the stored file:
+ *   • uploads are normalised to WebP, which WhatsApp and LinkedIn link
+ *     previews do not reliably render — the share degrades to a bare link;
+ *   • a stored original can run to several MB (X's card limit is 5 MB, and
+ *     WhatsApp's practical limit is far lower);
+ *   • og:image:width/height must describe the actual file for Facebook to
+ *     draw the image on the very first share — 1200×630 is now guaranteed.
+ *
+ * Returns null when the source cannot be transformed (not on the configured R2
+ * base, or an r2.dev base), so the caller can fall back to the original
+ * without declaring dimensions it cannot vouch for.
+ */
+export function socialCardImageUrl(src: string | null | undefined): string | null {
+  if (!src || !/^https?:\/\//i.test(src)) return null;
+
+  try {
+    const url = new URL(src);
+    const publicBase = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE;
+    if (!publicBase || new URL(publicBase).origin !== url.origin) return null;
+    if (!supportsImageTransformations(publicBase)) return null;
+    if (url.pathname.startsWith(TRANSFORM_PATH)) return null;
+
+    const { width, height } = SOCIAL_CARD_SIZE;
+    const options = `width=${width},height=${height},fit=cover,gravity=auto,format=jpeg,quality=82`;
+    return `${url.origin}${TRANSFORM_PATH}${options}${url.pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Single entry point for turning a stored image value into something safe to
  * put in an `<img src>`.

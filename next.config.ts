@@ -1,6 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import { networkInterfaces } from "node:os";
+import { HTML_LIMITED_BOTS } from "./lib/html-limited-bots";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dev-only: allow this machine's LAN addresses to load /_next/* resources.
@@ -71,6 +72,9 @@ function r2RemotePattern(): NonNullable<NonNullable<NextConfig["images"]>["remot
 const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
+  // Social/link-preview crawlers must get og:image and twitter:card in <head>,
+  // not streamed into <body>. Superset of Next's defaults — see the module.
+  htmlLimitedBots: HTML_LIMITED_BOTS,
   // env block removed because Auth.js infers host dynamically via trustHost
   allowedDevOrigins: localNetworkOrigins(),
   async redirects() {
