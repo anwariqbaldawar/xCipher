@@ -40,9 +40,13 @@ export async function GET() {
 
   try {
     articles = await dbRead.query.article.findMany({
+      // `<= NOW()` as well as the 48-hour window: a scheduled article already
+      // holds the PUBLISHED status, so without the upper bound a story that is
+      // not live yet would be submitted to Google News as news.
       where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"
         AND ${articleTable.publishedAt} IS NOT NULL
-        AND ${articleTable.publishedAt} >= NOW() - INTERVAL '48 HOURS'`,
+        AND ${articleTable.publishedAt} >= NOW() - INTERVAL '48 HOURS'
+        AND ${articleTable.publishedAt} <= NOW()`,
       columns: { slug: true, title: true, img: true, featuredImageCaption: true, publishedAt: true, updatedAt: true },
       orderBy: (article, { desc }) => [desc(article.publishedAt)],
       limit: NEWS_SITEMAP_LIMIT,
@@ -53,7 +57,8 @@ export async function GET() {
     // ka "Missing XML tag: url" error na mile.
     if (!articles.length) {
       articles = await dbRead.query.article.findMany({
-        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"
+          AND (${articleTable.publishedAt} IS NULL OR ${articleTable.publishedAt} <= NOW())`,
         columns: { slug: true, title: true, img: true, featuredImageCaption: true, publishedAt: true, updatedAt: true },
         orderBy: (article, { desc }) => [desc(article.publishedAt)],
         limit: 10,

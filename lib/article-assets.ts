@@ -24,6 +24,28 @@
 
 import { r2KeyFromUrl } from "./storage";
 
+/**
+ * The bucket namespaces the article pipeline writes to.
+ *
+ * `xsypher/articles/` is every editor upload and every external image mirrored
+ * through /api/upload/external; `articles/` holds the content blobs
+ * (`articles/content-<id>.json`).
+ *
+ * Deletion is scoped to these on purpose. Article body markup can reference any
+ * URL in the bucket — an inlined brand logo, a shared chart — and "the article
+ * mentions it" is not the same as "the article owns it": deleting a shared asset
+ * because one story embedded it would break every other page still using it.
+ * Objects outside these namespaces are left alone; the sweep reports them
+ * instead, and a shared file that nothing references is a bucket-hygiene
+ * decision rather than a deletion side effect.
+ */
+export const ARTICLE_ASSET_PREFIXES = ["xsypher/articles/", "articles/"] as const;
+
+/** True when a bucket key is owned by the article pipeline. */
+export function isArticleAssetKey(key: string, prefixes: readonly string[] = ARTICLE_ASSET_PREFIXES): boolean {
+  return prefixes.some((prefix) => key.startsWith(prefix));
+}
+
 /** Attributes that can carry an image/video asset in sanitized article HTML. */
 const URL_ATTRIBUTES = [
   "src",
@@ -160,27 +182,28 @@ export function collectArticleAssetKeys(
   source: ArticleAssetSource,
   payload: ArticleContentPayload | string | null | undefined,
   publicBase?: string,
+  prefixes: readonly string[] = ARTICLE_ASSET_PREFIXES,
 ): string[] {
   const keys = new Set<string>();
+  const add = (value: string | null | undefined) => {
+    const key = r2KeyFromUrl(value ?? null, publicBase);
+    if (key && isArticleAssetKey(key, prefixes)) keys.add(key);
+  };
 
-  const featured = r2KeyFromUrl(source.img ?? null, publicBase);
-  if (featured) keys.add(featured);
-
-  const social = r2KeyFromUrl(source.ogImage ?? null, publicBase);
-  if (social) keys.add(social);
-
-  const content = r2KeyFromUrl(source.contentUrl ?? null, publicBase);
-  if (content) keys.add(content);
+  add(source.img);
+  add(source.ogImage);
+  // The content blob is the article's own body; it is always removed.
+  add(source.contentUrl);
 
   if (typeof payload === "string") {
-    for (const key of extractKeysFromHtml(payload, publicBase)) keys.add(key);
+    for (const key of extractKeysFromHtml(payload, publicBase)) add(key);
   } else if (payload && typeof payload === "object") {
     const { html, json } = payload as ArticleContentPayload;
     if (typeof html === "string") {
-      for (const key of extractKeysFromHtml(html, publicBase)) keys.add(key);
+      for (const key of extractKeysFromHtml(html, publicBase)) add(key);
     }
     if (json != null) {
-      for (const key of extractKeysFromJson(json, publicBase)) keys.add(key);
+      for (const key of extractKeysFromJson(json, publicBase)) add(key);
     }
   }
 

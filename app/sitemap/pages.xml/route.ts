@@ -73,7 +73,13 @@ export async function GET(request?: NextRequest) {
     safely(
       "articles",
       dbRead.query.article.findMany({
-        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"`,
+        // PUBLISHED *and* due. An article scheduled for a future date carries
+        // the PUBLISHED status while `publishedAt` is still ahead of now (that
+        // is how the scheduler finds it), and listing it here publishes a URL
+        // that the article route answers with a 404 — the fastest way to get a
+        // sitemap full of soft errors.
+        where: sql`${articleTable.status} = 'PUBLISHED'::"ArticleStatus"
+          AND (${articleTable.publishedAt} IS NULL OR ${articleTable.publishedAt} <= NOW())`,
         // `img` feeds the <image:image> extension below. Nothing else on this
         // page is allowed to emit an image: category, tag and author URLs are
         // listed without one so Google Images binds each featured image to its
@@ -92,9 +98,9 @@ export async function GET(request?: NextRequest) {
             .from(categoryTable)
             .where(
               sql`"Category"."parentId" IS NULL AND "Category"."slug" !~ '\\s' AND EXISTS (
-                SELECT 1 FROM "Article" a WHERE a."categoryId" = "Category"."id" AND a."status" = 'PUBLISHED'
+                SELECT 1 FROM "Article" a WHERE a."categoryId" = "Category"."id" AND a."status" = 'PUBLISHED' AND (a."publishedAt" IS NULL OR a."publishedAt" <= NOW())
                 UNION ALL
-                SELECT 1 FROM "Article" a JOIN "Category" sub ON a."categoryId" = sub."id" WHERE sub."parentId" = "Category"."id" AND a."status" = 'PUBLISHED'
+                SELECT 1 FROM "Article" a JOIN "Category" sub ON a."categoryId" = sub."id" WHERE sub."parentId" = "Category"."id" AND a."status" = 'PUBLISHED' AND (a."publishedAt" IS NULL OR a."publishedAt" <= NOW())
               )`,
             )
             .limit(1000),
@@ -114,6 +120,7 @@ export async function GET(request?: NextRequest) {
                 WHERE a."authorId" = "Author"."id"
                   AND a."status" = 'PUBLISHED'
                   AND a."isAnonymous" = false
+                  AND (a."publishedAt" IS NULL OR a."publishedAt" <= NOW())
               )`,
             )
             .limit(1000),
@@ -126,7 +133,7 @@ export async function GET(request?: NextRequest) {
             .select({ slug: tagTable.slug })
             .from(tagTable)
             .where(
-              sql`(SELECT count(*) FROM "_ArticleToTag" JOIN "Article" ON "Article"."id" = "_ArticleToTag"."A" WHERE "_ArticleToTag"."B" = ${tagTable.id} AND "Article"."status" = 'PUBLISHED'::"ArticleStatus") >= 3 AND ${tagTable.slug} !~ '\\s'`,
+              sql`(SELECT count(*) FROM "_ArticleToTag" JOIN "Article" ON "Article"."id" = "_ArticleToTag"."A" WHERE "_ArticleToTag"."B" = ${tagTable.id} AND "Article"."status" = 'PUBLISHED'::"ArticleStatus" AND ("Article"."publishedAt" IS NULL OR "Article"."publishedAt" <= NOW())) >= 3 AND ${tagTable.slug} !~ '\\s'`,
             )
             .limit(2000),
         )

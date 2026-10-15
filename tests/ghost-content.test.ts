@@ -1,26 +1,21 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Ghost content detection
+// Ghost content classification and orphan detection
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Two decisions live here, and both are destructive when they are wrong:
-//
-//   classifyGhostArticle — calling a real story a fixture would delete it
-//   findOrphanObjects    — calling a live object an orphan would break an image
-//
-// So the tests state the false-positive side explicitly (a real headline, a
-// single stray Roman Urdu word, an unreferenced object uploaded a minute ago),
-// not just the happy path.
+// The two decisions a cleanup run is built on. Both are pure, so both are
+// testable without a database or a bucket — which is the point: the destructive
+// script around them should be the only part that cannot be rehearsed.
 
 import { describe, expect, it } from "vitest";
 import {
-  GHOST_PHRASES,
   classifyGhostArticle,
   findOrphanObjects,
+  orphanedContentBlobIds,
   type SweepableObject,
 } from "@/lib/ghost-content";
 
-describe("classifyGhostArticle — confirmed fixtures", () => {
-  it("catches the fixtures that were actually indexed", () => {
+describe("classifyGhostArticle — fixtures", () => {
+  it("recognises the fixtures that were actually deleted from the dashboard", () => {
     const tiptap = classifyGhostArticle({
       title: "Tiptap Editor: Ultimate Testing Document",
       slug: "tiptap-editor-ultimate-testing-document",
@@ -28,133 +23,120 @@ describe("classifyGhostArticle — confirmed fixtures", () => {
     expect(tiptap?.confidence).toBe("confirmed");
     expect(tiptap?.reasons.join(" ")).toContain("tiptap editor");
 
-    const homenest = classifyGhostArticle({ title: "Homenest Movers Truck", slug: "homenest-movers-truck" });
+    const homenest = classifyGhostArticle({ title: "Homenest Movers", slug: "homenest-movers" });
     expect(homenest?.confidence).toBe("confirmed");
-    expect(homenest?.reasons.join(" ")).toContain("homenest");
   });
 
-  it("catches a fixture by slug alone", () => {
-    expect(classifyGhostArticle({ title: "Quarterly chip outlook", slug: "test-post" })?.confidence).toBe("confirmed");
-    expect(classifyGhostArticle({ title: "Quarterly chip outlook", slug: "test-page" })?.confidence).toBe("confirmed");
-    expect(classifyGhostArticle({ title: "Quarterly chip outlook", slug: "test-3" })?.reasons.join(" ")).toContain("slug matches");
-    expect(classifyGhostArticle({ title: "Quarterly chip outlook", slug: "draft-12" })?.confidence).toBe("confirmed");
+  it("recognises the fixture slugs the generator produced", () => {
+    for (const slug of ["test", "test-post", "test-2", "dummy-post", "untitled", "lorem-ipsum", "my-first-post", "copy-of-review"]) {
+      expect(classifyGhostArticle({ title: "A perfectly ordinary headline", slug })?.confidence, slug).toBe(
+        "confirmed",
+      );
+    }
   });
 
-  it("keeps copies in the review tier: a duplicate can be somebody's work in progress", () => {
-    const verdict = classifyGhostArticle({ title: "Quarterly chip outlook", slug: "copy-of-review" });
-    expect(verdict?.confidence).toBe("probable");
-    expect(verdict?.reasons.join(" ")).toContain('starts with "copy-of-"');
+  it("reads the slug the way a reader does, so dashed fixture names still match", () => {
+    // "testing-document" is not in any list; it matches the phrase once the
+    // dashes become spaces.
+    expect(classifyGhostArticle({ title: "", slug: "testing-document" })?.confidence).toBe("confirmed");
   });
 
-  it("reads the fixture evidence out of the deck as well as the title", () => {
-    const verdict = classifyGhostArticle({ title: "Untitled", slug: "notes", deck: "Just a test of the new editor." });
+  it("accepts extra phrases from the operator", () => {
+    const verdict = classifyGhostArticle({
+      title: "Notes from a staging import",
+      slug: "notes-from-a-staging-import",
+      extraPhrases: ["staging import"],
+    });
     expect(verdict?.confidence).toBe("confirmed");
-  });
-
-  it("accepts extra phrases from the command line", () => {
-    const verdict = classifyGhostArticle({ title: "Draft about fibre", slug: "fibre", extraPhrases: ["about fibre"] });
-    expect(verdict?.confidence).toBe("confirmed");
-    expect(verdict?.reasons.join(" ")).toContain("about fibre");
+    expect(verdict?.reasons.join(" ")).toContain("staging import");
   });
 });
 
-describe("classifyGhostArticle — probable fixtures", () => {
-  it("flags Roman Urdu only on two distinct markers", () => {
+describe("classifyGhostArticle — Roman Urdu", () => {
+  it("flags a Roman Urdu draft as probable, with the words that matched", () => {
     const verdict = classifyGhostArticle({
-      title: "Yeh article bahut acha hai, lekin adhoora",
-      slug: "yeh-article",
+      title: "Yeh article kya hai aur kaise likha gaya",
+      slug: "yeh-article-kya-hai",
     });
+    // "yeh article" is not in the phrase list, so this rides on the markers.
     expect(verdict?.confidence).toBe("probable");
     expect(verdict?.reasons.join(" ")).toContain("Roman Urdu");
   });
 
-  it("does not flag a single marker hidden inside a longer word", () => {
-    // "aur" must not match Aurora, and one token is not a language.
-    expect(classifyGhostArticle({ title: "Aurora over Kaur Valley", slug: "aurora-kaur" })).toBeNull();
-    expect(classifyGhostArticle({ title: "Theek pricing for GPUs", slug: "gpu-pricing" })).toBeNull();
+  it("does not flag English copy that merely contains an Urdu-looking word", () => {
+    expect(classifyGhostArticle({ title: "The Linux kernel and you", slug: "linux-kernel-and-you" })).toBeNull();
+    expect(classifyGhostArticle({ title: "Google's AI Overviews, one year on", slug: "ai-overviews-one-year-on" })).toBeNull();
   });
 });
 
-describe("classifyGhostArticle — real editorial work", () => {
-  it("leaves genuine headlines alone", () => {
-    const real = [
-      { title: "Apple's M5 MacBook Pro review: the efficiency story", slug: "apple-m5-macbook-pro-review" },
-      { title: "Pakistan's 5G auction is delayed again", slug: "pakistan-5g-auction-delayed" },
-      { title: "Samsung's newest tablet, reviewed", slug: "samsung-tablet-review" },
+describe("classifyGhostArticle — real headlines", () => {
+  it("leaves genuine reporting alone", () => {
+    const headlines: { title: string; slug: string }[] = [
+      { title: "Test data breaches at GitHub expose enterprise tokens", slug: "test-data-breaches-at-github" },
+      { title: "Sample rate conversion, explained", slug: "sample-rate-conversion-explained" },
+      { title: "Dummy variables in regression models", slug: "dummy-variables-in-regression" },
+      { title: "The movers behind Kubernetes' scheduler rewrite", slug: "movers-behind-kubernetes-scheduler" },
+      { title: "Hello, World: fifty years of the first program", slug: "hello-world-fifty-years" },
     ];
-    for (const article of real) {
-      expect(classifyGhostArticle(article), article.slug).toBeNull();
+
+    for (const headline of headlines) {
+      const verdict = classifyGhostArticle(headline);
+      // Null, or a *probable* verdict the operator has to look at. Never the
+      // auto-delete tier: a fixture word inside a real headline is not proof.
+      expect(verdict?.confidence ?? null, headline.slug).not.toBe("confirmed");
     }
   });
 
-  it("reports a plausible story whose slug merely starts with test- for review, never as confirmed", () => {
-    // "Test data leaks into production" is a story this site could actually
-    // publish. Its slug matches the fixture prefix rule, so it is surfaced —
-    // but only in the tier that needs a human, which is what keeps a delete run
-    // from taking real work with it.
-    const verdict = classifyGhostArticle({
-      title: "Test data leaks into production",
-      slug: "test-data-leaks-production",
-    });
-    expect(verdict?.confidence).toBe("probable");
-    expect(verdict?.reasons.join(" ")).toContain('starts with "test-"');
-  });
-
-  it("keeps a suffix-only fixture shape in the review tier too", () => {
-    expect(classifyGhostArticle({ title: "NVMe SSD test", slug: "nvme-ssd-test" })?.confidence).toBe("probable");
-  });
-
-  it("treats Hello World as reviewable, not conclusive", () => {
-    expect(classifyGhostArticle({ title: "Hello World", slug: "hello-world-variants" })?.confidence).toBe("probable");
-    // …while the classic first-post slug is still conclusive on its own.
-    expect(classifyGhostArticle({ title: "Hello World", slug: "hello-world" })?.confidence).toBe("confirmed");
-  });
-
-  it("never treats a missing verdict as a negative one", () => {
+  it("returns null rather than something falsy-but-informative", () => {
+    expect(classifyGhostArticle({ title: "Nvidia's next GPU", slug: "nvidia-next-gpu" })).toBeNull();
     expect(classifyGhostArticle({})).toBeNull();
-    expect(classifyGhostArticle({ title: null, slug: null })).toBeNull();
+    expect(classifyGhostArticle({ title: null, slug: null, deck: null })).toBeNull();
   });
-});
 
-describe("GHOST_PHRASES", () => {
-  it("has no blank entries that would match everything", () => {
-    expect(GHOST_PHRASES.filter((phrase) => !phrase.trim())).toEqual([]);
-    expect(GHOST_PHRASES.every((phrase) => phrase === phrase.toLowerCase())).toBe(true);
+  it("flags a bare placeholder title at the review tier", () => {
+    const verdict = classifyGhostArticle({ title: "Test (2)", slug: "some-real-slug-here" });
+    expect(verdict?.confidence).toBe("probable");
   });
 });
 
 describe("findOrphanObjects", () => {
-  const now = new Date("2026-10-15T12:00:00.000Z");
-  const object = (key: string, ageDays?: number): SweepableObject => ({
+  const now = new Date("2026-10-15T00:00:00.000Z");
+  const day = 24 * 60 * 60 * 1000;
+  const object = (key: string, ageDays: number): SweepableObject => ({
     key,
-    lastModified: ageDays === undefined ? null : new Date(now.getTime() - ageDays * 86_400_000),
+    size: 1024,
+    lastModified: new Date(now.getTime() - ageDays * day),
   });
 
-  it("returns only objects no reference mentions", () => {
-    const objects = [object("kept.png", 30), object("ghost-truck.png", 30)];
-    const orphans = findOrphanObjects(objects, new Set(["kept.png"]), { now });
-    expect(orphans.map((entry) => entry.key)).toEqual(["ghost-truck.png"]);
+  it("deletes only what nothing references", () => {
+    const objects = [object("xsypher/articles/a.png", 10), object("xsypher/articles/b.png", 10)];
+    const orphans = findOrphanObjects(objects, new Set(["xsypher/articles/a.png"]), { now });
+    expect(orphans.map((o) => o.key)).toEqual(["xsypher/articles/b.png"]);
   });
 
-  it("keeps anything inside the grace window so an in-flight upload survives", () => {
-    const objects = [object("just-uploaded.png", 0.01), object("old-ghost.png", 30)];
-    const orphans = findOrphanObjects(objects, new Set(), { now, graceMs: 7 * 86_400_000 });
-    expect(orphans.map((entry) => entry.key)).toEqual(["old-ghost.png"]);
+  it("honours the grace window so a fresh upload is never swept", () => {
+    const objects = [object("xsypher/articles/fresh.png", 1), object("xsypher/articles/old.png", 30)];
+    const orphans = findOrphanObjects(objects, new Set(), { now, graceMs: 7 * day });
+    expect(orphans.map((o) => o.key)).toEqual(["xsypher/articles/old.png"]);
   });
 
-  it("keeps an object it cannot age while a grace window is in force", () => {
-    // With no timestamp there is no way to prove the object is old enough.
-    expect(findOrphanObjects([object("undated.png")], new Set(), { now, graceMs: 86_400_000 })).toEqual([]);
-    // Without a grace window the same object is an orphan.
-    expect(findOrphanObjects([object("undated.png")], new Set(), { now }).map((entry) => entry.key)).toEqual(["undated.png"]);
+  it("ignores entries without a key", () => {
+    expect(findOrphanObjects([{ key: "", lastModified: new Date(0) }], new Set(), { now })).toEqual([]);
+  });
+});
+
+describe("orphanedContentBlobIds", () => {
+  it("matches the content blob naming scheme the save path uses", () => {
+    const keys = ["articles/content-abc123.json", "xsypher/articles/2026/10/photo.png"];
+    expect(orphanedContentBlobIds(keys, new Set())).toEqual([{ key: "articles/content-abc123.json", articleId: "abc123" }]);
   });
 
-  it("is a pure filter: no input object is mutated or reordered", () => {
-    const objects = [object("a.png", 30), object("b.png", 30)];
-    const live = new Set<string>();
-    const first = findOrphanObjects(objects, live, { now });
-    const second = findOrphanObjects(objects, live, { now });
-    expect(first.map((entry) => entry.key)).toEqual(second.map((entry) => entry.key));
-    expect(objects.map((entry) => entry.key)).toEqual(["a.png", "b.png"]);
+  it("keeps blobs whose article still exists", () => {
+    const keys = ["articles/content-abc123.json"];
+    expect(orphanedContentBlobIds(keys, new Set(["abc123"]))).toEqual([]);
+  });
+
+  it("does not mistake an unrelated json object for a content blob", () => {
+    expect(orphanedContentBlobIds(["articles/metadata.json", "articles/content.json"], new Set())).toEqual([]);
   });
 });

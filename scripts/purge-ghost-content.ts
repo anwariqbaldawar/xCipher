@@ -45,6 +45,18 @@
  *     a redeploy clears them outright.
  *   • Rows are hard deleted. There is no soft-delete column in this schema and
  *     none is simulated here.
+ *   • The orphan sweep refuses to delete anything it cannot fully reason about.
+ *     Inline media is only visible inside the content bodies, so `--apply` stops
+ *     (exit 1) if `--skip-content-scan` is set or if any body could not be read —
+ *     in either case an image that a live article still uses looks unreferenced.
+ *     `--force-orphans` overrides that, and the only good reason to pass it is a
+ *     bucket whose bodies are known to be unreachable.
+ *   • Deletion candidates are limited to the article namespaces the pipeline
+ *     writes (`xsypher/articles/`, `articles/`). An article body can reference
+ *     any URL in the bucket, and "an article mentions it" is not "the article
+ *     owns it" — deleting a shared brand asset because one story embedded it
+ *     would break every other page. `--force-any-prefix` lifts that limit for an
+ *     operator who has listed a prefix outside those namespaces on purpose.
  *
  * Exit codes: 0 = success (including "nothing to do"), 1 = failure. A failed run
  * must never look like a successful one in CI (AGENTS.md §6).
@@ -61,7 +73,7 @@ import {
   comment,
   publicationSettings,
 } from "../lib/db/schema";
-import { collectArticleAssetKeys } from "../lib/article-assets";
+import { collectArticleAssetKeys, isArticleAssetKey } from "../lib/article-assets";
 import {
   classifyGhostArticle,
   findOrphanObjects,
@@ -78,6 +90,8 @@ const INCLUDE_PROBABLE = process.argv.includes("--include-probable");
 const SKIP_DB = process.argv.includes("--skip-db");
 const SKIP_R2 = process.argv.includes("--skip-r2");
 const SKIP_CONTENT_SCAN = process.argv.includes("--skip-content-scan");
+const FORCE_ORPHANS = process.argv.includes("--force-orphans");
+const FORCE_ANY_PREFIX = process.argv.includes("--force-any-prefix");
 
 /** `--match "text"` (repeatable) and `--slug value` (repeatable). */
 function collectFlagValues(flag: string): string[] {
@@ -100,7 +114,12 @@ const PREFIXES = collectFlagValues("--prefix");
 const GRACE_DAYS = numberFlag("--grace-days", 7);
 const CONTENT_SCAN_CONCURRENCY = Math.max(1, numberFlag("--concurrency", 4));
 
-const DEFAULT_PREFIXES = ["xsypher/", "articles/"];
+/**
+ * Where the sweep looks by default: exactly the namespaces the article pipeline
+ * writes to. Anything outside them (a brand asset, a deployment's own folder) is
+ * not this script's business.
+ */
+const DEFAULT_PREFIXES = ["xsypher/articles/", "articles/"];
 
 interface Row {
   id: string;
@@ -213,7 +232,16 @@ async function sweepGhostRows(): Promise<number> {
   let purged = 0;
   for (const { row } of targets) {
     try {
-      const report = await purgeArticleAssets(asDeletable(row));
+      // Revision rows can name content keys the article no longer points at
+      // (a restored version, a legacy save). They are read before the rows go.
+      const revisions = await db
+        .select({ contentUrl: articleRevision.contentUrl })
+        .from(articleRevision)
+        .where(eq(articleRevision.articleId, row.id));
+
+      const report = await purgeArticleAssets(asDeletable(row), {
+        extraReferences: revisions.map((revision) => revision.contentUrl),
+      });
       if (report.failed.length) {
         console.warn(`[ghost]   ${report.failed.length} R2 object(s) failed for /${row.slug}:`, report.failed);
       }
@@ -254,7 +282,7 @@ async function sweepGhostRows(): Promise<number> {
 }
 
 // ── Sweep 2: orphaned R2 objects ─────────────────────────────────────────────
-async function buildLiveKeySet(): Promise<Set<string>> {
+async function buildLiveKeySet(): Promise<{ live: Set<string>; unreadable: number; skippedContentScan: boolean }> {
   const live = new Set<string>();
   const add = (value: string | null | undefined) => {
     const key = r2KeyFromUrl(value ?? null);
@@ -312,7 +340,7 @@ async function buildLiveKeySet(): Promise<Set<string>> {
   if (SKIP_CONTENT_SCAN) {
     console.log("[orphans] --skip-content-scan: inline images inside article bodies are NOT counted as live.");
     console.log("[orphans]            Only use this to see the size of the problem, never to delete.");
-    return live;
+    return { live, unreadable: 0, skippedContentScan: true };
   }
 
   // Inline media: the only complete source is the content bodies themselves.
@@ -322,12 +350,14 @@ async function buildLiveKeySet(): Promise<Set<string>> {
   );
 
   let scanned = 0;
+  let unreadable = 0;
   for (let i = 0; i < withContent.length; i += CONTENT_SCAN_CONCURRENCY) {
     const slice = withContent.slice(i, i + CONTENT_SCAN_CONCURRENCY);
     const payloads = await Promise.all(slice.map((row) => readContent(row.contentUrl)));
     slice.forEach((row, index) => {
       const payload = payloads[index];
       if (payload == null) {
+        unreadable++;
         console.warn(
           `[orphans]   WARNING: could not read content for /${row.slug} — assets referenced only from its body may be reported as orphans.`,
         );
@@ -338,8 +368,11 @@ async function buildLiveKeySet(): Promise<Set<string>> {
     });
   }
 
-  console.log(`[orphans] ${scanned}/${withContent.length} content bodies scanned; ${live.size} live key(s) total.`);
-  return live;
+  console.log(
+    `[orphans] ${scanned}/${withContent.length} content bodies scanned; ${live.size} live key(s) total.` +
+      (unreadable ? ` ${unreadable} body/bodies UNREADABLE.` : ""),
+  );
+  return { live, unreadable, skippedContentScan: false };
 }
 
 async function sweepOrphanObjects(): Promise<number> {
@@ -353,8 +386,21 @@ async function sweepOrphanObjects(): Promise<number> {
     objects.push(...listed);
   }
 
-  const live = await buildLiveKeySet();
-  const orphans = findOrphanObjects(objects, live, { graceMs: GRACE_DAYS * 24 * 60 * 60 * 1000 });
+  const { live, unreadable, skippedContentScan } = await buildLiveKeySet();
+
+  // Only the article pipeline's own namespaces are candidates. A body can embed
+  // a shared asset, and a shared asset that one story happens to reference is
+  // still shared — the sweep reports it rather than deleting it.
+  const candidates = FORCE_ANY_PREFIX ? objects : objects.filter((object) => isArticleAssetKey(object.key));
+  const outOfNamespace = objects.length - candidates.length;
+  if (outOfNamespace) {
+    console.log(
+      `[orphans] ${outOfNamespace} object(s) outside the article namespaces were listed and left alone` +
+        (FORCE_ANY_PREFIX ? "" : " (pass --force-any-prefix to include them)"),
+    );
+  }
+
+  const orphans = findOrphanObjects(candidates, live, { graceMs: GRACE_DAYS * 24 * 60 * 60 * 1000 });
 
   // Stale-named objects are worth calling out separately: the truck image is the
   // reason this sweep exists, and seeing its key in the list is the confirmation
@@ -374,6 +420,10 @@ async function sweepOrphanObjects(): Promise<number> {
   if (staleNamed.length) {
     console.log(`[orphans] ${staleNamed.length} object(s) match the known-stale placeholder list:`);
     for (const object of staleNamed) console.log(`        ${object.key}`);
+    console.log(
+      "[orphans] if any of them are still referenced by a row, run scripts/purge-stale-assets.ts first: " +
+        "this sweep only removes objects nothing points at, and unlinking is the other script's job.",
+    );
   } else {
     console.log("[orphans] no known-stale placeholder objects in the bucket.");
   }
@@ -388,6 +438,21 @@ async function sweepOrphanObjects(): Promise<number> {
     return orphans.length;
   }
 
+  // Refuse to delete on an incomplete picture. Inline media only exists inside
+  // the content bodies, so if a body could not be read (or was skipped) the
+  // images it references look unreferenced, and "unreferenced" here means
+  // "delete". Re-running once the bucket is reachable is cheap; recovering a
+  // deleted photograph is not.
+  const blockers: string[] = [];
+  if (skippedContentScan) blockers.push("--skip-content-scan was set, so article bodies were never read");
+  if (unreadable > 0) blockers.push(`${unreadable} content body/bodies could not be read from R2`);
+  if (blockers.length && !FORCE_ORPHANS) {
+    throw new Error(
+      `refusing to delete ${orphans.length} object(s): ${blockers.join("; ")}. ` +
+        "Re-run when the bucket is fully readable, or pass --force-orphans if you accept the risk.",
+    );
+  }
+
   const result = await deleteKeysFromR2(orphans.map((object) => object.key));
   console.log(`[orphans] deleted ${result.deleted.length}/${result.requested.length} object(s).`);
   if (result.failed.length) {
@@ -400,6 +465,16 @@ async function sweepOrphanObjects(): Promise<number> {
 async function main() {
   const config = getR2Config();
   console.log(`[purge] mode: ${APPLY ? "APPLY" : "DRY RUN"}`);
+
+  // Checked before anything runs, so an unsafe combination fails without
+  // touching the database or the bucket.
+  if (APPLY && SKIP_CONTENT_SCAN && !FORCE_ORPHANS) {
+    throw new Error(
+      "--skip-content-scan with --apply would delete the inline images of live articles " +
+        "(their only reference is inside a content body). Re-run without --skip-content-scan, " +
+        "or pass --force-orphans if the bodies are known to be unreachable.",
+    );
+  }
   if ("error" in config) {
     console.log(`[purge] R2 is not configured (${config.error}) — the bucket sweep will be skipped.`);
   }

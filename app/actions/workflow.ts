@@ -27,6 +27,7 @@ import {
   purgeArticleAssets,
   revalidateArticleDeletion,
   notifyIndexingOfDeletion,
+  SYNDICATION_PATHS,
   type DeletableArticle,
 } from "@/lib/article-deletion";
 import { enqueueGoogleIndexing } from "@/lib/google-indexing";
@@ -68,6 +69,33 @@ async function getArticle(id: string) {
 }
 
 type ArticleRow = NonNullable<Awaited<ReturnType<typeof getArticle>>>;
+
+/**
+ * Content keys named by revision rows for the given articles.
+ *
+ * A revision stores the content key that was live when it was taken. That is
+ * normally the same `articles/content-<id>.json` the article still points at,
+ * but a restored version or a pre-migration save can leave a revision holding a
+ * key nothing else references — and the revision row is the only record of it,
+ * so it has to be read *before* the cascade removes the row.
+ */
+async function revisionContentKeysByArticle(articleIds: string[]): Promise<Map<string, string[]>> {
+  const byArticle = new Map<string, string[]>();
+  if (!articleIds.length) return byArticle;
+
+  const rows = await db
+    .select({ articleId: articleRevision.articleId, contentUrl: articleRevision.contentUrl })
+    .from(articleRevision)
+    .where(inArray(articleRevision.articleId, articleIds));
+
+  for (const row of rows) {
+    if (!row.contentUrl) continue;
+    const list = byArticle.get(row.articleId) ?? [];
+    list.push(row.contentUrl);
+    byArticle.set(row.articleId, list);
+  }
+  return byArticle;
+}
 
 /**
  * The fields the deletion helpers read, as a structural subset.
@@ -273,9 +301,21 @@ function revalidateArticleRoutes(article: {
   // queries the article directly rather than through a tagged helper, because
   // it needs the body columns the card select deliberately omits.
   revalidatePath(`/article/${article.slug}`, "page");
-  
-  // Revalidate the sitemap so search engines immediately see the new/updated URL.
-  revalidatePath("/sitemap.xml");
+
+  // The syndication surfaces are the one part of this that tags cannot cover.
+  //
+  // /sitemap/articles.xml is force-dynamic and never needs it, but
+  // /sitemap/pages.xml and /feed.xml are cached with `revalidate = 3600` and
+  // read the article table directly rather than through a tagged helper. Until
+  // this list existed, archiving or unpublishing a story left it in both files
+  // for up to an hour -- and being listed in the sitemap and the feed is
+  // precisely what keeps a dead URL in the index.
+  //
+  // Same list the delete path uses (`SYNDICATION_PATHS`), so a status change
+  // and a deletion cannot disagree about which surfaces a story appears on.
+  for (const path of SYNDICATION_PATHS) {
+    revalidatePath(path);
+  }
 }
 
 async function executeTransition(
@@ -772,7 +812,10 @@ export async function deleteArticlePermanently(id: string): Promise<ActionRespon
     //    reported, not swallowed: the row is still going away, and the sweep
     //    script can find whatever is left by listing the bucket.
     const target = asDeletable(articleData);
-    const assets = await purgeArticleAssets(target);
+    const revisionKeys = await revisionContentKeysByArticle([id]);
+    const assets = await purgeArticleAssets(target, {
+      extraReferences: revisionKeys.get(id) ?? [],
+    });
     if (assets.failed.length) {
       console.error(
         `[workflow] deleteArticlePermanently: ${assets.failed.length} R2 object(s) could not be deleted for ${articleData.slug}:`,
@@ -842,7 +885,10 @@ export async function deleteOwnDraft(id: string): Promise<ActionResponse> {
 
   try {
     const target = asDeletable(articleData);
-    const assets = await purgeArticleAssets(target);
+    const revisionKeys = await revisionContentKeysByArticle([id]);
+    const assets = await purgeArticleAssets(target, {
+      extraReferences: revisionKeys.get(id) ?? [],
+    });
     if (assets.failed.length) {
       console.error(
         `[workflow] deleteOwnDraft: ${assets.failed.length} R2 object(s) could not be deleted for ${articleData.slug}:`,
@@ -1252,13 +1298,18 @@ export async function bulkDelete(ids: string[]): Promise<BulkResponse> {
       },
     });
     const targets = fullRows.map(asDeletable);
+    const revisionKeys = await revisionContentKeysByArticle(deletableIds);
 
     // Small concurrency window: each purge reads a content payload and issues a
     // batch delete, and a hundred of those at once would exhaust the pool.
     const PURGE_CONCURRENCY = 5;
     for (let i = 0; i < targets.length; i += PURGE_CONCURRENCY) {
       const slice = targets.slice(i, i + PURGE_CONCURRENCY);
-      const reports = await Promise.all(slice.map((target) => purgeArticleAssets(target)));
+      const reports = await Promise.all(
+        slice.map((target) =>
+          purgeArticleAssets(target, { extraReferences: revisionKeys.get(target.id) ?? [] }),
+        ),
+      );
       const failed = reports.flatMap((report) => report.failed);
       if (failed.length) {
         console.error(`[workflow] bulkDelete: ${failed.length} R2 object(s) could not be deleted:`, failed);

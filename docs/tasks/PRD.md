@@ -130,6 +130,43 @@ Not verifiable here: this environment has no database and no R2 bucket, so
 real bucket. Run the sweep as a dry run first; it prints the fixture rows, their evidence and
 the orphan list before anything is deleted.
 
+**Hardening pass (follow-up commit).** The pipeline above was reviewed against the failure it
+is meant to prevent, and five gaps were closed:
+
+* The purge only ever considered the article namespace. `lib/article-assets.ts` now declares
+  `ARTICLE_ASSET_PREFIXES = ["xsypher/articles/", "articles/"]` and `isArticleAssetKey()`, and
+  every candidate — including a bare, non-URL TipTap attribute value such as `"left"`, which
+  the JSON walker legitimately returns — passes through one `add()` that drops anything outside
+  the namespace. A shared brand asset (logo, default social card, author avatar) can therefore
+  never be deleted because it appeared in one body. `scripts/purge-ghost-content.ts` filters on
+  the same prefix list and adds `--force-any-prefix` for a bucket organised differently.
+* Revisions can point at a content blob the article no longer does: `ArticleRevision.contentUrl`
+  is a snapshot from the moment it was saved. `app/actions/workflow.ts` reads them before the
+  cascade (`revisionContentKeysByArticle()`) and passes them in as
+  `purgeArticleAssets(article, { extraReferences })`, and the offline sweep resolves revision
+  URLs the same way, so restore history cannot strand a blob.
+* An unreadable payload used to look exactly like a clean delete. `purgeArticleAssets()` reports
+  it, the script counts bodies it could not read, and refuses `--apply` without
+  `--force-orphans` (and refuses `--apply --skip-content-scan` outright) so a skipped scan is
+  never mistaken for a completed purge.
+* A status change invalidated `/sitemap.xml` only, while `/feed.xml` and `/sitemap/pages.xml` are
+  cached for an hour and read the article table directly — archiving a story left it in both.
+  The list now lives in one exported constant (`SYNDICATION_PATHS` in `lib/article-deletion.ts`)
+  shared by the transition path and every delete path.
+* Ghost classification was eager and narrow at once. Fixture slug prefixes such as `test-` and
+  the phrase "hello world" moved to a separate weak tier that is reported but never deleted
+  (`GHOST_SLUG_WEAK_PREFIXES`, `GHOST_WEAK_PHRASES`), so a real story like
+  `test-data-leaks-production` survives the sweep, while the confirmed fixture wording remains
+  deletable. `lib/article-deletion.ts` also stopped importing the Google Indexing queue at
+  module scope — it is a dynamic import inside `notifyIndexingOfDeletion()`, so the offline
+  script can import the module without opening a Redis connection.
+
+Verified after the pass: `npx tsc --noEmit`, `npx eslint` clean on the touched files, and
+`npx vitest run` — 62 files / 742 tests, including a new `tests/article-deletion.test.ts` that
+asserts the `DeleteObjects` body carries the content blob, the featured and social images and
+the inline keys, and that a refused batch still reports per-key failures instead of claiming
+success.
+
 ### Task 6 — independent-publication identity and cross-site consistency
 The policy pages were written in the voice of an organisation xSypher is not: a
 surveillance-resistant newsroom with a legal desk, a revenue split and a subpoena

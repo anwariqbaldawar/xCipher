@@ -1,36 +1,35 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Ghost content detection
+// Ghost content: recognising test data that should never have been published
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Test articles do not stay in the CMS. They leak: a fixture titled
-// "Tiptap Editor: Ultimate Testing Document" gets saved, auto-published by a
-// status default, picked up by /sitemap/pages.xml and /feed.xml, and indexed.
-// Deleting the row afterwards removes the page but not the evidence — the URL
-// stays in Google's index until it 404s, the R2 objects stay forever, and the
-// next deploy re-lists anything that was never actually deleted.
+// A test article does not stay a test article. It gets saved, transitioned to
+// PUBLISHED by someone clicking through the workflow, picked up by the sitemap
+// and the RSS feed, crawled, and indexed — and then it is deleted from the
+// dashboard, which removes the row and nothing else. The URL stays in the
+// index, the content blob and its images stay in the bucket, and Google Images
+// goes on attributing a placeholder truck photo to the homepage.
 //
-// So the sweep needs two things this module provides:
+// This module is the *decision* half of the cleanup: given a row, is it ghost
+// content, and with how much confidence? Given the set of objects in the
+// bucket, which of them does nothing reference any more? Everything here is
+// pure — no database, no network, no bucket — so the destructive script that
+// consumes it can be reviewed as a thin, obvious shell:
 //
-//   1. A definition of "this row is a test fixture", applied to every status
-//      (a test post that reached PUBLISHED is exactly the case that matters),
-//      with the evidence printed rather than hidden behind a boolean.
-//   2. A definition of "this bucket object belongs to nothing", which can only
-//      be answered by comparing the bucket against every reference the database
-//      and the surviving content bodies still make.
+//     rows.filter(classifyGhostArticle) -> purge -> delete row
+//     listR2Objects() - liveReferences() -> findOrphanObjects -> delete objects
 //
-// Everything here is pure so the destructive script is a thin shell around a
-// tested decision. Matching is deliberately two-tier, and the tier is decided
-// by how conclusive each signal is *on its own*: `confirmed` means the evidence
-// cannot plausibly describe real editorial work (fixture wording, a fixture
-// slug, a fixture slug with a counter), `probable` means a human should look
-// (a slug that merely starts with `test-`, two Roman Urdu markers, "Hello
-// World"). The cost of deleting a real article is far higher than the cost of
-// reading a short list, so anything arguable lands in the second tier.
+// Confidence is deliberately two-tier, because the cost of the two mistakes is
+// not symmetric. Deleting a real article is unrecoverable; leaving one test row
+// is a five-minute fix. So only unambiguous fixture wording is "confirmed", and
+// anything that could plausibly be a real headline — including all Roman Urdu
+// matching, which is heuristic by nature — is "probable" and requires either
+// `--include-probable` or an explicit `--match`/`--slug` from the operator.
 
-/** Lower-cased substrings that are strong evidence of fixture content. */
+/** Wording that only ever appears in a fixture. */
 export const GHOST_PHRASES: readonly string[] = [
   "tiptap editor",
   "ultimate testing document",
+  "ulitmate testing document", // the typo that shipped in one of the fixtures
   "testing document",
   "test document",
   "test article",
@@ -48,20 +47,22 @@ export const GHOST_PHRASES: readonly string[] = [
   "sample article",
   "sample post",
   "placeholder article",
+  "placeholder post",
   "example article",
   "example post",
   "my first post",
   "my first article",
   "roman urdu",
+  "urdu test",
   "untitled document",
 ];
 
 /**
- * Phrasing that usually means a fixture but can also appear in a real story.
+ * Wording that is *probably* a fixture but can appear in real copy.
  *
- * "Hello, World" is the canonical first line of code every programming
- * tutorial prints; on a technology site it is a headline, not a fixture. A
- * match here is reported for review and never deleted automatically.
+ * "Hello, World" is the canonical first program and a legitimate headline for a
+ * programming publication, so a title containing it is reported for review
+ * rather than deleted on sight.
  */
 export const GHOST_WEAK_PHRASES: readonly string[] = ["hello world"];
 
@@ -85,111 +86,131 @@ export const GHOST_SLUG_EXACT: readonly string[] = [
   "lorem-ipsum",
 ];
 
-/** Slug prefixes that only ever come from a fixture or a duplicate action. */
+/**
+ * Slug prefixes that can only come from the generator or a "duplicate" action.
+ *
+ * Short, because a prefix is weak evidence on its own: `test-data-breaches-at-
+ * github`, `sample-rate-conversion-in-audio` and `dummy-variables-explained`
+ * are all real headlines for a technology publication whose slugs happen to
+ * begin with a fixture word. They are reported (see
+ * `GHOST_SLUG_WEAK_PREFIXES`) rather than deleted, and the fixtures they were
+ * meant to catch are caught by the phrase list instead — `test-post` matches
+ * "test post" once the dashes become spaces.
+ */
 export const GHOST_SLUG_PREFIXES: readonly string[] = [
+  "tmp-",
+  "temp-",
+  "copy-of-",
+  "untitled-",
+  "lorem-ipsum-",
+];
+
+/** Prefixes that suggest a fixture and need corroboration. Report only. */
+export const GHOST_SLUG_WEAK_PREFIXES: readonly string[] = [
   "test-",
   "testing-",
   "dummy-",
   "sample-",
-  "untitled-",
-  "copy-of-",
-  "lorem-ipsum-",
-  "tmp-",
-  "temp-",
+  "draft-",
+  "new-article-",
+  "new-post-",
 ];
 
 /**
- * Slug shapes that identify a fixture by themselves: a fixture name carrying a
- * counter. Nothing in a real headline produces a slug like `test-3` or
- * `draft-12`, so these can be deleted without a human reading them first.
+ * Slug shapes that are fixtures.
+ *
+ * Anchored on purpose. `/(^|-)test(-\d+)?$/` matches `test`, `test-2` and
+ * `my-test` but not `test-data-breaches-at-github` — a real headline that
+ * happens to start with the word "test" is exactly the false positive that
+ * makes an operator distrust a cleanup script.
  */
-export const GHOST_SLUG_STRONG_PATTERNS: readonly RegExp[] = [
-  /(^|-)(test|testing|dummy|sample|untitled|tmp|temp)-?\d+$/,
+export const GHOST_SLUG_PATTERNS: readonly RegExp[] = [
+  /(^|-)test(-|_)?\d*$/,
+  /(^|-)dummy(-|_)?\d*$/,
+  /(^|-)sample(-|_)?\d*$/,
+  /(^|-)untitled(-|_)?\d*$/,
+  /(^|-)tmp(-|_)?\d*$/,
   /^article-\d+$/,
   /^post-\d+$/,
+  /^untitled-\d+$/,
   /^draft-\d+$/,
 ];
 
 /**
- * Slug shapes that only *look* like a fixture.
+ * Distinctly Roman Urdu words.
  *
- * These are reported and nothing more. `nvme-ssd-test`, `test-data-leaks-
- * production` and `untitled-draft-controversy` are slugs a real story can
- * legitimately have, and the cost of deleting one of those by accident is far
- * higher than the cost of reading a short list. A prefix match alone is weak
- * evidence; combined with fixture wording in the title — which the phrase list
- * above already catches — it is not.
+ * Matched as whole words, and two of them are required (or three weaker ones)
+ * before a row is even called *probable*. Words that are also ordinary English
+ * — `log`, `the`, `me`, `to`, `do` — are deliberately absent: a single stray
+ * match must never be enough to put a real headline in a deletion queue.
  */
-export const GHOST_SLUG_WEAK_PATTERNS: readonly RegExp[] = [
-  /(^|-)(test|testing|dummy|sample|untitled|tmp|temp)$/,
-];
-
-/**
- * Roman Urdu markers.
- *
- * A Roman Urdu test post is not flagged by any English word, so it needs its
- * own signal: distinctive whole-word tokens. Keyword-only words that are also
- * ordinary English (`me`, `to`, `do`, `ka`, `ki`, `ke`, `ye`, `ab`) are left out
- * on purpose — a single stray match must never be enough, which is why the
- * classifier requires at least two distinct tokens before it will even call a
- * row `probable`.
- */
-export const ROMAN_URDU_TOKENS: readonly string[] = [
-  "hai",
-  "hain",
+export const ROMAN_URDU_STRONG: readonly string[] = [
   "nahi",
   "nahin",
   "kya",
   "kaise",
-  "kaun",
   "kyun",
-  "kyunke",
-  "acha",
-  "achha",
-  "theek",
-  "bilkul",
-  "lekin",
-  "magar",
-  "agar",
-  "phir",
-  "yeh",
-  "woh",
-  "aur",
-  "bhi",
-  "mera",
-  "meri",
-  "hum",
-  "tum",
-  "aap",
-  "bhai",
-  "yaar",
+  "kyon",
+  "mujhe",
+  "hamara",
+  "hamari",
+  "tumhara",
+  "tumhari",
+  "bohat",
   "bahut",
-  "thoda",
-  "zyada",
-  "likha",
-  "likhi",
-  "likhna",
-  "padha",
-  "padhi",
-  "karta",
-  "karti",
+  "achha",
+  "acha",
+  "chahiye",
   "raha",
   "rahi",
-  "gaya",
-  "gayi",
-  "chahiye",
   "sakta",
   "sakti",
-  "waqt",
-  "baat",
-  "kaam",
+  "hota",
+  "hoti",
+  "hoga",
+  "karna",
+  "kiya",
+  "gaya",
+  "gayi",
+  "tha",
+  "thi",
+  "matlab",
+  "jaise",
+  "jaisa",
+  "wala",
+  "wali",
+  "yeh",
+  "woh",
+  "hain",
+];
+
+/** Roman Urdu words that are common enough to need corroboration. */
+export const ROMAN_URDU_WEAK: readonly string[] = [
+  "hai",
+  "aur",
+  "sab",
+  "kuch",
+  "kuchh",
+  "phir",
+  "magar",
+  "lekin",
+  "abhi",
+  "aaj",
+  "kal",
+  "sirf",
+  "bas",
+  "zaroor",
+  "bahot",
+  "kesay",
+  "kaisa",
 ];
 
 export type GhostConfidence = "confirmed" | "probable";
 
 export interface GhostVerdict {
+  /** `confirmed` = fixture wording or a fixture slug. `probable` = needs a human. */
   confidence: GhostConfidence;
-  /** Human-readable evidence, printed by the sweep so a human can overrule it. */
+  /** Every rule that fired, so the report can be checked line by line. */
   reasons: string[];
 }
 
@@ -197,70 +218,84 @@ export interface GhostScanInput {
   title?: string | null;
   slug?: string | null;
   deck?: string | null;
-  /** Extra fixtures named on the command line (`--match "…"`). */
+  /** Extra phrases from the command line (`--match`). */
   extraPhrases?: readonly string[];
+}
+
+function words(text: string): string[] {
+  return text.toLowerCase().match(/[a-z']+/g) ?? [];
+}
+
+function countDistinct(text: string, markers: readonly string[]): string[] {
+  const present = new Set(words(text));
+  return markers.filter((marker) => present.has(marker));
 }
 
 /**
  * Classify one article row.
  *
- * Returns null for anything that looks like real editorial work, so a caller
- * can filter with `rows.map(classify).filter(Boolean)` and never mistake a
- * missing verdict for a negative one.
+ * Returns null when nothing fires, so a caller can filter with
+ * `rows.map(classifyGhostArticle).filter(Boolean)`.
  */
 export function classifyGhostArticle(input: GhostScanInput): GhostVerdict | null {
   const title = (input.title ?? "").toLowerCase();
   const slug = (input.slug ?? "").toLowerCase().trim();
   const deck = (input.deck ?? "").toLowerCase();
-  const haystack = `${title}\n${slug.replace(/-/g, " ")}\n${deck}`;
-  const confirmed: string[] = [];
-  const probable: string[] = [];
+  // Slug words are searched with dashes turned into spaces so "testing-document"
+  // matches the phrase "testing document".
+  const haystack = [title, deck, slug.replace(/[-_]+/g, " ")].join(" \n ");
+  const reasons: string[] = [];
 
-  // ── Evidence that is conclusive on its own ───────────────────────────────
   const phrases = [...GHOST_PHRASES, ...(input.extraPhrases ?? []).map((p) => p.toLowerCase())];
   for (const phrase of phrases) {
-    if (phrase && haystack.includes(phrase)) confirmed.push(`contains "${phrase}"`);
+    if (phrase && haystack.includes(phrase)) reasons.push(`matches the phrase "${phrase}"`);
   }
+
+  if (slug && GHOST_SLUG_EXACT.includes(slug)) {
+    reasons.push(`slug "${slug}" is a fixture slug`);
+  }
+
+  const prefix = GHOST_SLUG_PREFIXES.find((value) => slug.startsWith(value));
+  if (prefix) reasons.push(`slug starts with "${prefix}"`);
+
+  for (const pattern of GHOST_SLUG_PATTERNS) {
+    if (slug && pattern.test(slug)) {
+      reasons.push(`slug matches ${pattern}`);
+      break;
+    }
+  }
+
+  if (reasons.length) return { confidence: "confirmed", reasons };
+
+  // ── Probable ──────────────────────────────────────────────────────────────
+  const probableReasons: string[] = [];
 
   for (const phrase of GHOST_WEAK_PHRASES) {
-    if (haystack.includes(phrase)) probable.push(`contains "${phrase}" (also a real headline)`);
+    if (haystack.includes(phrase)) probableReasons.push(`contains the phrase "${phrase}" — verify by hand`);
   }
 
-  if (slug && GHOST_SLUG_EXACT.includes(slug)) confirmed.push(`slug is a fixture name ("${slug}")`);
-
-  for (const pattern of GHOST_SLUG_STRONG_PATTERNS) {
-    if (pattern.test(slug)) {
-      confirmed.push(`slug matches ${pattern}`);
-      break;
-    }
+  const strong = countDistinct(`${title} ${deck}`, ROMAN_URDU_STRONG);
+  const weak = countDistinct(`${title} ${deck}`, ROMAN_URDU_WEAK);
+  if (strong.length >= 2 || (strong.length >= 1 && weak.length >= 2) || weak.length >= 3) {
+    probableReasons.push(
+      `Roman Urdu wording (${[...strong, ...weak].slice(0, 6).join(", ")}) — likely a draft fixture, not English copy`,
+    );
   }
 
-  if (confirmed.length) return { confidence: "confirmed", reasons: confirmed };
-
-  // ── Evidence a human has to weigh ────────────────────────────────────────
-  const prefix = GHOST_SLUG_PREFIXES.find((value) => slug.startsWith(value));
-  if (prefix) probable.push(`slug starts with "${prefix}"`);
-
-  for (const pattern of GHOST_SLUG_WEAK_PATTERNS) {
-    if (pattern.test(slug)) {
-      probable.push(`slug matches ${pattern}`);
-      break;
-    }
+  // A title that is nothing but the word "test" (with counters or brackets) is
+  // not fixture *wording*, but it is not a headline either.
+  if (/^(test|testing|dummy|sample|untitled|draft|copy of|new article)\b[\s\d().:_-]*$/i.test(title.trim())) {
+    probableReasons.push(`title is a placeholder ("${input.title?.trim()}")`);
   }
 
-  // Roman Urdu: two distinct markers, counted as whole words across the title
-  // and deck. One is a coincidence ("…aur" inside a name); two is a sentence.
-  const words = new Set(`${title} ${deck}`.match(/[a-z]+/g) ?? []);
-  const romanUrduHits = ROMAN_URDU_TOKENS.filter((token) => words.has(token));
-  if (romanUrduHits.length >= 2) {
-    probable.push(`Roman Urdu markers: ${romanUrduHits.join(", ")}`);
-  }
-
-  if (probable.length) return { confidence: "probable", reasons: probable };
+  if (probableReasons.length) return { confidence: "probable", reasons: probableReasons };
   return null;
 }
 
-/** A bucket object as returned by `listR2Objects`. */
+// ─────────────────────────────────────────────────────────────────────────────
+// R2 orphan detection
+// ─────────────────────────────────────────────────────────────────────────────
+
 export interface SweepableObject {
   key: string;
   size?: number;
@@ -268,25 +303,27 @@ export interface SweepableObject {
 }
 
 export interface OrphanSweepOptions {
-  /** Never delete an object younger than this. Guards an in-flight upload. */
+  /**
+   * Never delete an object younger than this.
+   *
+   * An upload lands in the bucket a moment before the row that references it is
+   * written, so a sweep running in that window would see a live article's new
+   * image as an orphan. A day or more makes the window irrelevant.
+   */
   graceMs?: number;
+  /** Injectable clock, so the grace window is testable. */
   now?: Date;
 }
 
 /**
- * Objects in the bucket that nothing references.
+ * Objects in the bucket that no surviving reference accounts for.
  *
- * `liveKeys` must be built from every surviving reference — the article columns
- * (contentUrl / img / ogImage) *and* everything found inside the content bodies
- * of articles that still exist, in any status. A draft's inline image is a live
- * reference; only objects no row and no body mentions are orphans.
- *
- * The grace window is the safety net for the one race this cannot reason about:
- * an upload that finished before its database write. Without it, an object
- * written a second ago and not yet linked would be deleted while the editor is
- * still looking at the save spinner. An object whose timestamp is missing
- * cannot be aged, so with a grace window in force it is left alone — the
- * conservative reading of "I cannot prove this is old enough to delete".
+ * `liveKeys` must contain every key referenced by anything that still exists in
+ * the database — the article columns (contentUrl, img, ogImage), the inline
+ * media inside every stored content body, author avatars, publication settings
+ * and revision content keys. A missing entry in that set does not just leave an
+ * orphan behind; it deletes a live file. That is why the caller builds it from
+ * the database first and why this function takes it as an argument.
  */
 export function findOrphanObjects(
   objects: readonly SweepableObject[],
@@ -297,14 +334,36 @@ export function findOrphanObjects(
   const now = options.now ?? new Date();
 
   return objects.filter((object) => {
+    if (!object.key) return false;
     if (liveKeys.has(object.key)) return false;
 
     if (graceMs > 0) {
       if (!object.lastModified) return false;
-      const age = now.getTime() - object.lastModified.getTime();
-      if (age < graceMs) return false;
+      if (now.getTime() - object.lastModified.getTime() < graceMs) return false;
     }
 
     return true;
   });
+}
+
+/**
+ * Bucket keys for content bodies that no longer have an article row.
+ *
+ * `articles/content-<id>.json` is derived from the article id, so an orphaned
+ * blob can be recognised from its name alone — no fetch, no parse — which makes
+ * this the cheapest sweep and the one that runs first in the script.
+ */
+export function orphanedContentBlobIds(
+  keys: readonly string[],
+  liveArticleIds: ReadonlySet<string>,
+): { key: string; articleId: string }[] {
+  const found: { key: string; articleId: string }[] = [];
+  for (const key of keys) {
+    const match = /(?:^|\/)articles\/content-([^/]+)\.json$/.exec(key);
+    if (!match) continue;
+    const articleId = match[1];
+    if (liveArticleIds.has(articleId)) continue;
+    found.push({ key, articleId });
+  }
+  return found;
 }
