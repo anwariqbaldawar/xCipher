@@ -58,6 +58,26 @@
        faint rim on the dark one. */
     --glass-specular: rgba(255, 255, 255, 0.7);
     --glass-shadow-strong: rgba(6, 8, 12, 0.42);
+    /* Glass highlight: a pane of red-tinted glass laid over the text. Consumed
+       ONLY by inline <mark> in the article body and by the matched characters
+       in live search (see "GLASS HIGHLIGHT" below). Kept apart from --accent /
+       --accent-soft on purpose, so the solid red of the Subscribe button,
+       active category pills, drawer items and badges can never pick it up.
+       On light the pane is FROSTED: it lifts whatever is behind it towards a
+       pale rose instead of darkening it, which is what keeps red match text
+       legible on the grey search glass. The red lives in the rim, the glow
+       and the tint pooled along the bottom edge. */
+    --hl-glass-fill: rgba(250, 214, 214, 0.62);
+    --hl-glass-fill-strong: rgba(250, 198, 198, 0.76);
+    --hl-glass-fill-deep: rgba(230, 0, 0, 0.1);
+    --hl-glass-sheen: rgba(255, 255, 255, 0.6);
+    --hl-glass-edge: rgba(230, 0, 0, 0.24);
+    --hl-glass-specular: rgba(255, 255, 255, 0.9);
+    --hl-glass-glow: rgba(230, 0, 0, 0.18);
+    /* Matched-character text in live search. Darker than --accent, which
+       measures ~3:1 on the pane; this holds 4.5:1 (WCAG AA) behind the glyphs
+       even on the hovered/active row over a dark page. */
+    --hl-glass-ink: #990000;
     --drawer-bg: rgba(255, 255, 255, 0.75);
     --drawer-border: rgba(0, 0, 0, 0.1);
     --drawer-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -108,6 +128,16 @@
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-specular: rgba(255, 255, 255, 0.07);
     --glass-shadow-strong: rgba(0, 0, 0, 0.85);
+    /* Glass highlight on dark: a denser tint, a brighter rim and a soft red
+       bloom, so the pane reads as lit glass rather than a muddy smear. */
+    --hl-glass-fill: rgba(255, 26, 26, 0.14);
+    --hl-glass-fill-strong: rgba(255, 26, 26, 0.24);
+    --hl-glass-fill-deep: rgba(255, 26, 26, 0.26);
+    --hl-glass-sheen: rgba(255, 255, 255, 0.09);
+    --hl-glass-edge: rgba(255, 92, 92, 0.36);
+    --hl-glass-specular: rgba(255, 255, 255, 0.2);
+    --hl-glass-glow: rgba(255, 26, 26, 0.34);
+    --hl-glass-ink: #ff9e9e;
     --drawer-bg: rgba(10, 10, 10, 0.65);
     --drawer-border: rgba(255, 255, 255, 0.1);
     --drawer-shadow: 20px 0 50px rgba(0, 0, 0, 0.6);
@@ -2779,6 +2809,73 @@ mark,
 
 mark * {
     color: inherit !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLASS HIGHLIGHT — article-body <mark> + live-search matches
+   ═══════════════════════════════════════════════════════════════════════════
+   Scope is deliberately narrow:
+     • .tiptap-content mark  — the published article body, the draft preview
+                               and the review pane (every ArticleBody render)
+     • .ed-body-content mark — the article editor canvas, so what an author
+                               highlights is what a reader gets
+     • .search-mark          — matched characters in live search results
+   Every other <mark> keeps the solid fallback above (author bios, …), and
+   nothing here reads --accent, so the Subscribe button, active category
+   pills, drawer items and badges keep their solid red untouched.
+
+   Cascade: the fallback forces background-color and color with !important,
+   so those two declarations must be !important here as well. Every other
+   property wins on source order at equal specificity — keep this block BELOW
+   the fallback.
+
+   Paint-only material: the rim and the specular top edge are inset shadows,
+   not borders, so a highlight never changes line height or where text wraps.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.tiptap-content mark,
+.ed-body-content mark,
+.search-mark {
+    background-color: var(--hl-glass-fill) !important;
+    /* Frosted sheen fading out of the top half, tint pooling at the bottom:
+       light from above, like a pane of glass. */
+    background-image:
+        linear-gradient(180deg, var(--hl-glass-sheen) 0%, transparent 55%),
+        linear-gradient(180deg, transparent 30%, var(--hl-glass-fill-deep) 100%);
+    box-shadow:
+        inset 0 1px 0 var(--hl-glass-specular),
+        inset 0 0 0 1px var(--hl-glass-edge),
+        0 1px 2px -1px var(--hl-glass-glow),
+        0 6px 14px -9px var(--hl-glass-glow);
+    /* A highlight that wraps keeps its rim, radius and padding on every line
+       instead of being sliced open at each line end. */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+
+/* Article body: the words keep their own reading colour (ink in a paragraph,
+   muted in a table cell) and the glass carries the emphasis. The small
+   negative margin gives back most of the side padding, so highlighted words
+   sit almost exactly where they would without the highlight. */
+.tiptap-content mark,
+.ed-body-content mark {
+    color: inherit !important;
+    border-radius: .32em;
+    padding: .04em .22em;
+    margin: 0 -.06em;
+}
+
+/* High-contrast themes discard translucent paint; hand the highlight to the
+   system's own Mark colours so it stays visible. (The live-search match has
+   its own block after its rules, which it must follow to win.) */
+@media (forced-colors: active) {
+
+    .tiptap-content mark,
+    .ed-body-content mark {
+        forced-color-adjust: none;
+        background: Mark !important;
+        color: MarkText !important;
+        box-shadow: none;
+    }
 }
 
 .video-ph {
@@ -8843,12 +8940,51 @@ body.is-article .prose pre {
     height: 54px;
 }
 
-/* The characters the reader actually typed: brand-red text, no highlight
-   box behind them. */
+/* The characters the reader actually typed, on the glass highlight pane (the
+   material itself is defined once, under GLASS HIGHLIGHT next to the prose
+   rules). Bold deep-red text keeps the "this is what matched" signal.
+   Zero vertical padding: the title is line-clamped with overflow:hidden, so
+   anything taller than the line box would be clipped. The negative margin
+   gives back half the side padding, so a partial-word match ("graph|s")
+   stays one word and the pill barely enters the space before it. color is
+   !important to beat the global `mark { color: … !important }` fallback. */
 .search-mark {
-    background: transparent;
-    color: var(--accent);
+    color: var(--hl-glass-ink) !important;
     font-weight: 700;
+    border-radius: .3em;
+    padding: 0 .1em;
+    margin: 0 -.05em;
+    transition: background-color .15s ease, box-shadow .15s ease;
+}
+
+/* Room for a match pill at either end of a title line: the 2-line clamp's
+   overflow:hidden would otherwise shave the pill's side overhang flat.
+   Padding and margin cancel out, so the title text itself does not move. */
+.search-row-title {
+    padding-inline: .1em;
+    margin-inline: -.1em;
+}
+
+/* The active row's matches deepen with it, so the selection and the match
+   read as one gesture while arrowing through results. */
+.search-row:hover .search-mark,
+.search-row[data-active="true"] .search-mark {
+    background-color: var(--hl-glass-fill-strong) !important;
+}
+
+/* High contrast: system Mark colours, as for the article highlight. Listed
+   with the active-row selector and placed after both rules above so it
+   outranks them. */
+@media (forced-colors: active) {
+
+    .search-mark,
+    .search-row:hover .search-mark,
+    .search-row[data-active="true"] .search-mark {
+        forced-color-adjust: none;
+        background: Mark !important;
+        color: MarkText !important;
+        box-shadow: none;
+    }
 }
 
 /* ── Footer, empty and hint states ─────────────────────────────────────── */
@@ -8999,7 +9135,8 @@ body.is-article .prose pre {
     .search-row,
     .search-row::before,
     .search-overlay,
-    .search-close {
+    .search-close,
+    .search-mark {
         transition: none;
     }
 

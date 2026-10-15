@@ -217,7 +217,7 @@ describe("⌘K search overlay", () => {
     expect(container.textContent).not.toContain("⌘K");
   });
 
-  it("highlights the matched characters in the author name, in red text only", async () => {
+  it("highlights the matched characters in the author name with the glass match", async () => {
     await mount(<SearchProvider><SearchButton /></SearchProvider>);
     await act(async () => { container.querySelector("button")!.click(); });
     await settle(60);
@@ -536,11 +536,28 @@ describe("live search stylesheet", () => {
     expect(reducedMotion).toContain(".search-close");
   });
 
-  it("renders matched characters as red text with no highlight background", () => {
-    const mark = /\.search-mark\s*\{([^}]*)\}/.exec(css)![1];
-    expect(mark).toMatch(/background:\s*transparent/);
-    expect(mark).toMatch(/color:\s*var\(--accent\)/);
+  it("renders matched characters on the glass highlight, never a solid red block", () => {
+    // The match's own rule, not the shared GLASS HIGHLIGHT selector list that
+    // also ends in `.search-mark {`: it is the one that opens after a comment
+    // or a closing brace.
+    const mark = /(?:\}|\*\/)\s*\.search-mark\s*\{([^}]*)\}/.exec(css)![1];
+    // !important, or the global `mark { color: #fff !important }` fallback
+    // wins — which is how matches used to render as white on solid red.
+    expect(mark).toMatch(/color:\s*var\(--hl-glass-ink\)\s*!important/);
+    expect(mark).toMatch(/font-weight:\s*700/);
     expect(mark).not.toMatch(/background:\s*var\(--accent/);
+    // The title is line-clamped with overflow:hidden: vertical padding would
+    // be clipped, so the pill only pads sideways.
+    expect(mark).toMatch(/padding:\s*0\s+[\d.]+em/);
+
+    // The shared material includes the match and beats the fallback's fill.
+    expect(css).toMatch(/\.tiptap-content mark,\s*\.ed-body-content mark,\s*\.search-mark\s*\{[^}]*background-color:\s*var\(--hl-glass-fill\)\s*!important/);
+    // The active row deepens its matches.
+    expect(css).toMatch(/\.search-row\[data-active="true"\] \.search-mark\s*\{[^}]*var\(--hl-glass-fill-strong\)\s*!important/);
+    // The pill's colour transition honours reduced motion.
+    const searchBlock = css.slice(css.indexOf("LIVE INSTANT SEARCH"));
+    const reducedMotion = searchBlock.slice(searchBlock.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reducedMotion).toContain(".search-mark");
 
     // The removed chrome stays removed: no match badges, no kbd hints, no
     // keyboard legend bar.
