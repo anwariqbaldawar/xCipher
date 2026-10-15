@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, Bot, BadgeDollarSign, FileWarning, FlaskConical, Handshake } from "lucide-react";
 import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
+import PolicyLayout, { type PolicySection } from "@/components/legal/PolicyLayout";
+
+// The ethics and funding rules: who owns xSypher, how it makes money, and the
+// lines commercial relationships cannot cross. How stories are reported and
+// corrected lives in /page/editorial-standards; keep the two consistent.
 
 export const metadata: Metadata = constructMetadata({
   title: "Editorial Policy & Ethics — xSypher",
@@ -12,216 +16,205 @@ export const metadata: Metadata = constructMetadata({
   imageAlt: "xSypher editorial policy",
 });
 
+const LAST_UPDATED = "16 October 2026";
+const LAST_UPDATED_ISO = "2026-10-16";
+
+const sections: PolicySection[] = [
+  {
+    id: "ownership",
+    title: "Ownership and funding",
+    content: (
+      <>
+        <p>
+          xSypher is an independent publication published by xSypher Media, founded and edited by Anwar Iqbal Dawar. It takes no venture
+          capital and has no corporate parent.
+        </p>
+        <p>
+          The publication is funded by clearly labelled sponsorship and advertising, affiliate commissions where a story includes them, and
+          reader support. None of these comes with editorial control. The full ownership and funding disclosure is in our{" "}
+          <Link href="/page/transparency">transparency report</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "independence",
+    title: "Editorial independence",
+    content: (
+      <>
+        <p>
+          Our core reporting, reviews and benchmarks are editorially independent. Payment never buys a positive review, a favourable
+          conclusion, a score or a ranking — and no gift or favour changes what we conclude.
+        </p>
+        <p>
+          What we cover, how we rate products and the conclusions we draw are decided by our editors alone, separately from advertising and
+          partnerships. No sponsor, vendor, advertiser or investor has prior review, copy approval or veto power over any piece of our
+          journalism. If a major technology company — including a sponsor — makes a misstep, we cover it critically and fairly.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "sponsored-content",
+    title: "Sponsored content and native advertising",
+    content: (
+      <>
+        <p>
+          Commercial partners support xSypher through three formats: <strong>Sponsored Deep-Dives</strong> (paid technical explorations
+          produced with a partner), <strong>Partner Content</strong>, and <strong>display and newsletter sponsorships</strong>. They fund the
+          independent reporting around them; they never replace it.
+        </p>
+        <ul>
+          <li>Every paid piece carries a visible &ldquo;Sponsored&rdquo; or &ldquo;Partner&rdquo; label <strong>before the first paragraph</strong> — never buried at the foot of the page.</li>
+          <li>Paid links are tagged so search engines treat them as advertising.</li>
+          <li>Sponsored material is never presented as an independent review, benchmark or endorsement, and never carries a verdict or score.</li>
+          <li>Sponsors may check a sponsored piece for factual accuracy about their own product. They may not soften criticism in editorial coverage, preview unrelated stories, or veto publication.</li>
+          <li>Sponsoring one piece buys no influence over any other coverage, including coverage of the sponsor.</li>
+        </ul>
+        <p>
+          If a partnership would require any of that, we decline it. Formats and ground rules for partners are on our{" "}
+          <Link href="/page/advertising">advertising page</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "display-advertising",
+    title: "Display advertising",
+    content: (
+      <>
+        <p>
+          Any display ads on xSypher are served by Google AdSense and load only for readers who accept optional cookies (see our{" "}
+          <Link href="/page/privacy-policy">Privacy Policy</Link>). Ads are chosen by Google&rsquo;s systems, not by our editors; our writers do
+          not see who is advertising to whom, and advertisers cannot request, influence or remove coverage.
+        </p>
+        <p>
+          Ads are always presented as advertising and kept apart from article text. If you see an ad on xSypher that is misleading or
+          inappropriate, tell us and we will block it through Google&rsquo;s controls.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "affiliate-links",
+    title: "Affiliate and partner links",
+    content: (
+      <>
+        <p>
+          Where a story contains an affiliate or partner link, that is disclosed in the story, and the link is tagged as advertising for search
+          engines. A commission never affects our verdicts, scores, rankings or recommendations: products are chosen on merit first, and if a
+          product falls short of our standards we say so, whatever the commission.
+        </p>
+        <p>We do not sell do-follow backlinks or paid insertions into existing editorial articles.</p>
+      </>
+    ),
+  },
+  {
+    id: "gifts",
+    title: "Gifts, review units, travel and events",
+    content: (
+      <ul>
+        <li>Hardware sent for review is returned after testing or kept solely as a reference for future benchmark comparisons. We never sell review units, and accepting one never guarantees coverage — let alone positive coverage.</li>
+        <li>We decline gifts beyond nominal value from companies we cover.</li>
+        <li>If a company ever pays for travel or event access connected to a story, the story says so.</li>
+        <li>Embargoes are honoured for timing only. They never limit what we may say.</li>
+      </ul>
+    ),
+  },
+  {
+    id: "conflicts",
+    title: "Conflicts of interest",
+    content: (
+      <p>
+        Writers and editors disclose to the desk any financial interest, business relationship or personal connection that touches a story,
+        and step back from coverage where the conflict cannot be managed. Where a conflict is relevant to readers, the story discloses it.
+        Nobody at xSypher may trade on information before it is published.
+      </p>
+    ),
+  },
+  {
+    id: "verification",
+    title: "Technical verification and benchmarking",
+    content: (
+      <>
+        <p>
+          We rely on primary sources — the specification, the repository, the advisory, official documentation — plus direct interviews and
+          hands-on testing, and we reproduce testable claims ourselves. When we publish a benchmark, we disclose the setup it ran on — hardware
+          or instance type, versions, configuration and workload — so a reader can reproduce the number. Vendor-supplied figures we have not
+          reproduced are labelled as vendor claims.
+        </p>
+        <p>
+          Unconfirmed information such as hardware leaks is published only when we can explain why it is credible, and is labelled as
+          unconfirmed. The full process is in our <Link href="/page/editorial-standards#verification">Editorial Standards</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "ai",
+    title: "AI assistance and human review",
+    content: (
+      <>
+        <p>
+          Every xSypher article is researched, written and edited by people. AI tools may help organise research, check language mechanics, and
+          produce illustrations that are disclosed as AI-generated. They never produce the thesis, the analysis or a verdict; they never stand
+          in for fact-checking; and they never write a quote or a patch note.
+        </p>
+        <p>
+          The complete rules, including what we will never put into an AI tool, are in our{" "}
+          <Link href="/page/editorial-standards#ai">AI usage ethics</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "corrections",
+    title: "Corrections protocol",
+    content: (
+      <>
+        <p>
+          Anyone can report an error — through the <Link href="/page/corrections">corrections page</Link> or the contact desk — and every report
+          gets a human answer within two business days. Material changes made after publication are noted on the story with a date; minor typo
+          fixes may not get a note, but substantive edits are never made quietly.
+        </p>
+        <p>
+          Definitions, the full response targets and how retractions work are set out in our{" "}
+          <Link href="/page/editorial-standards#corrections">Editorial Standards</Link>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "accountability",
+    title: "Complaints and accountability",
+    content: (
+      <p>
+        Questions about these rules, or a concern about something we published, go to{" "}
+        <a href="mailto:editor@xsypher.com">editor@xsypher.com</a>. Complaints that the desk cannot resolve are reviewed by the Founder &amp; Lead
+        Editor, and significant corrections are recorded in the <Link href="/page/transparency">transparency report</Link>.
+      </p>
+    ),
+  },
+];
+
 export default function EditorialPolicyPage() {
   return (
-    <div className="w-full bg-[var(--paper)] min-h-screen text-[var(--ink)]">
-      {/* ─────────────────────────────────────────────────────────────
-          1. HERO SECTION
-          ───────────────────────────────────────────────────────────── */}
-      <section className="w-full border-b border-[var(--line)] bg-[var(--surface)] relative overflow-hidden">
-        {/* Subtle grid background */}
-        <div 
-          className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none"
-          style={{
-            backgroundImage: "linear-gradient(var(--ink) 1px, transparent 1px), linear-gradient(90deg, var(--ink) 1px, transparent 1px)",
-            backgroundSize: "32px 32px",
-          }}
-          aria-hidden="true"
-        />
-        
-        <div className="max-w-3xl mx-auto px-4 sm:px-8 pt-32 pb-16 sm:pt-40 sm:pb-24 relative z-10 text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20 mb-6">
-            Transparency &amp; Trust
-          </span>
-          <h1 className="font-[family:var(--f-display)] text-3xl sm:text-5xl font-extrabold tracking-tight text-[var(--ink)] leading-tight">
-            Our Editorial Guidelines &amp; Ethics
-          </h1>
-          <p className="mt-6 text-base sm:text-lg text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-            These are the rules behind every story on xSypher: how we stay independent, how technical claims are verified, where AI does and does not help, and how a correction gets made. Where a rule needs a longer explanation, it links to one.
-          </p>
-        </div>
-      </section>
-
-      {/* ─────────────────────────────────────────────────────────────
-          2. POLICY SECTIONS
-          ───────────────────────────────────────────────────────────── */}
-      <section className="w-full py-12 sm:py-16 lg:py-20">
-        <div className="max-w-3xl mx-auto px-4 sm:px-8 flex flex-col gap-8 sm:gap-10">
-          
-          {/* Section 1: Editorial Independence */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  Editorial Independence
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    xSypher&apos;s core reporting, reviews and benchmarks are editorially independent. Payment never buys a positive review, a favourable conclusion, a score or a ranking — and no gift or favor changes what we conclude.
-                  </p>
-                  <p>
-                    Our editorial decisions — including what we cover, how we rate products, and the conclusions we draw — are made separately from advertising and partnerships. Commercial partners support the publication through the clearly labelled formats described below; no sponsor, vendor or investor has prior review, copy approval or veto power over any piece of our journalism.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Sponsored Content & Native Advertising */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <Handshake className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  Sponsored Content &amp; Native Advertising Disclosure
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    xSypher is supported in part by commercial partnerships: <strong>Sponsored Deep-Dives</strong> (paid technical explorations produced with a partner), <strong>Partner Content</strong>, and <strong>display and newsletter sponsorships</strong>. These formats fund the independent reporting around them; they do not replace it.
-                  </p>
-                  <p>
-                    Every paid piece carries a visible &ldquo;Sponsored&rdquo; or &ldquo;Partner&rdquo; disclosure before the first paragraph — never buried at the foot of the page — and paid links are tagged so search engines treat them as advertising. Sponsored material is never presented as an independent review, benchmark or endorsement, and a partner&apos;s sponsorship of one piece buys no influence over any other coverage, including coverage of that partner.
-                  </p>
-                  <p>
-                    Sponsors may check a sponsored piece for factual accuracy about their own product; they may not soften criticism in editorial coverage, preview unrelated stories, or veto publication. If a partnership would require any of that, we decline it. The formats and ground rules for partners are set out on our advertising page.
-                  </p>
-                  <p className="pt-2">
-                    <Link
-                      href="/page/advertising"
-                      className="inline-flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline"
-                    >
-                      Advertising &amp; partnerships &rarr;
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 2: Fact-Checking & Sourcing */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <FlaskConical className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  Technical Verification &amp; Benchmarking Methodology
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    Every story passes through a rigorous fact-checking process. We rely heavily on primary sources — the specification, the repository, the advisory, official documentation — plus direct interviews and hands-on testing. We verify technical claims by reproducing setups and running local benchmarks whenever a claim is testable.
-                  </p>
-                  <p>
-                    When we publish a benchmark, we disclose the setup it ran on: hardware or instance type, versions, configuration and the workload, so a reader can reproduce the number rather than take it on trust. Vendor-supplied figures we have not reproduced are labelled as vendor claims. If a re-run contradicts a published number, the correction protocol below applies to it like any other error.
-                  </p>
-                  <p>
-                    We actively avoid unverified rumors or speculation. If we do report on unconfirmed information (such as hardware leaks or industry rumors), it is explicitly stated as such, with clear context on why we believe the information is credible enough to publish.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: AI & Automation Policy */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md relative overflow-hidden">
-            {/* Subtle highlight accent for AI policy */}
-            <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--accent)]" aria-hidden="true" />
-            
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <Bot className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  AI Assistance &amp; Human Engineering Review
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    Because we cover artificial intelligence deeply, we must be completely transparent about how we use it. <strong>All xSypher articles are researched, written, and edited by human journalists.</strong>
-                  </p>
-                  <p>
-                    AI tools may assist with research organisation (clustering sources, summarising a long specification into an author’s notes), language mechanics, and generated illustration that is disclosed as such. They never produce the thesis, the analysis or a verdict, they never stand in for fact-checking, and they never write a quote or a patch note. Every article is researched, written and edited by named humans — the fuller breakdown of that boundary is on the transparency report.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 4: Affiliate & Advertising Disclosure */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <BadgeDollarSign className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  Affiliate &amp; Partner Links Policy
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    xSypher is funded by clearly labelled sponsorship and advertising, affiliate commissions where a story includes them, and reader support. It takes no venture capital and has no corporate parent — the full ownership and funding disclosure is in the transparency report.
-                  </p>
-                  <p>
-                    Where a story contains an affiliate or partner link, that is disclosed in the story, and the link is tagged as advertising for search engines. A commission <strong>never</strong> impacts our editorial verdicts, scores, rankings or product recommendations: products are chosen on merit first, and if a product falls short of our standards we say so, regardless of any potential commission. We do not sell do-follow backlinks or paid insertions into existing editorial articles.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section 5: Corrections Policy */}
-          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
-              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
-                <FileWarning className="w-6 h-6" />
-              </div>
-              <div className="flex-1">
-                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
-                  Corrections Protocol
-                </h2>
-                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
-                  <p>
-                    We are fiercely committed to fixing our mistakes openly. Anyone can report an error — through the corrections page or the contact desk — and every report gets a human answer within two business days. If we publish an error, we correct it as quickly as possible.
-                  </p>
-                  <p>
-                    Any material changes made to an article post-publication (such as correcting technical inaccuracies or updating factual claims) will be clearly noted with a timestamp at the bottom of the piece. Minor typo fixes may not always receive a log entry, but substantive edits will never be quietly swept under the rug.
-                  </p>
-                  <p className="pt-2 flex flex-wrap items-center gap-x-5 gap-y-2">
-                    <Link
-                      href="/page/corrections"
-                      className="inline-flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline"
-                    >
-                      Report an error &rarr;
-                    </Link>
-                    <Link
-                      href="/page/transparency#corrections"
-                      className="inline-flex items-center gap-1 text-[var(--accent)] font-semibold hover:underline"
-                    >
-                      Correction response times &rarr;
-                    </Link>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
-      
-      {/* ─────────────────────────────────────────────────────────────
-          3. BOTTOM CTA / FOOTNOTE
-          ───────────────────────────────────────────────────────────── */}
-      <section className="w-full py-10 sm:py-12 border-t border-[var(--line)] bg-[var(--surface)] text-center">
-        <p className="text-xs sm:text-sm text-[var(--faint)] font-[family:var(--f-ui)] max-w-lg mx-auto px-4">
-          Questions about these rules, or a concern about something we published? <Link href="/page/contact" className="text-[var(--accent)] hover:underline">Contact the desk</Link> — or read the <Link href="/page/transparency" className="text-[var(--accent)] hover:underline">transparency report</Link> for how the publication is owned, funded and corrected.
-        </p>
-      </section>
-    </div>
+    <PolicyLayout
+      slug="editorial-policy"
+      kicker="Transparency & trust"
+      title="Editorial Policy & Ethics"
+      summary="Who owns xSypher, how it is funded, and the lines no commercial relationship can cross — the ethics behind every story we publish."
+      lastUpdated={LAST_UPDATED}
+      lastUpdatedIso={LAST_UPDATED_ISO}
+      appliesTo="All xSypher journalism and commercial partnerships"
+      highlights={[
+        { title: "Independently owned", body: "No venture capital and no corporate parent; funding sources are disclosed in the transparency report." },
+        { title: "Coverage is not for sale", body: "No sponsor, advertiser or vendor gets previews, copy approval or a veto." },
+        { title: "Paid means labelled", body: "Sponsored and Partner content is marked before the first paragraph, and paid links are tagged." },
+        { title: "Conflicts disclosed", body: "Financial and personal interests are declared to the desk — and to readers when they matter." },
+      ]}
+      sections={sections}
+      contact={{ label: "Editorial questions", email: "editor@xsypher.com", note: "Raise a concern about a story or about how these rules are applied." }}
+    />
   );
 }

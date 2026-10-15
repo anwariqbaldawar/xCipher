@@ -1,210 +1,246 @@
-import { Info, Cookie, ShieldCheck, BarChart3, Settings, RefreshCw } from 'lucide-react';
-import type { Metadata } from 'next';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { constructMetadata, siteConfig } from "@/lib/seo";
+import PolicyLayout, { type PolicySection } from "@/components/legal/PolicyLayout";
+import CookieSettingsButton from "@/components/legal/CookieSettingsButton";
 
-export const metadata: Metadata = {
-  title: 'Cookie Policy | xSypher',
-  description: 'Learn about the cookies we use, why we use them, and how you can manage your preferences on xSypher.',
-};
+// The inventory below mirrors the code: storage keys from CookieConsent,
+// ThemeProvider, the font-size control, useInstantSearch and ViewCounter;
+// the session cookie from lib/auth.config.ts; and the consent gate that keeps
+// AdSense and Sentry replay off until "Accept". Change the code, change this.
+
+export const metadata: Metadata = constructMetadata({
+  title: "Cookie Policy | xSypher",
+  description:
+    "Every cookie and browser-storage item xSypher uses — strictly necessary, preferences, diagnostics and Google AdSense advertising cookies — with purposes, durations, and how to change your choice at any time.",
+  canonical: `${siteConfig.url}/page/cookie-policy`,
+});
+
+const LAST_UPDATED = "16 October 2026";
+const LAST_UPDATED_ISO = "2026-10-16";
+
+type Row = [name: string, provider: string, purpose: string, duration: string];
+
+function CookieTable({ rows }: { rows: Row[] }) {
+  return (
+    <div className="policy-table-wrap">
+      <table className="policy-table">
+        <thead>
+          <tr><th>Name</th><th>Provider</th><th>Purpose</th><th>Duration</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(([name, provider, purpose, duration]) => (
+            <tr key={name}>
+              <td><code>{name}</code></td>
+              <td>{provider}</td>
+              <td>{purpose}</td>
+              <td>{duration}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const sections: PolicySection[] = [
+  {
+    id: "what-are-cookies",
+    title: "What cookies and browser storage are",
+    content: (
+      <>
+        <p>
+          A <strong>cookie</strong> is a small text file a website asks your browser to keep and send back on later visits.{" "}
+          <strong>Local storage</strong> and <strong>session storage</strong> are similar browser features, except that what they hold stays
+          on your device and is not sent with every request; session storage is cleared when you close the tab.
+        </p>
+        <p>
+          &ldquo;First-party&rdquo; items are set by xsypher.com itself. &ldquo;Third-party&rdquo; cookies are set by another company&rsquo;s
+          domain — on this site, only Google&rsquo;s advertising cookies, and only if you allow them.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "our-approach",
+    title: "Our approach: consent first",
+    content: (
+      <>
+        <p>
+          When you first visit, a banner asks whether to allow optional cookies. Until you answer, and if you choose Decline, xSypher uses
+          only what is <strong>strictly necessary</strong> for the site to work or what <strong>remembers your own settings</strong>.
+        </p>
+        <p>
+          Optional items — <strong>Google AdSense advertising cookies</strong> and <strong>diagnostic session replay</strong> — are switched on
+          only after you choose Accept. Before that, the AdSense code is not loaded on our pages at all.
+        </p>
+        <p>
+          We do not use analytics scripts, tracking pixels, social-media &ldquo;like&rdquo; buttons or fingerprinting.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "strictly-necessary",
+    title: "Strictly necessary",
+    content: (
+      <>
+        <p>These are needed for the site to work and to keep it secure, so they do not require consent.</p>
+        <CookieTable
+          rows={[
+            ["xsypher-cookie-consent", "xSypher (local storage)", "Remembers whether you accepted or declined optional cookies, so the banner does not ask on every page.", "Until you clear it or use Cookie settings"],
+            ["__Secure-next-auth.session-token", "xSypher", "Keeps writers and editors signed in to the newsroom. Never set for readers.", "Up to 30 days"],
+            ["__Host-authjs.csrf-token", "xSypher", "Protects the staff sign-in form against cross-site request forgery. Staff only.", "Browser session"],
+            ["__Secure-authjs.callback-url", "xSypher", "Returns a staff member to the right page after signing in. Staff only.", "Browser session"],
+            ["__cf_bm", "Cloudflare", "May be set by our network provider to tell people apart from automated traffic and protect the site from bots.", "30 minutes"],
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "preferences",
+    title: "Preferences (on your device only)",
+    content: (
+      <>
+        <p>
+          These remember choices you make. They live in your browser&rsquo;s storage, are never sent to us and are not used to identify you.
+        </p>
+        <CookieTable
+          rows={[
+            ["xsypher-theme", "xSypher (local storage)", "Remembers light or dark mode if you choose one instead of following your device.", "Until you clear it"],
+            ["xsypher-fs", "xSypher (local storage)", "Remembers the reading text size you picked.", "Until you clear it"],
+            ["xsypher:recent-searches", "xSypher (local storage)", "Shows your last few searches in the search panel, on this device only.", "Until you clear it"],
+            ["Article view flag", "xSypher (session storage)", "Stops a reload of the same article in the same tab being counted twice in our view totals.", "Until the tab closes"],
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "diagnostics",
+    title: "Diagnostics (optional)",
+    content: (
+      <>
+        <p>
+          Only if you accept optional cookies, a small sample of sessions may be recorded by our error-monitoring provider, Sentry, so we can
+          see what went wrong when an interaction breaks. All text is masked and all images and media are blocked in these recordings.
+        </p>
+        <CookieTable
+          rows={[
+            ["sentryReplaySession", "Sentry (session storage)", "Groups the events of one sampled session so a failure can be reproduced.", "Until the tab closes"],
+          ]}
+        />
+      </>
+    ),
+  },
+  {
+    id: "advertising",
+    title: "Advertising (optional) — Google AdSense",
+    content: (
+      <>
+        <p>
+          xSypher may show ads served by Google AdSense. If — and only if — you accept optional cookies, Google and its partners may set and
+          read the cookies below to show ads, including ads based on your visits to this and other websites, to limit how often you see the
+          same ad, and to measure performance and prevent fraud.
+        </p>
+        <CookieTable
+          rows={[
+            ["IDE", "Google (doubleclick.net)", "The DoubleClick cookie formerly known as the DART cookie: ad personalisation and measurement across sites.", "13 months (EEA/UK), 24 months elsewhere"],
+            ["test_cookie", "Google (doubleclick.net)", "Checks whether your browser accepts cookies.", "15 minutes"],
+            ["__gads", "Google (xsypher.com)", "Ad delivery, frequency capping and measurement for ads on this site.", "13 months"],
+            ["__gpi", "Google (xsypher.com)", "Works with __gads for ad delivery and measurement.", "13 months"],
+            ["__eoi", "Google (xsypher.com)", "Security and ad-fraud prevention.", "6 months"],
+          ]}
+        />
+        <p>
+          These are the cookies Google documents for AdSense; Google may change their names or lifetimes. Its current list is at{" "}
+          <a href="https://policies.google.com/technologies/cookies" rel="noopener noreferrer" target="_blank">policies.google.com/technologies/cookies</a>,
+          and how it uses data from sites like ours is explained at{" "}
+          <a href="https://policies.google.com/technologies/partner-sites" rel="noopener noreferrer" target="_blank">policies.google.com/technologies/partner-sites</a>.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "embedded-content",
+    title: "Embedded content",
+    content: (
+      <p>
+        Videos are embedded in YouTube&rsquo;s privacy-enhanced mode (youtube-nocookie.com): YouTube does not set cookies for your visit until
+        you play a video, after which it may store information on your device under Google&rsquo;s own policies. Posts from X are rendered by
+        our servers as static content — X&rsquo;s scripts and cookies are not loaded, though images inside a post load from X&rsquo;s servers.
+      </p>
+    ),
+  },
+  {
+    id: "manage-choices",
+    title: "Managing your choices",
+    content: (
+      <>
+        <h3>Change or withdraw consent at any time</h3>
+        <p>
+          Use the button below to bring the cookie banner back and choose again. If you decline after accepting earlier, ads stop loading
+          from your next page view; cookies Google has already set expire on their own schedule or can be deleted in your browser.
+        </p>
+        <CookieSettingsButton />
+        <h3>Opt out of personalised ads</h3>
+        <ul>
+          <li><a href="https://adssettings.google.com" rel="noopener noreferrer" target="_blank">Google Ads Settings</a> — turn off ad personalisation by Google.</li>
+          <li>
+            <a href="https://optout.aboutads.info" rel="noopener noreferrer" target="_blank">aboutads.info</a> (US),{" "}
+            <a href="https://www.youronlinechoices.eu" rel="noopener noreferrer" target="_blank">youronlinechoices.eu</a> (EU and UK) and the{" "}
+            <a href="https://optout.networkadvertising.org" rel="noopener noreferrer" target="_blank">Network Advertising Initiative</a> — industry opt-outs.
+          </li>
+        </ul>
+        <h3>Use your browser&rsquo;s controls</h3>
+        <p>
+          Every major browser lets you view, block and delete cookies and site data:{" "}
+          <a href="https://support.google.com/chrome/answer/95647" rel="noopener noreferrer" target="_blank">Chrome</a>,{" "}
+          <a href="https://support.mozilla.org/kb/clear-cookies-and-site-data-firefox" rel="noopener noreferrer" target="_blank">Firefox</a>,{" "}
+          <a href="https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac" rel="noopener noreferrer" target="_blank">Safari</a> and{" "}
+          <a href="https://support.microsoft.com/microsoft-edge/delete-cookies-in-microsoft-edge-63947406-40ac-c3b8-57b9-2a946a29ae09" rel="noopener noreferrer" target="_blank">Edge</a>.
+          Blocking strictly necessary items does not stop you reading xSypher; it only affects staff sign-in and your saved preferences.
+        </p>
+        <h3>Do Not Track</h3>
+        <p>
+          There is no agreed standard for browser &ldquo;Do Not Track&rdquo; signals, so the site does not change behaviour in response to them.
+          The consent banner and Cookie settings are how you control optional cookies here.
+        </p>
+      </>
+    ),
+  },
+  {
+    id: "changes-contact",
+    title: "Changes and contact",
+    content: (
+      <p>
+        If we add, remove or change a cookie, we update this page and the date at the top. Questions:{" "}
+        <a href="mailto:privacy@xsypher.com">privacy@xsypher.com</a>. How we handle personal data more broadly is set out in our{" "}
+        <Link href="/page/privacy-policy">Privacy Policy</Link>.
+      </p>
+    ),
+  },
+];
 
 export default function CookiePolicyPage() {
   return (
-    <div className="bg-[var(--surface)] min-h-screen">
-      {/* HEADER HERO */}
-      <header className="border-b border-[var(--line)] bg-[var(--surface-2)]">
-        <div className="max-w-7xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:px-8 lg:pt-44 lg:px-12">
-          <div className="max-w-3xl">
-            <span className="text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-3 block">
-              Legal & Compliance
-            </span>
-            <h1 className="font-[family:var(--f-display)] text-4xl sm:text-5xl font-bold mb-4 text-[var(--ink)] tracking-tight">
-              Cookie Policy
-            </h1>
-            <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              Transparency is our default. This policy explains how and why we use cookies and similar tracking technologies to improve your experience.
-            </p>
-            <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--faint)]">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)]"></span>
-              Last Updated: September 19, 2026
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* MAIN CONTENT WRAPPER */}
-      <div className="max-w-7xl mx-auto px-4 py-12 sm:px-8 lg:px-12 flex flex-col lg:flex-row gap-12">
-        
-        {/* SIDEBAR NAVIGATION (Sticky on Desktop) */}
-        <aside className="lg:w-1/4 hidden lg:block shrink-0">
-          <div className="sticky top-32">
-            <h4 className="font-[family:var(--f-display)] font-bold text-sm text-[var(--ink)] uppercase tracking-wider mb-4 border-b border-[var(--line)] pb-2">
-              Table of Contents
-            </h4>
-            <nav className="flex flex-col font-[family:var(--f-ui)] text-sm border-l-2 border-[var(--line-2)]">
-              <a href="#tldr" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">0. TL;DR Summary</a>
-              <a href="#what-are-cookies" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">1. What Exactly Are Cookies?</a>
-              <a href="#types-of-cookies" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">2. Types of Cookies We Use</a>
-              <a href="#third-party" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">3. Third-Party Analytics</a>
-              <a href="#manage-preferences" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">4. Managing Your Preferences</a>
-              <a href="#updates" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">5. Policy Updates & Contact</a>
-            </nav>
-          </div>
-        </aside>
-
-        {/* CONTENT AREA */}
-        <article className="lg:w-3/4 max-w-3xl text-[var(--ink)] space-y-12">
-          
-          {/* TL;DR BOX */}
-          <section id="tldr" className="scroll-mt-28 bg-[var(--surface-2)] border border-[var(--line)] rounded-2xl p-6 sm:p-8 shadow-sm">
-            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-              <div className="p-3 bg-[var(--surface)] rounded-xl text-[var(--accent)] shadow-sm shrink-0">
-                <Info className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-[family:var(--f-display)] font-bold text-[var(--ink)] text-xl mb-3">TL;DR: The Short Version</h3>
-                <ul className="list-none space-y-3 font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We use <strong>essential cookies</strong> to keep the site secure, functional, and to remember your light/dark mode preference.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We use <strong>analytics cookies</strong> to understand what content our readers enjoy most, helping us improve our journalism.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We respect your privacy: we do <strong>not</strong> use intrusive, cross-site third-party advertising trackers.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">You retain full control and can clear or block non-essential cookies directly from your browser settings.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION 1 */}
-          <section id="what-are-cookies" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <Cookie className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                1. What Exactly Are Cookies?
-              </h2>
-            </div>
-            <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
-              <p className="mb-4">
-                Cookies are small text files that are placed on your computer, smartphone, or other device when you visit a website. They are widely used by website owners in order to make their websites work, or to work more efficiently, as well as to provide reporting information.
-              </p>
-              <p className="mb-4">
-                Cookies set by the website owner (in this case, xSypher) are called "first-party cookies". Cookies set by parties other than the website owner are called "third-party cookies". We use both types to ensure our platform functions correctly and to deliver a seamless reading experience.
-              </p>
-            </div>
-          </section>
-
-          {/* SECTION 2 */}
-          <section id="types-of-cookies" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <ShieldCheck className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                2. Types of Cookies We Use
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-6">
-              <p>
-                Our platform utilizes different categories of cookies, each serving a distinct and necessary purpose:
-              </p>
-              
-              <div className="p-5 border border-l-4 border-[var(--line)] border-l-[var(--accent)] rounded-r-xl bg-[var(--surface-2)]">
-                <h4 className="font-bold text-[var(--ink)] mb-2 flex items-center gap-2">
-                  Essential / Strictly Necessary Cookies
-                </h4>
-                <p className="text-sm mb-3">These cookies are critical for xSypher to function correctly. Without them, core services cannot be provided.</p>
-                <ul className="text-sm list-disc pl-5 space-y-1">
-                  <li><strong>Authentication:</strong> Keeping you logged in to your account securely.</li>
-                  <li><strong>Security:</strong> Detecting malicious activity and preventing CSRF attacks.</li>
-                  <li><strong>Preferences:</strong> Remembering your theme choice (Light vs. Dark mode) to prevent flashing screens on load.</li>
-                </ul>
-              </div>
-
-              <div className="p-5 border border-l-4 border-[var(--line)] border-l-[var(--muted)] rounded-r-xl bg-[var(--surface-2)]">
-                <h4 className="font-bold text-[var(--ink)] mb-2 flex items-center gap-2">
-                  Performance & Functionality Cookies
-                </h4>
-                <p className="text-sm mb-3">These cookies are used to enhance the performance and functionality of our platform but are non-essential to its core use.</p>
-                <ul className="text-sm list-disc pl-5 space-y-1">
-                  <li><strong>Session State:</strong> Remembering where you left off in an article or if you dismissed a banner.</li>
-                  <li><strong>Load Balancing:</strong> Distributing traffic across servers to ensure fast load times.</li>
-                </ul>
-              </div>
-            </div>
-          </section>
-
-          {/* SECTION 3 */}
-          <section id="third-party" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <BarChart3 className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                3. Third-Party Analytics
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                We use privacy-respecting analytics tools to collect aggregated, anonymous data about our traffic. This helps us see which articles are most popular, how fast our pages are loading, and where we can improve the reading experience. 
-              </p>
-              <p>
-                <strong>No Cross-Site Tracking:</strong> Unlike many modern platforms, we do not utilize invasive advertising trackers (like Meta Pixels or aggressive ad-network cookies) that follow you across the internet to build advertising profiles. 
-              </p>
-            </div>
-          </section>
-
-          {/* SECTION 4 */}
-          <section id="manage-preferences" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <Settings className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                4. Managing Your Preferences
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                You have the right to decide whether to accept or reject non-essential cookies. You can set or amend your web browser controls to accept or refuse cookies entirely.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                <div className="p-4 bg-[var(--surface-2)] border border-[var(--line)] rounded-xl">
-                  <h4 className="font-bold text-[var(--ink)] mb-1 text-sm">Browser Settings</h4>
-                  <p className="text-xs">Navigate to the privacy or security settings in your browser (Chrome, Firefox, Safari, Edge) to clear existing cookies or block future ones.</p>
-                </div>
-                <div className="p-4 bg-[var(--surface-2)] border border-[var(--line)] rounded-xl">
-                  <h4 className="font-bold text-[var(--ink)] mb-1 text-sm">Important Note</h4>
-                  <p className="text-xs">If you choose to reject essential cookies, you may still use our website, but your access to some functionality and areas (like logging in) may be restricted or broken.</p>
-                </div>
-              </div>
-              <p className="mt-4">
-                To find out more about how to manage and delete cookies, visit <a href="https://aboutcookies.org" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">aboutcookies.org</a> or <a href="https://www.allaboutcookies.org" target="_blank" rel="noopener noreferrer" className="text-[var(--accent)] hover:underline">allaboutcookies.org</a>.
-              </p>
-            </div>
-          </section>
-
-          {/* SECTION 5 */}
-          <section id="updates" className="scroll-mt-28 pb-12">
-            <div className="flex items-center gap-3 mb-6">
-              <RefreshCw className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                5. Policy Updates & Contact
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                We may update this Cookie Policy from time to time in order to reflect changes to the cookies we use or for other operational, legal, or regulatory reasons. Please revisit this page regularly to stay informed about our use of cookies and related technologies.
-              </p>
-              <p>
-                If you have any questions regarding our use of cookies or other technologies, please email our team at <a href="mailto:privacy@xsypher.com" className="text-[var(--accent)] hover:underline font-semibold">privacy@xsypher.com</a>.
-              </p>
-            </div>
-          </section>
-
-        </article>
-      </div>
-    </div>
+    <PolicyLayout
+      slug="cookie-policy"
+      kicker="Legal & privacy"
+      title="Cookie Policy"
+      summary="Every cookie and browser-storage item xSypher uses, who sets it, what it does and how long it lasts — and how to change your choice at any time."
+      lastUpdated={LAST_UPDATED}
+      lastUpdatedIso={LAST_UPDATED_ISO}
+      appliesTo="xsypher.com and its subdomains"
+      highlights={[
+        { title: "Necessary only, until you choose", body: "Before you answer the banner, the site uses only what it needs to work and to remember your settings." },
+        { title: "Optional really is optional", body: "Google AdSense cookies and diagnostic session replay switch on only after you choose Accept." },
+        { title: "Change your mind any time", body: "Cookie settings on this page brings the banner back so you can accept or decline again." },
+        { title: "No tracking scripts", body: "No analytics scripts, tracking pixels, social widgets or fingerprinting run on xSypher." },
+      ]}
+      sections={sections}
+      contact={{ label: "Cookie questions", email: "privacy@xsypher.com", note: "Ask about any item on this page, or how to remove cookies already set." }}
+    />
   );
 }

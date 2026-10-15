@@ -35,6 +35,21 @@ export function useCookiePreference() {
   return useSyncExternalStore(subscribe, readPreference, serverPreference);
 }
 
+/**
+ * Forget the saved choice so the banner asks again. Withdrawing consent must
+ * be as easy as giving it (GDPR Art. 7(3)); the Cookie and Privacy policies
+ * offer this through <CookieSettingsButton />.
+ */
+export function resetCookiePreference() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage unavailable: the in-memory choice below is all there is.
+  }
+  sessionPreference = null;
+  window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
 export default function CookieConsent() {
   const savedPreference = useCookiePreference();
 
