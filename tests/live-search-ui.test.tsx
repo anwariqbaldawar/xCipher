@@ -131,7 +131,10 @@ describe("⌘K search overlay", () => {
     expect(row.textContent).toContain("Graph neural networks explained");
     expect(row.textContent).toContain("AI");
     expect(row.textContent).toContain("Anwar Iqbal Dawar");
-    expect(row.textContent).toContain("Title match");
+    // No match-type badge: the "why it matched" chip was removed, so the row
+    // shows the section pill only.
+    expect(row.textContent).not.toContain("Title match");
+    expect(container.querySelector(".search-row-match")).toBeNull();
     // The thumbnail 是 the server-resolved R2 transform, not the raw original.
     expect(container.querySelector<HTMLImageElement>(".search-row-thumb")?.getAttribute("src"))
       .toContain("/cdn-cgi/image/");
@@ -201,6 +204,74 @@ describe("⌘K search overlay", () => {
     });
     expect(container.querySelector(".search-overlay")!.className).not.toContain("is-open");
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("shows no keyboard shortcut hints in the input or a footer legend", async () => {
+    await mount(<SearchProvider><SearchButton /></SearchProvider>);
+    await act(async () => { container.querySelector("button")!.click(); });
+    await settle(60);
+
+    expect(container.querySelector(".search-kbd")).toBeNull();
+    expect(container.querySelector(".search-kbd-sm")).toBeNull();
+    expect(container.querySelector(".search-panel-foot")).toBeNull();
+    expect(container.textContent).not.toContain("⌘K");
+  });
+
+  it("highlights the matched characters in the author name, in red text only", async () => {
+    await mount(<SearchProvider><SearchButton /></SearchProvider>);
+    await act(async () => { container.querySelector("button")!.click(); });
+    await settle(60);
+    const input = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+
+    await type(input, "anwar");
+    await settle();
+
+    const authorMark = container.querySelector(".search-row-meta .search-mark");
+    expect(authorMark).not.toBeNull();
+    expect(authorMark!.textContent?.toLowerCase()).toBe("anwar");
+  });
+
+  it("closes the modal when 'See all results' is clicked and navigates to /search", async () => {
+    await mount(<SearchProvider><SearchButton /></SearchProvider>);
+    await act(async () => { container.querySelector("button")!.click(); });
+    await settle(60);
+    const input = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+
+    await type(input, "graph");
+    await settle();
+
+    const seeAll = container.querySelector<HTMLAnchorElement>(".search-footer-link")!;
+    expect(seeAll).not.toBeNull();
+    expect(seeAll.textContent).toContain("See all results");
+
+    await act(async () => { seeAll.click(); });
+
+    expect(push).toHaveBeenCalledWith("/search?q=graph");
+    expect(container.querySelector(".search-overlay")!.className).not.toContain("is-open");
+  });
+
+  it("offers a labelled Clear action only while text is typed, distinct from Close", async () => {
+    await mount(<SearchProvider><SearchButton /></SearchProvider>);
+    await act(async () => { container.querySelector("button")!.click(); });
+    await settle(60);
+    const input = container.querySelector<HTMLInputElement>('input[type="search"]')!;
+
+    // Nothing typed: no clear affordance. The close control is always there.
+    expect(container.querySelector(".search-input-clear")).toBeNull();
+    expect(container.querySelector(".search-close")).not.toBeNull();
+
+    await type(input, "graph");
+    await settle();
+
+    const clearButton = container.querySelector<HTMLButtonElement>(".search-input-clear")!;
+    expect(clearButton).not.toBeNull();
+    expect(clearButton.textContent).toContain("Clear");
+    expect(clearButton.getAttribute("aria-label")).toBe("Clear search");
+    expect(clearButton).not.toBe(container.querySelector(".search-close"));
+
+    await act(async () => { clearButton.click(); });
+    expect(input.value).toBe("");
+    expect(container.querySelector(".search-input-clear")).toBeNull();
   });
 
   it("shows the empty state, and Enter with no highlight runs the full search", async () => {
@@ -463,6 +534,19 @@ describe("live search stylesheet", () => {
     expect(reducedMotion).toContain(".search-overlay");
     expect(reducedMotion).toContain(".search-panel-glass");
     expect(reducedMotion).toContain(".search-close");
+  });
+
+  it("renders matched characters as red text with no highlight background", () => {
+    const mark = /\.search-mark\s*\{([^}]*)\}/.exec(css)![1];
+    expect(mark).toMatch(/background:\s*transparent/);
+    expect(mark).toMatch(/color:\s*var\(--accent\)/);
+    expect(mark).not.toMatch(/background:\s*var\(--accent/);
+
+    // The removed chrome stays removed: no match badges, no kbd hints, no
+    // keyboard legend bar.
+    expect(css).not.toContain(".search-row-match");
+    expect(css).not.toContain(".search-panel-foot");
+    expect(css).not.toContain(".search-kbd");
   });
 
   it("gives the close control a real tap target and the list the empty space to dismiss on", () => {

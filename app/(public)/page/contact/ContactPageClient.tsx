@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { submitContactMessage } from "@/app/actions/contact";
+import SocialLinks from "@/components/common/SocialLinks";
 import {
   Mail,
   Send,
@@ -519,6 +520,22 @@ export default function ContactPageClient() {
               </span>
             </Link>
 
+          </div>
+
+          {/* Official profiles — the same ordered set as the footer. */}
+          <div className="mt-10 flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] p-5">
+            <div className="flex-1">
+              <h3 className="font-[family:var(--f-display)] text-sm font-bold text-[var(--ink)]">
+                Follow the publication
+              </h3>
+              <p className="text-xs text-[var(--muted)] font-[family:var(--f-body)] mt-1">
+                Stories, threads and community discussion — including r/xsypher on Reddit.
+              </p>
+            </div>
+            <SocialLinks
+              className="flex items-center gap-2"
+              linkClassName="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface)] transition-colors"
+            />
           </div>
         </div>
       </section>

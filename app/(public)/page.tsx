@@ -288,7 +288,7 @@ export default async function Home() {
 
           <div className="trust-card">
             <h3>How we work</h3>
-            <p>xSypher stories are reported, fact-checked and edited before publication. We correct errors openly and label opinion clearly. We buy our own review units and accept no payment for coverage.</p>
+            <p>xSypher stories are reported, fact-checked and edited before publication. We correct errors openly and label opinion clearly. Our core reporting and benchmarks stay independent; clearly labelled Sponsored Deep-Dives, Partner Content and sponsorships help fund the work — sponsorship buys placement, never conclusions.</p>
             <Link href="/page/editorial-standards">Read our editorial standards →</Link>
           </div>
         </aside>

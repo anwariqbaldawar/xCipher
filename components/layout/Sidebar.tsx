@@ -55,7 +55,7 @@ export default async function Sidebar() {
 
       <div className="trust-card">
         <h3>How we work</h3>
-        <p>xSypher stories are researched, fact-checked and edited before publication, and errors are corrected on the article itself. Reviews are never paid for; any review unit, test account or sponsorship is disclosed in the story.</p>
+        <p>xSypher stories are researched, fact-checked and edited before publication, and errors are corrected on the article itself. Reviews and benchmarks are never paid for and no sponsor can buy a verdict; Sponsored Deep-Dives and Partner Content are always labelled as such, and any review unit or test account is disclosed in the story.</p>
         <Link href="/page/editorial-policy">Read our editorial policy →</Link>
       </div>
 

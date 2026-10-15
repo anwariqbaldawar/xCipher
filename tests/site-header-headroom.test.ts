@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 
 // Utility function capturing the headroom decision logic implemented in SiteHeader
 export function resolveHeadroomState({
@@ -225,5 +227,46 @@ describe("SiteHeader Smart Headroom Logic", () => {
       expect(homeClasses).toContain("translate-y-0");
       expect(homeClasses).not.toContain("-translate-y-full");
     });
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Desktop article header contract (source-level)
+ *
+ * The behavioural helpers above model the older mobile headroom. The live
+ * component must give article pages on desktop the exact homepage behaviour —
+ * only the utility bar (Row 1) toggles — while the mobile 3-tier collapse
+ * stays untouched below the breakpoint.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+describe("desktop article header (source contract)", () => {
+  const read = (relative: string) => readFileSync(path.join(process.cwd(), relative), "utf8");
+  const header = read("components/layout/SiteHeader.tsx");
+  const css = read("app/globals.css");
+
+  it("routes desktop article pages through the homepage Row 1 behaviour", () => {
+    expect(header).toContain('window.matchMedia("(min-width: 768px)")');
+    expect(header).toMatch(/if \(!isArticlePage \|\| isDesktop\)/);
+    // Breakpoint crossings re-evaluate without waiting for a scroll.
+    expect(header).toContain('window.addEventListener("resize", handleScroll)');
+  });
+
+  it("keeps the mobile progressive collapse for article pages below the breakpoint", () => {
+    // The 3-tier thresholds still exist and still run for non-desktop
+    // article pages (the branch after the desktop/listing return).
+    expect(header).toContain("HIDE_ROW2_Y");
+    expect(header).toContain("HIDE_ROW3_Y");
+    expect(header.indexOf("if (!isArticlePage || isDesktop)")).toBeLessThan(
+      header.indexOf("HIDE_ROW3_Y", header.indexOf("if (!isArticlePage || isDesktop)")),
+    );
+  });
+
+  it("pins Rows 2 and 3 on desktop article pages but lets Row 1 collapse", () => {
+    const desktopBlock = css.slice(css.indexOf('@media (min-width: 768px)'));
+    const block = desktopBlock.slice(0, desktopBlock.indexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(block).toContain('.site-head[data-article="true"] .hdr-row-2');
+    expect(block).toContain('.site-head[data-article="true"] .hdr-row-3');
+    expect(block).not.toContain('.site-head[data-article="true"] .hdr-row-1');
+    expect(block).not.toMatch(/\.site-head\[data-article="true"\] \.hdr-row,/);
   });
 });

@@ -24,12 +24,26 @@ export default function ThemeToggle() {
   }
 
   const isDark = resolvedTheme === "dark";
+  const followingSystem = !theme || theme === "system";
 
   return (
-    <button 
-      className="icon-btn" 
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+    <button
+      className="icon-btn"
+      onClick={(event) => {
+        // Manual override: store the explicit opposite of what is on screen.
+        // Shift-click clears the override and resumes following the OS.
+        if (event.shiftKey) {
+          setTheme("system");
+          return;
+        }
+        setTheme(isDark ? "light" : "dark");
+      }}
       aria-label={`Switch to ${isDark ? "light" : "dark"} theme`}
+      title={
+        followingSystem
+          ? `Following your system theme (${isDark ? "dark" : "light"}) — click to switch to ${isDark ? "light" : "dark"}`
+          : `Switch to ${isDark ? "light" : "dark"} theme (Shift-click to follow system)`
+      }
     >
       {isDark ? (
         <svg className="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">

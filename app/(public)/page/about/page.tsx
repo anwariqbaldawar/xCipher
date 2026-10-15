@@ -22,6 +22,7 @@ import {
   FileCode2
 } from "lucide-react";
 import { SocialIcon } from "@/components/common/SocialIcon";
+import SocialLinks from "@/components/common/SocialLinks";
 import { siteConfig } from "@/lib/seo";
 
 export const dynamic = "force-static";
@@ -93,10 +94,10 @@ export default function AboutPage() {
           <div className="mt-12 pt-8 border-t border-[var(--line)] grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             <div className="flex flex-col">
               <span className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                2025
+                Independent
               </span>
               <span className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-ui)] mt-1">
-                Founded &amp; Independent
+                Engineering &amp; Security Publication
               </span>
             </div>
 
@@ -120,10 +121,10 @@ export default function AboutPage() {
 
             <div className="flex flex-col">
               <span className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--accent)]">
-                Zero
+                100%
               </span>
               <span className="text-xs sm:text-sm text-[var(--muted)] font-[family:var(--f-ui)] mt-1">
-                Sponsored Clickbait
+                Transparent &amp; Labelled Partnerships
               </span>
             </div>
           </div>
@@ -799,7 +800,7 @@ export default function AboutPage() {
                     2. A real wall between editorial and commercial
                   </h3>
                   <p className="text-sm text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed">
-                    No advertiser, sponsor or investor gets preview access or a say in what we publish. Sponsored material is labelled before the first paragraph, and where a sponsor&apos;s product is reviewed, the verdict stays ours: sponsorship buys placement, not conclusions.
+                    No advertiser, sponsor or investor gets preview access or a say in what we publish. The publication is supported by clearly labelled Sponsored Deep-Dives, Partner Content and display/newsletter sponsorships — every paid format carries a &ldquo;Sponsored&rdquo; or &ldquo;Partner&rdquo; tag before the first paragraph. Where a sponsor&apos;s product is independently reviewed, the verdict stays ours: sponsorship buys placement, never conclusions.
                   </p>
                 </div>
               </div>
@@ -892,6 +893,17 @@ export default function AboutPage() {
                 How we are funded
                 <ShieldCheck className="w-4 h-4" />
               </Link>
+            </div>
+
+            {/* Official profiles — the same ordered set as the footer. */}
+            <div className="mt-10 flex flex-col items-center gap-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-[var(--faint)]">
+                Follow xSypher
+              </span>
+              <SocialLinks
+                className="flex items-center justify-center gap-2"
+                linkClassName="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--ink)] hover:bg-[var(--surface-2)] transition-colors"
+              />
             </div>
           </div>
         </div>
