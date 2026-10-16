@@ -3,7 +3,7 @@ import { unstable_cache } from "next/cache";
 import { dbRead as db } from "./db";
 import { CACHE_TAGS, categoryTag, authorTag, tagTag } from "./cache-tags";
 import { publicFeedWhere, queryPublicFeed } from "./feed";
-import { maskPublicArticle } from "./personas";
+import { getArticleAuthor, maskPublicArticle } from "./personas";
 import { eq, and, or, ne, lte, isNull, inArray, notInArray, sql } from "drizzle-orm";
 import { article as articleTable, benchmarkLeaderboard } from "@/lib/db/schema";
 import {
@@ -13,6 +13,7 @@ import {
   LATEST_ARTICLE_LIMIT,
   LISTING_ARTICLE_LIMIT,
 } from "./queries";
+import { resolveIndexImage, type SearchIndexEntry, type SearchIndexPayload } from "./search-index";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tagged reads for public article listings
@@ -317,6 +318,188 @@ export function getArticleRecommendations(articleId: string, tagIds: string[], m
     { tags: [CACHE_TAGS.articles, categoryTag(categorySlug)], revalidate: 3600 },
   )(articleId, [...new Set(tagIds)].sort(), mainCategoryId);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The cached published-articles search index
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// One read of the searchable columns of every published article, held in Next's
+// data cache under the `search-index` tag. Live search and /search rank against
+// this snapshot in memory (lib/search-index.ts) instead of querying Postgres.
+//
+// Why the whole archive rather than per-query caching of answers: a query cache
+// only helps the second reader who types the same words, and the traffic here is
+// long-tailed — nearly every search is unique, so the database would still be
+// woken by the first person to type each phrase, which is all of them. A single
+// snapshot converts that traffic into one query per day per cache lifetime.
+//
+// A 24-hour TTL is safe *because* the tag is authoritative: every write that can
+// change a published article's searchable fields — save, publish, unpublish,
+// schedule, delete, rename a section, rename a tag, change a byline — goes
+// through `revalidateTag(CACHE_TAGS.searchIndex)` (see lib/cache-tags.ts), so the
+// ceiling is a backstop, not the mechanism that keeps the site fresh. Two extra
+// benefits fall out of the long window: a crawler hitting /search, the sitemaps
+// or the feed cannot keep re-running the same aggregate, and an idle deployment
+// lets the compute suspend.
+//
+// NOTE on size: the snapshot is bounded twice — at most
+// `SEARCH_INDEX_MAX_ARTICLES` rows, each carrying at most
+// `SEARCH_INDEX_BODY_CHARS` characters of body text. Both are env-tunable, and
+// `SEARCH_INDEX_BODY_CHARS=0` reduces search to metadata only (title, deck,
+// slug, section, byline, tags) for an archive large enough to make the body
+// slice the dominant cost.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Rows in the snapshot. Beyond this the newest articles are indexed. */
+function searchIndexMaxArticles(): number {
+  const parsed = Number(process.env.SEARCH_INDEX_MAX_ARTICLES);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 5000;
+}
+
+/** Body characters per article carried in the snapshot (0 = metadata only). */
+function searchIndexBodyChars(): number {
+  const raw = process.env.SEARCH_INDEX_BODY_CHARS;
+  if (raw === undefined || raw === "") return 1200;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 0) return 1200;
+  return Math.floor(parsed);
+}
+
+/** ISO string for a timestamp column, whether it arrives as a Date or a string. */
+function isoOrNull(value: Date | string | null | undefined): string | null {
+  if (!value) return null;
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+type SearchIndexRow = Awaited<ReturnType<typeof querySearchIndexRows>>[number];
+
+async function querySearchIndexRows(limit: number, bodyChars: number) {
+  return db.query.article.findMany({
+    where: and(
+      eq(articleTable.status, "PUBLISHED"),
+      // A scheduled story already holds PUBLISHED with a future stamp. It is not
+      // live, so it must not be searchable — the same "not yet" test the feed
+      // queries use.
+      or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
+    ),
+    orderBy: (a, { desc: orderDesc }) => [orderDesc(a.publishedAt), orderDesc(a.id)],
+    limit,
+    columns: {
+      id: true,
+      slug: true,
+      title: true,
+      deck: true,
+      img: true,
+      author: true,
+      role: true,
+      isAnonymous: true,
+      views: true,
+      readingTime: true,
+      createdAt: true,
+      publishedAt: true,
+      categoryId: true,
+      legacyTags: true,
+    },
+    // The body slice is truncated in SQL rather than in Node: the full
+    // `textContent` of a published archive is tens of megabytes, and none of it
+    // beyond the cap is ever read. Inlined rather than bound because the value is
+    // a code-level constant, not input — a parameter here would need a cast to
+    // give Postgres the `integer` it wants for `left()`.
+    extras: {
+      bodyText: sql<string | null>`left(${articleTable.textContent}, ${sql.raw(String(bodyChars))})`.as("bodyText"),
+    },
+    with: {
+      category: {
+        columns: { id: true, name: true, slug: true },
+        with: { parent: { columns: { name: true, slug: true } } },
+      },
+      authorModel: { columns: { name: true, slug: true, avatar: true, role: true } },
+      tags: { with: { tag: { columns: { name: true, slug: true } } } },
+    },
+  });
+}
+
+function toSearchIndexEntry(row: SearchIndexRow): SearchIndexEntry {
+  // The masked byline is what /search renders, and it is derived through the
+  // same helper every public listing uses — an anonymous story shows its desk
+  // persona, not the reporter's name.
+  const publicAuthor = getArticleAuthor(row as Parameters<typeof getArticleAuthor>[0]);
+  // `textContent` is the sanitized body HTML with tags stripped, so it arrives
+  // with the surrounding whitespace of the markup it came from. Trimming here
+  // keeps the snapshot's byte count down and makes the two branches below
+  // consistent (an all-whitespace body is no body).
+  const bodyText = row.bodyText?.trim();
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    deck: row.deck,
+    img: row.img,
+    image: resolveIndexImage(row.img),
+    createdAt: isoOrNull(row.createdAt) ?? new Date(0).toISOString(),
+    publishedAt: isoOrNull(row.publishedAt),
+    readingTime: row.readingTime || 1,
+    views: row.views || 0,
+    categoryId: row.categoryId,
+    categoryName: row.category?.name ?? null,
+    categorySlug: row.category?.slug ?? null,
+    categoryParentName: row.category?.parent?.name ?? null,
+    categoryParentSlug: row.category?.parent?.slug ?? null,
+    authorModelName: row.authorModel?.name ?? null,
+    authorModelSlug: row.authorModel?.slug ?? null,
+    authorModelAvatar: row.authorModel?.avatar ?? null,
+    legacyAuthor: row.author,
+    isAnonymous: Boolean(row.isAnonymous),
+    publicAuthorName: row.isAnonymous ? publicAuthor.name : (row.authorModel?.name || row.author || publicAuthor.name),
+    publicAuthorRole: row.isAnonymous ? "Editorial Desk" : (row.authorModel?.role || row.role || publicAuthor.role),
+    tags: (row.tags ?? [])
+      .map(entry => entry.tag)
+      .filter((tag): tag is { name: string; slug: string } => Boolean(tag))
+      .map(tag => ({ name: tag.name, slug: tag.slug })),
+    legacyTags: (row.legacyTags ?? []).filter(Boolean),
+    bodyText: bodyText ? bodyText : null,
+  };
+}
+
+export const getPublishedSearchIndex = unstable_cache(
+  async (): Promise<SearchIndexPayload> => {
+    const limit = searchIndexMaxArticles();
+    const bodyChars = searchIndexBodyChars();
+
+    // One retry: Neon's first query after a cold start can exceed the pool's
+    // connect timeout while the compute wakes. The second attempt lands on a
+    // warm compute. Anything else is rethrown rather than cached — a 24-hour
+    // entry built from a failed read would take search down for the day.
+    let rows: SearchIndexRow[];
+    try {
+      rows = await querySearchIndexRows(limit, bodyChars);
+    } catch (error) {
+      console.warn("[cached-queries] Search index read failed, retrying once:", error);
+      await new Promise(resolve => setTimeout(resolve, 1_500));
+      rows = await querySearchIndexRows(limit, bodyChars);
+    }
+
+    const entries = rows.map(toSearchIndexEntry);
+
+    // Only when the snapshot was truncated does the real total differ, and only
+    // then is a second query worth issuing.
+    let total = entries.length;
+    if (rows.length >= limit) {
+      const [countRow] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(articleTable)
+        .where(and(
+          eq(articleTable.status, "PUBLISHED"),
+          or(isNull(articleTable.publishedAt), lte(articleTable.publishedAt, new Date())),
+        ));
+      total = countRow?.count ?? entries.length;
+    }
+
+    return { entries, total, builtAt: new Date().toISOString() };
+  },
+  ["published-search-index-v1"],
+  { tags: [CACHE_TAGS.searchIndex, CACHE_TAGS.articles], revalidate: 86400 },
+);
 
 export const getBenchmarkLeaderboard = unstable_cache(
   async () => {

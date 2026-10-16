@@ -1,6 +1,5 @@
-import { db } from "@/lib/db";
 import redis from "@/lib/redis";
-import { sql } from "drizzle-orm";
+import { probeDatabase } from "@/lib/db-health";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Health check for uptime monitoring (UptimeRobot, BetterStack, …).
@@ -10,19 +9,16 @@ import { sql } from "drizzle-orm";
 //
 // Deliberately unauthenticated and detail-light: it exposes component
 // statuses and latencies only, never connection strings or data.
+//
+// The database check runs through a wake-up budget (lib/db-health.ts): a
+// successful probe is reused for HEALTH_DB_PROBE_MS (5 minutes by default,
+// matching Neon's scale-to-zero window) so a monitor polling every 30 seconds
+// cannot hold the compute awake, while a failure is always reported immediately
+// and re-probed. `cached: true` on the check marks an answer that came from the
+// budget rather than a live query.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const dynamic = "force-dynamic";
-
-async function checkDatabase(): Promise<{ status: "ok" | "fail"; latencyMs: number }> {
-  const start = Date.now();
-  try {
-    await db.execute(sql`SELECT 1`);
-    return { status: "ok", latencyMs: Date.now() - start };
-  } catch {
-    return { status: "fail", latencyMs: -1 };
-  }
-}
 
 async function checkRedis(): Promise<{ status: "ok" | "fail"; latencyMs: number }> {
   const start = Date.now();
@@ -45,7 +41,9 @@ async function checkRedis(): Promise<{ status: "ok" | "fail"; latencyMs: number 
 }
 
 export async function GET() {
-  const [database, redisCheck] = await Promise.all([checkDatabase(), checkRedis()]);
+  // Redis is a local/cheap dependency (and the view-counter buffer), so its
+  // check stays live — only the Postgres probe is budgeted.
+  const [database, redisCheck] = await Promise.all([probeDatabase(), checkRedis()]);
   const checks = { database, redis: redisCheck };
   const ok = database.status === "ok" && redisCheck.status === "ok";
 

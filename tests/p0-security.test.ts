@@ -6,6 +6,14 @@ import { hasRemoteMatch } from 'next/dist/shared/lib/match-remote-pattern';
 
 const { findMany } = vi.hoisted(() => ({ findMany: vi.fn() }));
 vi.mock('@/lib/db', () => ({ db: { query: { article: { findMany } } } }));
+// The RSS channel now reads through the data cache. The cache is not what this
+// file tests, so run the callback straight through — same pattern as
+// tests/p1-caching.test.ts.
+vi.mock('next/cache', () => ({
+  unstable_cache: (fn: (...args: unknown[]) => unknown) => fn,
+  revalidateTag: vi.fn(),
+  revalidatePath: vi.fn(),
+}));
 // Fixture mirrors the real siteConfig fields the feed route consumes; the RSS
 // channel title/description now come from siteConfig (audit CON-002), so the
 // mock must carry `name`/`tagline`/`description` too.

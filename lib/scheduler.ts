@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { CACHE_TAGS, articleTag, categoryTag } from "./cache-tags";
+import { forgetSearchIndexMemory } from "./search-index-memory";
 import { notifyPublished } from "@/lib/notifications";
 import { enqueueGoogleIndexing } from "@/lib/google-indexing";
 import { eq, lte, and, inArray, sql } from "drizzle-orm";
@@ -164,6 +165,13 @@ export async function runScheduledPublications(
       // One tag covers every article listing -- homepage, /latest, category,
       // tag, author, search -- instead of dropping the entire route tree.
       revalidateTag(CACHE_TAGS.articles, { expire: 0 });
+      // A scheduled publish changes the searchable archive, so this process's
+      // parsed search snapshot has to go with it — a story that visibly went
+      // live must be findable on the next keystroke, not when the memo's own TTL
+      // lapses. This module imports `next/cache` directly (it runs from cron, not
+      // from an editor's action), so it drops the memo itself rather than
+      // inheriting the wrapper's hook in lib/revalidate.ts.
+      forgetSearchIndexMemory();
       revalidatePath("/admin/articles", "page");
       for (const article of published) {
         revalidateTag(articleTag(article.slug), { expire: 0 });

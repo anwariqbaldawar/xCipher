@@ -7,7 +7,17 @@ import { Article, Category } from "@/lib/types";
 import { getReadingTimeMinutes } from "@/lib/reading-time";
 import ArticleByline from "./ArticleByline";
 
-export type StoryArticle = Partial<Article> & {
+// `createdAt` is omitted from the Partial<Article> half before being re-declared.
+//
+// The intersection used to be `Partial<Article> & { createdAt?: Date | string |
+// number }`, which does not widen the property at all: an intersection requires a
+// value to satisfy *both* sides, so `createdAt` stayed a `Date` and any caller
+// holding a serialized timestamp (an ISO string out of a Next data cache, a
+// numeric epoch) was a type error. `StoryRow` only ever feeds the value to `new
+// Date()`, which accepts all three forms, so the declaration now matches the
+// intent — and /search can build its rows from the cached search snapshot without
+// a cast.
+export type StoryArticle = Omit<Partial<Article>, "createdAt"> & {
   id: string;
   slug: string;
   title: string;

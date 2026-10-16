@@ -1,5 +1,7 @@
+import { unstable_cache } from "next/cache";
 import { dbRead } from "@/lib/db";
 import { article as articleTable, tag as tagTable, category as categoryTable, author as authorTable } from "@/lib/db/schema";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { articleFeaturedCrawlerUrl, siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
@@ -64,18 +66,33 @@ async function safely<T>(label: string, query: Promise<T>): Promise<T | null> {
   }
 }
 
-// The request parameter is required, not optional.
+// ─────────────────────────────────────────────────────────────────────────────
+// The four query groups are cached per page.
 //
-// Next 16 generates a type check for every route handler and rejects an
-// optional first parameter (`request?: NextRequest` is not assignable to
-// `NextRequest | Request`), which fails `next build` outright. Next always
-// supplies a request to a route handler, so the optional form bought nothing
-// and cost the build.
-export async function GET(request: NextRequest) {
-  const requestedPage = Number(request.nextUrl.searchParams.get("page") || "1");
-  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-  const offset = (page - 1) * SITEMAP_ARTICLE_LIMIT;
+// This document is the one crawlers fetch most often and the one nobody reads:
+// it lists up to 45,000 article URLs, plus the sections, tags and authors that
+// have published work. It ran four queries — including two `EXISTS`/`count(*)`
+// subqueries over the join tables — on every single request, and the route's own
+// `revalidate = 3600` did not help because the handler read the database each
+// time it ran.
+//
+// CACHING IS SKIPPED FOR A PARTIAL READ. The CRW-001 fix in this file made each
+// group fail independently so one bad query cannot empty the whole sitemap. That
+// behaviour is kept *and* protected from the cache: if any group failed, the
+// loader throws, `unstable_cache` stores nothing, and the caller re-reads without
+// the cache to serve the partial document. A transient database blip can
+// therefore never be frozen into an hour (or a day) of a truncated sitemap.
+// ─────────────────────────────────────────────────────────────────────────────
 
+interface SitemapPageData {
+  articles: { slug: string; title: string; img: string | null; featuredImageCaption: string | null; updatedAt: string }[];
+  categories: { slug: string }[];
+  authors: { slug: string }[];
+  tags: { slug: string }[];
+  complete: boolean;
+}
+
+async function fetchSitemapPageData(page: number, offset: number): Promise<SitemapPageData> {
   const [articles, categories, authors, tags] = await Promise.all([
     safely(
       "articles",
@@ -147,12 +164,67 @@ export async function GET(request: NextRequest) {
       : Promise.resolve([]),
   ]);
 
-  const articleRows = articles ?? [];
-  const categoryRows = categories ?? [];
-  const authorRows = authors ?? [];
-  const tagRows = tags ?? [];
+  return {
+    // `updatedAt` is normalized to an ISO string here, at the cache boundary:
+    // the data cache round-trips through JSON, so a `Date` would come back as a
+    // string on a hit and a `Date` on a miss. One shape, always.
+    articles: (articles ?? []).map(row => ({
+      slug: row.slug,
+      title: row.title,
+      img: row.img,
+      featuredImageCaption: row.featuredImageCaption,
+      updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : "",
+    })),
+    categories: categories ?? [],
+    authors: authors ?? [],
+    tags: tags ?? [],
+    complete: Boolean(articles && categories && authors && tags),
+  };
+}
 
-  const latestUpdateIso = (articleRows[0]?.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString();
+/** Cached read. Throws instead of caching a partial document — see above. */
+function getCachedSitemapPageData(page: number, offset: number) {
+  return unstable_cache(
+    async () => {
+      const data = await fetchSitemapPageData(page, offset);
+      if (!data.complete) {
+        throw new Error(`[sitemap] partial read for page ${page} — not cached`);
+      }
+      return data;
+    },
+    ["sitemap-page-v1", String(page)],
+    { tags: [CACHE_TAGS.articles, CACHE_TAGS.taxonomy, CACHE_TAGS.authors], revalidate: 86400 },
+  )();
+}
+
+async function loadSitemapPageData(page: number, offset: number): Promise<SitemapPageData> {
+  try {
+    return await getCachedSitemapPageData(page, offset);
+  } catch (error) {
+    // Either a partial read (never cached, by design) or an unusable cache.
+    // Serving the partial document is the intended behaviour here — the warning
+    // above already fired with the failing query group.
+    console.warn("[sitemap] serving an uncached page read:", error);
+    return fetchSitemapPageData(page, offset);
+  }
+}
+
+// The request parameter is required, not optional.
+//
+// Next 16 generates a type check for every route handler and rejects an
+// optional first parameter (`request?: NextRequest` is not assignable to
+// `NextRequest | Request`), which fails `next build` outright. Next always
+// supplies a request to a route handler, so the optional form bought nothing
+// and cost the build.
+export async function GET(request: NextRequest) {
+  const requestedPage = Number(request.nextUrl.searchParams.get("page") || "1");
+  const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const offset = (page - 1) * SITEMAP_ARTICLE_LIMIT;
+
+  const { articles: articleRows, categories: categoryRows, authors: authorRows, tags: tagRows } =
+    await loadSitemapPageData(page, offset);
+
+  const latestUpdateIso = articleRows[0]?.updatedAt || new Date("2026-10-01T00:00:00.000Z").toISOString();
   const urls: string[] = [
     ...(page === 1
       ? STATIC_PUBLIC_PATHS.map(
@@ -162,7 +234,7 @@ export async function GET(request: NextRequest) {
       : []),
     ...articleRows.map((a) => {
       const featured = articleFeaturedCrawlerUrl(a);
-      return `<url><loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc><lastmod>${(a.updatedAt || new Date("2026-10-01T00:00:00.000Z")).toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.8</priority>${
+      return `<url><loc>${siteConfig.url}/article/${escapeXml(a.slug)}</loc><lastmod>${a.updatedAt || new Date("2026-10-01T00:00:00.000Z").toISOString()}</lastmod><changefreq>daily</changefreq><priority>0.8</priority>${
         featured
           ? `<image:image><image:loc>${escapeXml(featured)}</image:loc><image:title>${escapeXml(a.title)}</image:title><image:caption>${escapeXml(a.featuredImageCaption?.trim() || a.title)}</image:caption></image:image>`
           : ""

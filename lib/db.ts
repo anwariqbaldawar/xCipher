@@ -75,6 +75,26 @@ export function withNeonPooler(connectionString: string): string {
   }
 }
 
+/**
+ * How long an idle WebSocket connection is kept before the pool releases it.
+ *
+ * This is part of the billing story, not a detail. Neon suspends a compute after
+ * ~5 minutes with no connections; a pool that holds a socket open indefinitely
+ * keeps it awake forever, which is exactly the shape the caching layer is meant
+ * to remove. Ten seconds means the pool lets go shortly after the last query of a
+ * burst — a page render, a build step, an admin save — so the compute can reach
+ * its idle window instead of being pinned by a connection nobody is using.
+ *
+ * The cost of releasing a connection is one reconnect on the next query (the
+ * driver re-dials through the pooler), which is a few milliseconds against a
+ * compute-hour. Overridable for a deployment that would rather hold connections
+ * open: `NEON_POOL_IDLE_TIMEOUT_MS`.
+ */
+export function poolIdleTimeoutMs(): number {
+  const parsed = Number(process.env.NEON_POOL_IDLE_TIMEOUT_MS);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 10_000;
+}
+
 function createDatabase(connectionString: string) {
   // Switched to Neon's WebSocket driver (Pool) from the HTTP driver.
   // Next.js 15's fetch monkey-patching causes severe deadlocks and timeouts
@@ -88,14 +108,33 @@ function createDatabase(connectionString: string) {
     // the process hang indefinitely when the proxy is unreachable.
     connectionTimeoutMillis: 10_000,
     // Reclaim idle connections so the pooler doesn't run out under sustained
-    // concurrency (SSG, live search bursts).
-    idleTimeoutMillis: 30_000,
+    // concurrency, and so the compute is allowed to suspend between bursts.
+    idleTimeoutMillis: poolIdleTimeoutMs(),
   });
   return drizzle(pool, { schema });
 }
 
-let cached: { connectionString: string; database: Database } | undefined;
-let cachedRead: { connectionString: string; database: Database } | undefined;
+/**
+ * Pools, held on `globalThis` rather than in module scope.
+ *
+ * `next dev` re-evaluates a module on every hot reload. A module-scope variable
+ * therefore does not survive an edit, and each reload used to create a *new* pool
+ * while the previous one's WebSocket connections were still open — a handful of
+ * connections leaked per file save, each of them holding a Neon compute awake
+ * (and eventually exhausting the pooler's connection slots). A production build
+ * has the same failure mode across re-imported bundles inside a single process.
+ *
+ * The store is keyed by connection string, so the proxy's contract is unchanged:
+ * asking for a different `DATABASE_URL` still yields a different client, and the
+ * same URL still yields the same one for the life of the process.
+ */
+interface PoolStore {
+  primary?: { connectionString: string; database: Database };
+  replica?: { connectionString: string; database: Database };
+}
+
+const globalForDb = globalThis as typeof globalThis & { __xsypherPoolStore?: PoolStore };
+const pools: PoolStore = (globalForDb.__xsypherPoolStore ??= {});
 
 function getDatabase(): Database {
   const connectionString = process.env.DATABASE_URL;
@@ -103,14 +142,14 @@ function getDatabase(): Database {
     throw new Error("DATABASE_URL is not set");
   }
 
-  if (!cached || cached.connectionString !== connectionString) {
-    cached = { connectionString, database: createDatabase(connectionString) };
+  if (!pools.primary || pools.primary.connectionString !== connectionString) {
+    pools.primary = { connectionString, database: createDatabase(connectionString) };
     const env = process.env;
     if (env.NODE_ENV === "production" && !env.NEXT_PUBLIC_SITE_URL) {
       console.warn("⚠️ WARNING: NEXT_PUBLIC_SITE_URL is not set in production. Canonical URLs and feeds may be broken.");
     }
   }
-  return cached.database;
+  return pools.primary.database;
 }
 
 // Read-only queries (public listings, sitemaps) go here. DATABASE_URL_REPLICA
@@ -124,10 +163,10 @@ function getReadDatabase(): Database {
     throw new Error("DATABASE_URL is not set");
   }
   const connectionString = process.env.DATABASE_URL_REPLICA || primary;
-  if (!cachedRead || cachedRead.connectionString !== connectionString) {
-    cachedRead = { connectionString, database: createDatabase(connectionString) };
+  if (!pools.replica || pools.replica.connectionString !== connectionString) {
+    pools.replica = { connectionString, database: createDatabase(connectionString) };
   }
-  return cachedRead.database;
+  return pools.replica.database;
 }
 
 function createDbProxy(resolve: () => Database): Database {

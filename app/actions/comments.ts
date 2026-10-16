@@ -6,10 +6,12 @@ import { comment, article } from "@/lib/db/schema";
 import { eq, and, asc, desc, inArray, sql } from "drizzle-orm";
 
 import { headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { getCurrentUser } from "@/lib/auth";
 import { hasRequiredRole } from "@/lib/permissions";
-import { revalidatePath } from "@/lib/revalidate";
+import { revalidatePath, revalidateTag } from "@/lib/revalidate";
+import { CACHE_TAGS, commentsTag } from "@/lib/cache-tags";
 import { Role } from "@/lib/types";
 import crypto from "crypto";
 
@@ -32,24 +34,72 @@ const emailSchema = z.string().email().max(320).toLowerCase().trim();
 const bodySchema = z.string().min(10).max(1200).trim();
 
 // ─── Get approved comments for an article ───────────────────────────────────
+//
+// This is the reader-facing read, and it is *the* hidden per-view database
+// consumer: `CommentsSection` calls it from a client effect on every article
+// page view, so a published story received one SELECT for every reader — and,
+// for the crawlers that execute JavaScript, for every crawl as well.
+//
+// Cached per article, tagged `comments:<slug>`, with a short window. Comments
+// are low-volume and reader-triggered, so five minutes of staleness on the list
+// is invisible; the tag is what keeps it honest, because approving a comment
+// drops exactly this article's entry (the moderation action calls
+// `revalidateTag(commentsTag(slug))`).
+//
+// `createdAt` is serialized inside the cached function: the data cache stores
+// JSON, so a `Date` would come back as a string on a hit and a `Date` on a miss,
+// and `PublicComment.createdAt` is declared as a string.
+function getCachedComments(articleSlug: string) {
+  return unstable_cache(
+    async () => {
+      const comments = await db.select({
+        id: comment.id,
+        displayName: comment.displayName,
+        emailHash: comment.emailHash,
+        body: comment.body,
+        createdAt: comment.createdAt,
+      })
+      .from(comment)
+      .where(and(eq(comment.articleSlug, articleSlug), eq(comment.status, "APPROVED")))
+      .orderBy(asc(comment.createdAt));
+
+      return comments.map((c) => ({
+        id: c.id,
+        displayName: c.displayName,
+        emailHash: c.emailHash,
+        body: c.body,
+        createdAt: c.createdAt.toISOString(),
+      }));
+    },
+    ["approved-comments-v1", articleSlug],
+    { tags: [commentsTag(articleSlug), CACHE_TAGS.articles], revalidate: 300 },
+  )();
+}
+
 export async function getComments(articleSlug: string): Promise<PublicComment[]> {
   if (!articleSlug || typeof articleSlug !== "string") return [];
+  try {
+    return await getCachedComments(articleSlug);
+  } catch (error) {
+    // A cache-layer failure must not remove the discussion from the page; fall
+    // back to the direct read this function used to do.
+    console.warn("[comments] cached read failed, reading through:", error);
+    const comments = await db.select({
+      id: comment.id,
+      displayName: comment.displayName,
+      emailHash: comment.emailHash,
+      body: comment.body,
+      createdAt: comment.createdAt,
+    })
+    .from(comment)
+    .where(and(eq(comment.articleSlug, articleSlug), eq(comment.status, "APPROVED")))
+    .orderBy(asc(comment.createdAt));
 
-  const comments = await db.select({
-    id: comment.id,
-    displayName: comment.displayName,
-    emailHash: comment.emailHash,
-    body: comment.body,
-    createdAt: comment.createdAt,
-  })
-  .from(comment)
-  .where(and(eq(comment.articleSlug, articleSlug), eq(comment.status, "APPROVED")))
-  .orderBy(asc(comment.createdAt));
-
-  return comments.map((c) => ({
-    ...c,
-    createdAt: c.createdAt.toISOString(),
-  }));
+    return comments.map((c) => ({
+      ...c,
+      createdAt: c.createdAt.toISOString(),
+    }));
+  }
 }
 
 // ─── Get comment count for an article (for SSR display) ─────────────────────
@@ -151,14 +201,20 @@ export async function moderateComment(
     const [c] = await db.select().from(comment).where(eq(comment.id, commentId)).limit(1);
     if (!c) return { success: false, error: "Comment not found." };
 
-    const [updatedComment] = await db.update(comment).set({
+    await db.update(comment).set({
       status: action as any,
       moderatorId: user.id,
       moderatorNote: note?.trim().slice(0, 500) || null,
       updatedAt: new Date(),
     }).where(eq(comment.id, commentId)).returning();
 
-    revalidatePath(`/article/${c.articleSlug}`, "page");
+    // The route, and the cached comment list that route renders. Without the tag
+    // the approved comment would appear up to five minutes later, or on the
+    // reader's next hard reload — whichever came first.
+    await Promise.all([
+      revalidatePath(`/article/${c.articleSlug}`, "page"),
+      revalidateTag(commentsTag(c.articleSlug), "max"),
+    ]);
     return { success: true };
   } catch (error: any) {
     console.error("[comments] moderateComment error:", error);

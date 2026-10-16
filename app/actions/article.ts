@@ -14,6 +14,7 @@ import { nextEditorPickedAt } from "@/lib/editor-picks";
 import { authorize } from "@/lib/capabilities";
 import { handleServerError } from "@/lib/errors";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
+import { isCrawlerUserAgent } from "@/lib/bot-detection";
 import { headers } from "next/headers";
 import { after } from "next/server";
 import { uploadToR2, deleteKeyFromR2 } from "@/lib/storage";
@@ -560,31 +561,62 @@ export async function restoreRevision(revisionId: string) {
   }
 }
 
+/** Logged once per process: a Redis outage must be visible, not noisy. */
+let warnedAboutDroppedViews = false;
+
+function warnOnceAboutDroppedViews() {
+  if (warnedAboutDroppedViews) return;
+  warnedAboutDroppedViews = true;
+  console.warn(
+    "[views] Redis unavailable — article views are being dropped instead of written to Postgres. " +
+    "Restore REDIS_URL to resume counting; nothing here should wake the database.",
+  );
+}
+
 export async function incrementArticleView(id: string) {
   try {
     const reqHeaders = await headers();
+
+    // Crawlers and unfurlers are not readership, and counting them is not free:
+    // one buffered increment is cheap, but the *fallback* path below is a real
+    // UPDATE that wakes a suspended Neon compute and holds it awake for five
+    // minutes. A social unfurl fires on every share of every story, so this gate
+    // is what keeps "someone posted a link" from becoming a compute bill. Checked
+    // before the rate limiter so a crawl does not even spend Redis calls.
+    if (isCrawlerUserAgent(reqHeaders.get("user-agent"))) {
+      return { success: true, counted: false };
+    }
+
     const ip = getClientIp(reqHeaders);
     const rl = await checkRateLimit("view", `${id}:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 });
-    
+
     if (!rl.allowed) {
       return { success: false };
     }
 
     // Count the view in Redis and let the worker flush it to Postgres once a
     // minute — one INCR instead of one UPDATE round trip per view over the
-    // Neon HTTP driver. Falls back to a direct update when Redis is down.
+    // Neon HTTP driver.
     const { bufferArticleView } = await import("@/lib/article-views");
     const buffered = await bufferArticleView(id);
     if (buffered) {
       return { success: true };
     }
 
-    // In Drizzle we can increment with sql`...`
-    await db.update(article)
-      .set({ views: sql`${article.views} + 1` })
-      .where(eq(article.id, id));
-
-    return { success: true };
+    // Redis is unavailable: the view is DROPPED, not written straight to
+    // Postgres.
+    //
+    // This used to fall back to a direct `UPDATE "Article" SET views = views + 1`,
+    // which is the most expensive thing a public page could do — a write that
+    // wakes a suspended compute and then keeps it awake for five minutes, on
+    // every page view, for as long as Redis is down (an ordinary occurrence in a
+    // restart, a deploy, or a container that came up without its sidecar).
+    // A view count is analytics; it is never worth an unpredictable compute
+    // bill, and the buffered counter is the system of record for views anyway
+    // (lib/article-views.ts flushes and restores on failure). The drop is logged
+    // once per deployment so it is visible without spamming the log per view.
+    warnOnceAboutDroppedViews();
+    return { success: true, counted: false };
   } catch (error) {
     return handleServerError(error, "Failed to increment view");
   }

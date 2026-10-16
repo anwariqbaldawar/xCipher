@@ -5,8 +5,10 @@ import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getArticleRecommendations, getBenchmarkLeaderboard, getRecentArticleSlugs } from "@/lib/cached-queries";
+import { CACHE_TAGS, articleTag } from "@/lib/cache-tags";
 import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
 import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd, siteConfig } from "@/lib/seo";
@@ -42,37 +44,108 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Article reads: two cache layers, one query
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// `generateMetadata` and the page component both need the same row, and both ran
+// on every request this route was not served from the route cache — a Googlebot
+// crawl, a Twitterbot unfurl, a Meta link preview, or any reader hitting a slug
+// outside the pre-built set. Two identical queries per render, every render.
+//
+// Two layers, each doing the job the other cannot:
+//
+//   React.cache()      — request-level deduplication. `generateMetadata` and the
+//                        page run in one render pass, so this makes the pair one
+//                        query. It cannot help a *second* visitor.
+//   unstable_cache()   — cross-request persistence. Tagged `articles` and
+//                        `article:<slug>`, so publishing, editing or deleting the
+//                        story drops exactly this entry (and nothing else), while
+//                        a crawler re-fetching the URL a thousand times does not
+//                        reach Postgres at all.
+//
+// The 3600s window matches the route's own `revalidate`, and is a ceiling rather
+// than the freshness mechanism: the tag invalidation is what keeps an edited
+// story current.
+//
+// Dates are rehydrated on the way out of the cache. `unstable_cache` stores its
+// result as JSON, so a `Date` read back from a cache hit is an ISO string while
+// one from a fresh read is a `Date`. The metadata builder, the JSON-LD and the
+// "Updated <date>" line all call `Date` methods on these fields, so the boundary
+// converts once here instead of at every use — that mismatch is otherwise only
+// reproducible on a warm cache, i.e. in production and never in dev.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function toDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+/** Same row, cached. `slug` is part of the key and of the invalidation tag. */
+function getCachedPublishedArticle(slug: string) {
+  return unstable_cache(
+    async () => {
+      const [article] = await db.query.article.findMany({
+        where: and(eq(articleTable.slug, slug), eq(articleTable.status, "PUBLISHED")),
+        limit: 1,
+        columns: {
+          id: true, slug: true, title: true, deck: true, img: true,
+          featuredImageAlt: true, featuredImageCaption: true, featuredImageCredit: true,
+          author: true, role: true, views: true, status: true, createdAt: true,
+          publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true,
+          isAnonymous: true, readingTime: true, seoTitle: true, seoDesc: true,
+          metaTitle: true, metaDescription: true, ogImage: true, canonicalUrl: true,
+        },
+        with: {
+          category: { with: { parent: true } },
+          authorModel: true,
+          tags: { with: { tag: true } },
+        },
+      });
+      return article ?? null;
+    },
+    ["published-article-v1", slug],
+    { tags: [CACHE_TAGS.articles, articleTag(slug)], revalidate: 3600 },
+  )();
+}
+
 const getPublishedArticleBySlug = cache(async (slug: string) => {
-  const [article] = await db.query.article.findMany({
-    where: and(eq(articleTable.slug, slug), eq(articleTable.status, "PUBLISHED")),
-    limit: 1,
-    columns: {
-      id: true, slug: true, title: true, deck: true, img: true,
-      featuredImageAlt: true, featuredImageCaption: true, featuredImageCredit: true,
-      author: true, role: true, views: true, status: true, createdAt: true,
-      publishedAt: true, updatedAt: true, categoryId: true, contentUrl: true,
-      isAnonymous: true, readingTime: true, seoTitle: true, seoDesc: true,
-      metaTitle: true, metaDescription: true, ogImage: true, canonicalUrl: true,
-    },
-    with: {
-      category: { with: { parent: true } },
-      authorModel: true,
-      tags: { with: { tag: true } },
-    },
-  });
-  return article || null;
+  const article = await getCachedPublishedArticle(slug);
+  if (!article) return null;
+  return {
+    ...article,
+    createdAt: toDate(article.createdAt),
+    publishedAt: article.publishedAt ? toDate(article.publishedAt) : null,
+    updatedAt: toDate(article.updatedAt),
+  };
 });
 
+/**
+ * A renamed article's *old* slug, used to 301 rather than 404.
+ *
+ * Only reached when the primary lookup misses, but that is precisely the case a
+ * crawler keeps re-requesting once a story has been renamed — so it is cached on
+ * the same terms, under the same `articles` tag.
+ */
+function getCachedHistoricalArticle(slug: string) {
+  return unstable_cache(
+    async () => {
+      const [historicalArticle] = await db.query.article.findMany({
+        where: and(
+          sql`${slug} = ANY(${articleTable.previousSlugs})`,
+          eq(articleTable.status, "PUBLISHED"),
+        ),
+        limit: 1,
+        columns: { id: true, slug: true },
+      });
+      return historicalArticle ?? null;
+    },
+    ["historical-article-v1", slug],
+    { tags: [CACHE_TAGS.articles, articleTag(slug)], revalidate: 3600 },
+  )();
+}
+
 const getHistoricalArticleBySlug = cache(async (slug: string) => {
-  const [historicalArticle] = await db.query.article.findMany({
-    where: and(
-      sql`${slug} = ANY(${articleTable.previousSlugs})`,
-      eq(articleTable.status, "PUBLISHED"),
-    ),
-    limit: 1,
-    columns: { id: true, slug: true },
-  });
-  return historicalArticle || null;
+  return getCachedHistoricalArticle(slug);
 });
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

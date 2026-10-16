@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { eq, sql } from "drizzle-orm";
 import { tag as tagTable, article as articleTable } from "@/lib/db/schema";
 import { publicFeedWhere } from "@/lib/feed";
 import { getTagArticles } from "@/lib/cached-queries";
+import { CACHE_TAGS, tagTag } from "@/lib/cache-tags";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import Sidebar from "@/components/layout/Sidebar";
 import Link from "next/link";
@@ -19,19 +21,33 @@ interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-const getTagWithCount = cache(async (slug: string) => {
-  const [tagResults, countResult] = await Promise.all([
-    db.query.tag.findMany({ where: eq(tagTable.slug, slug), limit: 1 }),
-    db
-      .select({ count: sql`count(*)`.mapWith(Number) })
-      .from(articleTable)
-      .where(publicFeedWhere({ tagSlug: slug })),
-  ]);
-  return {
-    tag: tagResults[0] || null,
-    totalCount: countResult[0]?.count || 0,
-  };
-});
+// The tag row and its published count were two queries on every render of this
+// route — and `generateMetadata` and the page each ran the pair, so four. The
+// listing itself was already cached (getTagArticles); this closes the remaining
+// gap so a tag archive, which is a favourite crawl target, costs nothing after
+// the first fill. Tagged `taxonomy`, `articles` and `tag:<slug>`, matching what
+// a taxonomy rename or a publish into this tag already invalidates.
+function getCachedTagWithCount(slug: string) {
+  return unstable_cache(
+    async () => {
+      const [tagResults, countResult] = await Promise.all([
+        db.query.tag.findMany({ where: eq(tagTable.slug, slug), limit: 1 }),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(articleTable)
+          .where(publicFeedWhere({ tagSlug: slug })),
+      ]);
+      return {
+        tag: tagResults[0] || null,
+        totalCount: countResult[0]?.count || 0,
+      };
+    },
+    ["tag-with-count-v1", slug],
+    { tags: [CACHE_TAGS.taxonomy, CACHE_TAGS.articles, tagTag(slug)], revalidate: 3600 },
+  )();
+}
+
+const getTagWithCount = cache(async (slug: string) => getCachedTagWithCount(slug));
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const { slug } = await params;

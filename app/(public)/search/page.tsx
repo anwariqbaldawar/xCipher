@@ -1,14 +1,10 @@
 import type { Metadata } from "next";
-import { dbRead as db } from "@/lib/db";
-import { and, eq, sql } from "drizzle-orm";
-import { article as articleTable } from "@/lib/db/schema";
-import { ARTICLE_CARD_COLUMNS, ARTICLE_CARD_WITH_TAGS_WITH } from "@/lib/queries";
 import StoryRow, { type StoryArticle } from "@/components/article/StoryRow";
 import Sidebar from "@/components/layout/Sidebar";
 import InstantSearchInput from "@/components/search/InstantSearchInput";
 import { normalizeQuery } from "@/lib/search-query";
-import { publicFeedWhere } from "@/lib/feed";
-import { searchArticlesLive } from "@/lib/search";
+import { loadSearchIndex } from "@/lib/search";
+import { rankSearchIndex, toSearchListingRow } from "@/lib/search-index";
 
 interface Props {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -28,6 +24,11 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   };
 }
 
+// Still rendered per request — a results page is defined by its query string —
+// but no longer backed by a per-request query. Every row on this page comes out
+// of the cached published-articles snapshot (lib/cached-queries.ts
+// `getPublishedSearchIndex`), so this route, which crawlers and "See all
+// results" clicks hit constantly, costs one data-cache read and no SQL.
 export const dynamic = "force-dynamic";
 
 export default async function SearchPage({ searchParams }: Props) {
@@ -40,55 +41,38 @@ export default async function SearchPage({ searchParams }: Props) {
 
   let results: StoryArticle[] = [];
   let totalCount = 0;
-  // The ranked listing is paged by the SQL LIMIT/OFFSET, so the only fact the
-  // pager needs is whether the page came back full. A total count would cost a
-  // second full-text scan for a number nobody reads.
+  // The ranked listing is paged by LIMIT/OFFSET, so the only fact the pager
+  // needs is whether the page came back full. A total count would mean scanning
+  // the ranked set twice for a number nobody reads.
   let hasMorePages = false;
 
   if (q || cat) {
-    // The listing runs through the same ranker the live dropdown uses
-    // (lib/search.ts) — matched fields, partial-word prefixes and tag joins all
-    // behave identically — with a category filter layered on top. The headline
-    // ranking lives in SQL, so "see all results" is an ordered continuation of
-    // what the reader already saw rather than a differently-sorted list.
-    const ranked = q ? await searchArticlesLive(q, { limit, offset: skip }) : [];
+    // One snapshot read, then pure in-memory work. `loadSearchIndex` is memoized
+    // per process for a few seconds, so the dropdown the reader just used and
+    // this page share the same parsed object.
+    const { entries } = await loadSearchIndex();
 
     if (cat) {
       // Category-browse mode (?cat=) keeps the card-shaped rows the listing
-      // components expect, filtered by section.
-      const whereClause = and(
-        eq(articleTable.status, "PUBLISHED"),
-        sql`${articleTable.categoryId} IN (SELECT id FROM "Category" WHERE slug = ${cat})`,
-      );
-      const [items, countResult] = await Promise.all([
-        db.query.article.findMany({
-          where: whereClause,
-          orderBy: (a, { desc }) => [desc(a.publishedAt)],
-          offset: skip,
-          limit,
-          columns: ARTICLE_CARD_COLUMNS,
-          with: ARTICLE_CARD_WITH_TAGS_WITH,
-        }),
-        db.select({ count: sql`count(*)`.mapWith(Number) }).from(articleTable).where(whereClause),
-      ]);
-      results = items;
-      totalCount = countResult[0].count;
-      hasMorePages = skip + limit < totalCount;
+      // components expect, filtered by section. The snapshot is ordered
+      // publishedAt DESC, id DESC — the same order the SQL listing used.
+      const inCategory = entries.filter(entry => entry.categorySlug === cat);
+      results = inCategory.slice(skip, skip + limit).map(entry => toSearchListingRow(entry));
+      totalCount = inCategory.length;
+      hasMorePages = skip + limit < inCategory.length;
     } else {
-      // Ranked ids from the full-text/ILIKE query, hydrated into cards in one
-      // further round trip so the rows render identically to every other listing.
-      const rankedIds = ranked.map(result => result.id);
-      const rows = rankedIds.length
-        ? await db.query.article.findMany({
-            where: and(publicFeedWhere(), sql`${articleTable.id} IN (${sql.join(rankedIds.map(id => sql`${id}`), sql`, `)})`),
-            columns: ARTICLE_CARD_COLUMNS,
-            with: ARTICLE_CARD_WITH_TAGS_WITH,
-          })
-        : [];
-      const byId = new Map(rows.map(row => [row.id, row]));
-      results = rankedIds
-        .map(id => byId.get(id))
-        .filter((row): row is NonNullable<typeof row> => Boolean(row));
+      // The listing runs through the same ranker the live dropdown uses
+      // (lib/search-index.ts) — matched fields, partial-word prefixes and tag
+      // joins all behave identically — so "see all results" is an ordered
+      // continuation of what the reader already saw rather than a differently
+      // sorted list. Rows are rebuilt from the snapshot rather than hydrated
+      // with a second query.
+      const ranked = rankSearchIndex(entries, q, { limit, offset: skip });
+      const byId = new Map(entries.map(entry => [entry.id, entry]));
+      results = ranked
+        .map(result => byId.get(result.id))
+        .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+        .map(entry => toSearchListingRow(entry));
       totalCount = results.length;
       hasMorePages = results.length === limit;
     }

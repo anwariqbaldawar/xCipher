@@ -3,8 +3,10 @@ import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { getCategoryArticles } from "@/lib/cached-queries";
+import { CACHE_TAGS, categoryTag } from "@/lib/cache-tags";
 import { eq, sql, isNull } from "drizzle-orm";
 import { category as categoryTable } from "@/lib/db/schema";
 import { brandBannerUrl, siteConfig } from "@/lib/seo";
@@ -25,17 +27,72 @@ interface Props {
   searchParams: Promise<{ sub?: string }>;
 }
 
-const getCategoryBySlug = cache(async (slug: string) => {
-  const [cat] = await db.query.category.findMany({
-    where: eq(categoryTable.slug, slug),
-    with: { parent: { columns: { slug: true, name: true } } },
-    limit: 1,
-  });
-  if (!cat) return null;
-  const result = await db.execute(sql`SELECT count(*) FROM "Article" a WHERE (a."categoryId" = ${cat.id} OR a."categoryId" IN (SELECT id FROM "Category" WHERE "parentId" = ${cat.id})) AND a."status" = 'PUBLISHED'`);
-  const count = result.rows[0]?.count || 0;
-  return { ...cat, publishedArticleCount: Number(count) };
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// Category reads are cached, not re-queried per render.
+//
+// Three separate queries used to run on every render of this route — the section
+// row, a `count(*)` over its articles plus its children's, and the subcategory
+// strip — and `generateMetadata` ran the first of them a second time. The route
+// re-renders on its 300s window, on publish (`revalidatePath`), and once more per
+// crawler that lands on a section URL, so the same three statements were being
+// paid for far more often than the data changed.
+//
+// Both helpers are tag-invalidated, so the freshness path is unchanged: editing
+// a section, or publishing into it, calls `revalidateTag` on `taxonomy`,
+// `articles` and `category:<slug>` (`taxonomyMutationTags` and
+// `articleMutationTags` in lib/cache-tags.ts), which drops these entries while
+// leaving the other twelve sections warm.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getCachedCategory(slug: string) {
+  return unstable_cache(
+    async () => {
+      const [cat] = await db.query.category.findMany({
+        where: eq(categoryTable.slug, slug),
+        with: { parent: { columns: { slug: true, name: true } } },
+        limit: 1,
+      });
+      if (!cat) return null;
+      const result = await db.execute(sql`SELECT count(*) FROM "Article" a WHERE (a."categoryId" = ${cat.id} OR a."categoryId" IN (SELECT id FROM "Category" WHERE "parentId" = ${cat.id})) AND a."status" = 'PUBLISHED'`);
+      const count = result.rows[0]?.count || 0;
+      return { ...cat, publishedArticleCount: Number(count) };
+    },
+    ["category-by-slug-v1", slug],
+    { tags: [CACHE_TAGS.taxonomy, CACHE_TAGS.articles, categoryTag(slug)], revalidate: 3600 },
+  )();
+}
+
+const getCategoryBySlug = cache(async (slug: string) => getCachedCategory(slug));
+
+/** The subcategory strip: cached for the same reasons, and tagged per section. */
+function getCachedSubcategories(slug: string) {
+  return unstable_cache(
+    async () => {
+      return db.query.category.findMany({
+        where: sql`${categoryTable.parentId} IN (SELECT id FROM "Category" WHERE slug = ${slug}) AND EXISTS (SELECT 1 FROM "Article" WHERE "Article"."categoryId" = ${categoryTable.id} AND "Article"."status" = 'PUBLISHED')`,
+        orderBy: (c, { asc }) => [asc(c.name)],
+        columns: { name: true, slug: true },
+      });
+    },
+    ["category-subcategories-v1", slug],
+    { tags: [CACHE_TAGS.taxonomy, CACHE_TAGS.articles, categoryTag(slug)], revalidate: 3600 },
+  )();
+}
+
+const getSubcategoriesFor = cache(async (slug: string) => getCachedSubcategories(slug));
+
+/** Slugs for `generateStaticParams`, cached so a rebuild does not re-list them. */
+const getTopLevelCategorySlugs = unstable_cache(
+  async () => {
+    const categories = await db.query.category.findMany({
+      where: isNull(categoryTable.parentId),
+      columns: { slug: true },
+    });
+    return categories.map((category) => ({ slug: category.slug }));
+  },
+  ["category-slugs-v1"],
+  { tags: [CACHE_TAGS.taxonomy], revalidate: 3600 },
+);
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -95,11 +152,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export async function generateStaticParams() {
   try {
-    const categories = await db.query.category.findMany({
-      where: isNull(categoryTable.parentId),
-      columns: { slug: true },
-    });
-    return categories.map((category) => ({ slug: category.slug }));
+    return await getTopLevelCategorySlugs();
   } catch (error) {
     console.warn("[category] Failed to fetch slugs for generateStaticParams:", error);
     return [];
@@ -124,11 +177,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     permanentRedirect(`/category/${category.parent.slug}?sub=${category.slug}`);
   }
 
-  const subcategories = await db.query.category.findMany({
-    where: sql`${categoryTable.parentId} IN (SELECT id FROM "Category" WHERE slug = ${slug}) AND EXISTS (SELECT 1 FROM "Article" WHERE "Article"."categoryId" = ${categoryTable.id} AND "Article"."status" = 'PUBLISHED')`,
-    orderBy: (c, { asc }) => [asc(c.name)],
-    columns: { name: true, slug: true }
-  });
+  const subcategories = await getSubcategoriesFor(slug);
 
   const catName = category.name || slug;
   const catFullTitle = category.fullTitle || catName;

@@ -360,30 +360,35 @@ describe("archive structured data", () => {
 });
 
 /* ─────────────────────────────────────────────────────────────────────────────
- * Live search SQL
+ * Live search SQL — or rather, the absence of it
  *
- * `searchArticlesLive` aliases the table (`FROM "Article" a`) and interpolates
- * its clauses into one raw statement, so a surviving `"Article"."title"` inside
- * a clause is not a style problem: Postgres rejects the whole query with
- * 42P01 (`invalid reference to FROM-clause entry for table "Article"`) and the
- * instant search answers 500 for every keystroke. The statement needs a running
- * database to be exercised, so the guard is a contract on the source itself.
+ * This block used to guard a raw statement whose clauses each spelled the table
+ * out (`"Article"."title"`) while the FROM clause aliased it, which Postgres
+ * rejects with 42P01 — a 500 on every keystroke. The statement is gone: live
+ * search now ranks a cached snapshot in memory, so the same class of bug cannot
+ * exist. What still needs guarding is that nobody reintroduces per-query SQL,
+ * and that the one statement that does exist (the snapshot builder) is built
+ * with the query builder, which qualifies columns for us.
  * ───────────────────────────────────────────────────────────────────────────── */
 
 describe("live search SQL", () => {
-  const source = readFileSync(path.join(process.cwd(), "lib/search.ts"), "utf8");
-  // Prose in this file quotes the broken spelling on purpose; only SQL counts.
-  const sql = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  // Prose in these files quotes SQL on purpose; only statements count.
+  const stripComments = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-  it("qualifies every column with the FROM alias", () => {
-    // The only legal mention of the table name is the FROM clause itself.
-    const mentions = [...sql.matchAll(/"Article"\."(\w+)"/g)].map(match => match[1]);
-    expect(mentions).toEqual([]);
-    expect(sql).toContain('FROM "Article" a');
+  it("issues no statement at all from the live-search path", () => {
+    for (const file of ["lib/search.ts", "app/api/search/route.ts"]) {
+      const source = stripComments(readFileSync(path.join(process.cwd(), file), "utf8"));
+      expect(source, file).not.toContain("@/lib/db");
+      expect(source, file).not.toMatch(/to_tsvector|ts_rank|plainto_/);
+      expect(source, file).not.toMatch(/db\.(execute|select|query|insert|update|delete)\b/);
+    }
   });
 
-  it("builds the full-text vector from the aliased columns", () => {
-    expect(sql).toMatch(/to_tsvector\('english'[\s\S]{0,220}a\."title"/);
-    expect(sql).toMatch(/j\."A" = a\."id"/);
+  it("builds the snapshot with qualified columns from the query builder", () => {
+    const source = stripComments(readFileSync(path.join(process.cwd(), "lib/cached-queries.ts"), "utf8"));
+    // The snapshot is one builder query (plus an optional count), not a
+    // hand-written statement that could mis-qualify a column.
+    expect(source).toContain("querySearchIndexRows");
+    expect(source).not.toContain("to_tsvector");
   });
 });

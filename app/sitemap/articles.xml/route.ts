@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { dbRead } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { articleFeaturedCrawlerUrl, siteConfig } from "@/lib/seo";
 import { sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
@@ -12,7 +14,14 @@ import { article as articleTable } from "@/lib/db/schema";
 // Google News Publisher Center) for Google News eligibility.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const dynamic = "force-dynamic";
+// Cached like the rest of the syndication surface. The 48-hour window is a
+// sliding one, so this document genuinely cannot be cached for a day — but it
+// also cannot be re-queried per crawl. A one-hour data cache plus a one-hour
+// route window, invalidated by tag on every publish, is the compromise: a story
+// that goes live is in the news sitemap immediately (the publish action
+// revalidates `articles` and this path), and a crawl every few minutes costs one
+// cache read.
+export const revalidate = 3600;
 
 const NEWS_SITEMAP_LIMIT = 1000;
 const PUBLICATION_NAME = "xSypher";
@@ -31,15 +40,22 @@ type NewsArticleRow = {
   title: string;
   img: string | null;
   featuredImageCaption: string | null;
-  publishedAt: Date | null;
-  updatedAt: Date | null;
+  publishedAt: string | null;
+  updatedAt: string | null;
 };
 
-export async function GET() {
-  let articles: NewsArticleRow[] = [];
-
-  try {
-    articles = await dbRead.query.article.findMany({
+/**
+ * The last 48 hours of publishable news, with the newsless-archive fallback.
+ *
+ * Deliberately without a try/catch: a failed read must escape, because
+ * `unstable_cache` stores only what the function returns and an empty news
+ * sitemap frozen for an hour is a worse outcome than one uncached request. The
+ * caller below turns the failure into the empty `<urlset>` this document has
+ * always fallen back to — just without caching it.
+ */
+const getNewsSitemapArticles = unstable_cache(
+  async (): Promise<NewsArticleRow[]> => {
+    let articles = await dbRead.query.article.findMany({
       // `<= NOW()` as well as the 48-hour window: a scheduled article already
       // holds the PUBLISHED status, so without the upper bound a story that is
       // not live yet would be submitted to Google News as news.
@@ -64,12 +80,35 @@ export async function GET() {
         limit: 10,
       });
     }
+
+    return articles.map(row => ({
+      slug: row.slug,
+      title: row.title,
+      img: row.img,
+      featuredImageCaption: row.featuredImageCaption,
+      publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : null,
+      updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+    }));
+  },
+  ["news-sitemap-v1"],
+  { tags: [CACHE_TAGS.articles], revalidate: 3600 },
+);
+
+/** Cached read, with the "database blipped" path kept out of the cache. */
+async function loadNewsSitemapArticles(): Promise<NewsArticleRow[]> {
+  try {
+    return await getNewsSitemapArticles();
   } catch (error) {
     console.warn("[sitemap] News sitemap query failed:", error);
+    return [];
   }
+}
+
+export async function GET() {
+  const articles = await loadNewsSitemapArticles();
 
   const urls = articles.map((a) => {
-    const date = (a.publishedAt || a.updatedAt || new Date()).toISOString();
+    const date = new Date(a.publishedAt || a.updatedAt || Date.now()).toISOString();
     const featured = articleFeaturedCrawlerUrl(a);
     return [
       "  <url>",

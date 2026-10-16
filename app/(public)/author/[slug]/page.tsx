@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { eq, sum } from "drizzle-orm";
 import { author as authorTable, article as articleTable } from "@/lib/db/schema";
 import { LISTING_ARTICLE_LIMIT } from "@/lib/queries";
 import { getAuthorArticles } from "@/lib/cached-queries";
+import { CACHE_TAGS, authorTag } from "@/lib/cache-tags";
 import { publicFeedWhere } from "@/lib/feed";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import { siteConfig } from "@/lib/seo";
@@ -19,14 +21,56 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-const getAuthorBySlug = cache(async (slug: string) => {
-  const [author] = await db.query.author.findMany({
-    where: eq(authorTable.slug, slug),
-    with: { user: true },
-    limit: 1,
-  });
-  return author || null;
-});
+// ─────────────────────────────────────────────────────────────────────────────
+// Author reads: request-deduped AND persisted.
+//
+// `generateMetadata` and the profile body both resolve the author, and both ran
+// a query on every re-render of this route. Since the route re-renders on a
+// 600s window, on every publish that touches the author, and once per crawler
+// request, the same two statements (the profile, and the lifetime view total)
+// were the most frequently repeated queries on the public site after search.
+//
+// Tagged `authors` and `author:<slug>`, so an editor's profile save invalidates
+// exactly this author's page — the byline-masking helpers in
+// app/actions/profile.ts already revalidate both tags.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getCachedAuthor(slug: string) {
+  return unstable_cache(
+    async () => {
+      const [author] = await db.query.author.findMany({
+        where: eq(authorTable.slug, slug),
+        with: { user: true },
+        limit: 1,
+      });
+      return author ?? null;
+    },
+    ["author-by-slug-v1", slug],
+    { tags: [CACHE_TAGS.authors, authorTag(slug)], revalidate: 3600 },
+  )();
+}
+
+const getAuthorBySlug = cache(async (slug: string) => getCachedAuthor(slug));
+
+/**
+ * Lifetime view total for the profile's stat strip.
+ *
+ * A separate entry from the profile itself, and a shorter window: view counts
+ * change without any editorial action (the worker flushes Redis deltas once a
+ * minute), so this is the one author figure that legitimately drifts. Ten minutes
+ * of drift on a lifetime total is invisible; a query per crawler hit is not.
+ */
+function getCachedAuthorViewTotal(authorId: string, slug: string) {
+  return unstable_cache(
+    async () => {
+      const where = publicFeedWhere({ authorId });
+      const rows = await db.select({ totalViews: sum(articleTable.views) }).from(articleTable).where(where);
+      return Number(rows?.[0]?.totalViews) || 0;
+    },
+    ["author-views-v1", authorId],
+    { tags: [CACHE_TAGS.articles, authorTag(slug)], revalidate: 600 },
+  )();
+}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -106,14 +150,10 @@ export default async function AuthorProfile({ params }: Props) {
   // The list is capped, so the view total cannot be summed from it -- that
   // would silently under-report as soon as an author passes the cap. Postgres
   // does the sum over every row instead, which is one cheap indexed aggregate.
-  const authorArticleWhere = publicFeedWhere({ authorId: author.id });
-
-  const [articles, viewsAggregate] = await Promise.all([
+  const [articles, totalViews] = await Promise.all([
     getAuthorArticles(author.id, slug),
-    db.select({ totalViews: sum(articleTable.views) }).from(articleTable).where(authorArticleWhere),
+    getCachedAuthorViewTotal(author.id, slug),
   ]);
-
-  const totalViews = Number(viewsAggregate?.[0]?.totalViews) || 0;
 
   const nonce = (await headers()).get("x-csp-nonce") || undefined;
 

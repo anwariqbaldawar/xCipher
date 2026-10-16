@@ -2,12 +2,44 @@
 
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { revalidatePath } from "@/lib/revalidate";
+import { revalidatePath, revalidateTag } from "@/lib/revalidate";
+import { taxonomyMutationTags } from "@/lib/cache-tags";
 import { authorize } from "@/lib/capabilities";
 import { eq, ne, and, sql, inArray } from "drizzle-orm";
 import { category as categoryTable, tag as tagTable, article as articleTable, _articleToTag, auditLog } from "@/lib/db/schema";
 
 import { Role } from "@/lib/types";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Taxonomy mutations invalidate data caches, not just the admin screen.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Every function in this file used to end with `revalidatePath("/admin/taxonomy")`
+// and nothing else. That was already incomplete before this change — renaming a
+// section left its public page showing the old name until the timer expired —
+// and it became visibly wrong once the public reads were cached: a rename now
+// also has to drop the cached section listing, the cached section row, the
+// sitemap entries and the search snapshot, because `categoryName` is a field a
+// search result renders.
+//
+// One helper, called by every mutation below, so a new taxonomy action cannot
+// ship with a partial invalidation list. `taxonomyMutationTags` owns which tags
+// (lib/cache-tags.ts), and the tag revalidation drops every data-cache entry that
+// reads them; the paths cover the syndication documents, which are route-cached
+// rather than tag-cached.
+async function revalidateTaxonomySurfaces(
+  extra: { categorySlug?: string | null; tagSlug?: string | null } = {},
+): Promise<void> {
+  await Promise.all([
+    ...taxonomyMutationTags(extra).map(tag => revalidateTag(tag, "max")),
+    revalidatePath("/admin/taxonomy"),
+    revalidatePath("/"),
+    revalidatePath("/latest"),
+    revalidatePath("/search"),
+    revalidatePath("/sitemap.xml"),
+    revalidatePath("/feed.xml"),
+  ]);
+}
 
 // Derived from the capability map rather than a hardcoded list, so it cannot
 // drift from the page guard or the sidebar link that gate the same feature.
@@ -79,7 +111,7 @@ export async function createCategory(data: { name: string; description?: string;
       description: data.description?.trim() || null,
       parentId: data.parentId || null,
     }).returning();
-    revalidatePath("/admin/taxonomy");
+    await revalidateTaxonomySurfaces({ categorySlug: category.slug });
     return { success: true, category };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create category";
@@ -132,8 +164,8 @@ export async function createSubcategory(name: string, parentSlug: string) {
       slug,
       parentId: parent.id,
     }).returning();
-    
-    revalidatePath("/admin/taxonomy");
+
+    await revalidateTaxonomySurfaces({ categorySlug: category.slug });
     return { success: true, category };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create subcategory";
@@ -152,12 +184,22 @@ export async function updateCategory(id: string, data: { name: string; descripti
     const [existing] = await db.select().from(categoryTable).where(and(eq(categoryTable.slug, slug), ne(categoryTable.id, id))).limit(1);
     if (existing) return { success: false, error: "Another category with this slug already exists" };
 
+    // The old slug is read before the write so its archive page can be
+    // invalidated too: a rename leaves `/category/<old>` cached (and linked from
+    // every card that still points at it) until something drops that entry.
+    const [before] = await db.select({ slug: categoryTable.slug }).from(categoryTable).where(eq(categoryTable.id, id)).limit(1);
+
     const [category] = await db.update(categoryTable).set({
       name: data.name.trim(),
       slug,
       description: data.description?.trim() || null,
     }).where(eq(categoryTable.id, id)).returning();
-    revalidatePath("/admin/taxonomy");
+
+    await revalidateTaxonomySurfaces({ categorySlug: category.slug });
+    if (before?.slug && before.slug !== category.slug) {
+      await revalidateTaxonomySurfaces({ categorySlug: before.slug });
+      await revalidatePath(`/category/${before.slug}`, "page");
+    }
     return { success: true, category };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update category";
@@ -188,7 +230,10 @@ export async function deleteCategory(id: string) {
     }
 
     await db.delete(categoryTable).where(eq(categoryTable.id, id));
-    revalidatePath("/admin/taxonomy");
+    // A deleted section's archive page is a dead URL: drop its cached listing and
+    // its cached row, and take the section out of the search snapshot's taxonomy.
+    await revalidateTaxonomySurfaces({ categorySlug: category.slug });
+    await revalidatePath(`/category/${category.slug}`, "page");
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to delete category";
@@ -213,7 +258,7 @@ export async function createTag(data: { name: string; description?: string }) {
       slug,
       description: data.description?.trim() || null,
     }).returning();
-    revalidatePath("/admin/taxonomy");
+    await revalidateTaxonomySurfaces({ tagSlug: tag.slug });
     return { success: true, tag };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to create tag";
@@ -232,12 +277,21 @@ export async function updateTag(id: string, data: { name: string; description?: 
     const [existing] = await db.select().from(tagTable).where(and(eq(tagTable.slug, slug), ne(tagTable.id, id))).limit(1);
     if (existing) return { success: false, error: "Another tag with this slug already exists" };
 
+    // Same as a category rename: the old tag archive is still cached and still
+    // linked from every story that carries the tag.
+    const [before] = await db.select({ slug: tagTable.slug }).from(tagTable).where(eq(tagTable.id, id)).limit(1);
+
     const [tag] = await db.update(tagTable).set({
       name: data.name.trim(),
       slug,
       description: data.description?.trim() || null,
     }).where(eq(tagTable.id, id)).returning();
-    revalidatePath("/admin/taxonomy");
+
+    await revalidateTaxonomySurfaces({ tagSlug: tag.slug });
+    if (before?.slug && before.slug !== tag.slug) {
+      await revalidateTaxonomySurfaces({ tagSlug: before.slug });
+      await revalidatePath(`/tag/${before.slug}`, "page");
+    }
     return { success: true, tag };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to update tag";
@@ -255,7 +309,8 @@ export async function deleteTag(id: string) {
     if (!tag) return { success: false, error: "Tag not found" };
 
     await db.delete(tagTable).where(eq(tagTable.id, id));
-    revalidatePath("/admin/taxonomy");
+    await revalidateTaxonomySurfaces({ tagSlug: tag.slug });
+    await revalidatePath(`/tag/${tag.slug}`, "page");
     return { success: true };
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Failed to delete tag";
@@ -334,11 +389,15 @@ export async function mergeCategories(sourceId: string, targetId: string) {
       articlesMoved: moved,
     });
 
-    revalidatePath("/admin/taxonomy");
     revalidatePath("/admin/articles");
-    // The source slug is now a dead URL and the target's listing has grown.
-    revalidatePath(`/category/${source.slug}`);
-    revalidatePath(`/category/${target.slug}`);
+    // Both sections changed: the source slug is now a dead URL and the target's
+    // listing has grown by every article that moved. Data caches go through the
+    // shared helper, so the search snapshot (which carries `categoryName`) is
+    // dropped along with the listings.
+    await revalidateTaxonomySurfaces({ categorySlug: target.slug });
+    await revalidateTaxonomySurfaces({ categorySlug: source.slug });
+    revalidatePath(`/category/${source.slug}`, "page");
+    revalidatePath(`/category/${target.slug}`, "page");
 
     return {
       success: true,
@@ -404,10 +463,13 @@ export async function mergeTags(sourceId: string, targetId: string) {
       articlesAlreadyTagged: source.articles.length - toConnect.length,
     });
 
-    revalidatePath("/admin/taxonomy");
     revalidatePath("/admin/articles");
-    revalidatePath(`/tag/${source.slug}`);
-    revalidatePath(`/tag/${target.slug}`);
+    // Both tag archives changed, and tag names are rendered on cards and in
+    // search results — so the data caches go with the routes.
+    await revalidateTaxonomySurfaces({ tagSlug: target.slug });
+    await revalidateTaxonomySurfaces({ tagSlug: source.slug });
+    revalidatePath(`/tag/${source.slug}`, "page");
+    revalidatePath(`/tag/${target.slug}`, "page");
 
     return {
       success: true,
