@@ -221,7 +221,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col overflow-hidden bg-black/95 text-white backdrop-blur-sm md:flex-row"
+      className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col overflow-hidden bg-black/95 text-white backdrop-blur-sm ${summary?.length ? "md:flex-row" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -229,14 +229,14 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     >
       <div
         ref={canvasRef}
-        className={`relative flex min-h-0 flex-1 touch-none select-none items-center justify-center overflow-hidden p-4 sm:p-8 ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+        className={`relative flex w-full min-h-0 flex-1 touch-none select-none items-center justify-center overflow-hidden p-4 sm:p-8 ${summary?.length ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
         onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
         aria-label="Interactive image canvas. Pinch or double-tap to zoom on touchscreens; use the wheel or double-click to zoom on desktop."
       >
         <div
           ref={mediaRef}
-          className="flex max-h-full max-w-full items-center justify-center will-change-transform"
-          style={{ transform: `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out" }}
+          className="absolute left-1/2 top-1/2 flex max-h-full max-w-full items-center justify-center will-change-transform"
+          style={{ transform: `translate3d(calc(-50% + ${zoom.x}px), calc(-50% + ${zoom.y}px), 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out", maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100dvh - 2rem)" }}
         >
           {media}
         </div>
