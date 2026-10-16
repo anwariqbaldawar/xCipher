@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, startTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showToast } from "@/lib/utils";
-import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import { useEditor, EditorContent, ReactRenderer, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Heading from "@tiptap/extension-heading";
 import Underline from "@tiptap/extension-underline";
@@ -17,7 +17,6 @@ import { Table } from "@tiptap/extension-table";
 import { TableRow } from "@tiptap/extension-table-row";
 import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
-import { Image as TiptapImage } from "@tiptap/extension-image";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import CategorySelector from "./CategorySelector";
@@ -85,6 +84,15 @@ function hasEmptyMermaidSource(value: unknown): boolean {
 function htmlHasMermaidSource(html: string): boolean {
   return /data-(?:code|graph-definition)\s*=\s*["'][^"']*\S[^"']*["']/i.test(html);
 }
+
+/**
+ * Idle window before the editor's HTML is serialised into the form.
+ *
+ * Long enough that continuous typing never pays for a serialisation, short
+ * enough that blur, save and crash-recovery all see a current document (each of
+ * those paths also forces a flush, so this is a ceiling rather than a promise).
+ */
+const BODY_SYNC_DEBOUNCE_MS = 700;
 
 // Templates
 const ARTICLE_TEMPLATES: Record<string, { title: string, deck: string, html: string }> = {
@@ -415,6 +423,50 @@ export default function ArticleEditor({
     defaultValues,
   });
 
+  // ── Editor → form bridge ───────────────────────────────────────────────────
+  //
+  // `editor.getHTML()` serialises the entire document through ProseMirror's DOM
+  // serializer. Running it inside `onUpdate` means a full traversal of the
+  // article — every paragraph, table cell, code block, figure and React node
+  // view — on every character typed. Up to a few hundred words nobody notices;
+  // past ~1,200 words it is the single largest cost in the editor, and it lands
+  // on the keystroke the writer is waiting for.
+  //
+  // The form only needs `bodyHtml` *at rest*:
+  //   • the save path reads the live editor (`handleSave` posts
+  //     `editor.getHTML()`), so autosave cannot go stale;
+  //   • the crash cache stores `bodyJson` from the live editor and prefers it
+  //     when restoring, so recovery is lossless even mid-debounce;
+  //   • validation reads title, slug, deck and category — never the body.
+  //
+  // So the sync is debounced, and additionally flushed on blur, when the tab is
+  // hidden, before a save, and on unmount — which covers every moment the value
+  // matters. Declared above `useEditor` on purpose: `onUpdate` closes over
+  // `scheduleBodyHtmlSync`, and a callback that can fire before its binding is
+  // initialised is a TDZ crash waiting for the first programmatic transaction.
+  const editorRef = useRef<Editor | null>(null);
+  const bodySyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const flushBodyHtmlSync = useCallback(() => {
+    if (bodySyncTimerRef.current) {
+      clearTimeout(bodySyncTimerRef.current);
+      bodySyncTimerRef.current = null;
+    }
+    const live = editorRef.current;
+    if (!live || live.isDestroyed) return;
+    setValue("bodyHtml", live.getHTML(), { shouldDirty: true });
+  }, [setValue]);
+
+  const scheduleBodyHtmlSync = useCallback(() => {
+    if (bodySyncTimerRef.current) clearTimeout(bodySyncTimerRef.current);
+    bodySyncTimerRef.current = setTimeout(() => {
+      bodySyncTimerRef.current = null;
+      const live = editorRef.current;
+      if (!live || live.isDestroyed) return;
+      setValue("bodyHtml", live.getHTML(), { shouldDirty: true });
+    }, BODY_SYNC_DEBOUNCE_MS);
+  }, [setValue]);
+
   const editor = useEditor({
     extensions: [
       Markdown,
@@ -535,10 +587,76 @@ export default function ArticleEditor({
       },
     },
     content: defaultValues.bodyHtml,
-    onUpdate: ({ editor }: any) => {
-      setValue("bodyHtml", editor.getHTML(), { shouldDirty: true });
-    },
+    // Never re-render this component on a transaction.
+    //
+    // This is Tiptap v3's default (`shouldRerenderOnTransaction` defaults to
+    // false), and it is stated explicitly because the alternative is what makes
+    // a long article feel broken: one re-render of this 2,000-line component —
+    // command bar, inspector rail, outline, publishing panel — per keystroke.
+    // Everything that genuinely needs editor state subscribes to it itself
+    // (`useEditorState` in EditorToolbar, EditorBubbleMenu, DocumentOutline and
+    // DocumentStatus), so nothing here depends on the old behaviour.
+    shouldRerenderOnTransaction: false,
+    // The document is serialised on a debounce instead of on every keystroke —
+    // see `scheduleBodyHtmlSync` below.
+    onUpdate: () => scheduleBodyHtmlSync(),
   });
+
+  // Keep the ref in step with the instance the hook hands back.
+  useEffect(() => {
+    editorRef.current = editor ?? null;
+  }, [editor]);
+
+  // Flush the pending serialisation on every event that means "the writer has
+  // stopped typing": leaving the editor, hiding the tab, closing it, or
+  // unmounting the studio.
+  useEffect(() => {
+    const dom = editor?.view?.dom as HTMLElement | undefined;
+    if (!dom) return;
+
+    const onBlur = () => flushBodyHtmlSync();
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") flushBodyHtmlSync();
+    };
+
+    dom.addEventListener("blur", onBlur);
+    window.addEventListener("pagehide", flushBodyHtmlSync);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      dom.removeEventListener("blur", onBlur);
+      window.removeEventListener("pagehide", flushBodyHtmlSync);
+      document.removeEventListener("visibilitychange", onHidden);
+      // Unmount: the last keystrokes must still reach the form/cache.
+      flushBodyHtmlSync();
+    };
+  }, [editor, flushBodyHtmlSync]);
+
+  // ── Stable callbacks for the memoised subtrees ─────────────────────────────
+  // Declared up here, above the `if (!editor) return null` short-circuit below:
+  // a hook after an early return runs on some renders and not others, which is
+  // both a lint error and a real "rendered more hooks than during the previous
+  // render" crash on the first frame (editor is null until the view mounts).
+  //
+  // `React.memo` only pays off if the props keep their identity between
+  // renders. These used to be inline arrows, which is exactly the pattern that
+  // defeats it: every render produced a new function, so DocumentOutline and
+  // the toolbar re-rendered regardless. The functional-update form keeps them
+  // referentially stable for the lifetime of the editor.
+  const toggleFullscreen = useCallback(() => setIsFullscreen(value => !value), []);
+  const toggleOutline = useCallback(() => setOutlineOpen(value => !value), []);
+  const closeOutline = useCallback(() => setOutlineOpen(false), []);
+  const closeInspector = useCallback(() => setIsInspectorOpen(false), []);
+  const handlePersonaChange = useCallback(
+    (value: boolean) => setValue("isAnonymous", value, { shouldDirty: true }),
+    [setValue],
+  );
+  const handleCategoryChange = useCallback(
+    (slug: string, parentSlug?: string) => {
+      setValue("cat", slug, { shouldDirty: true });
+      setValue("categoryParentSlug", parentSlug || "", { shouldDirty: true });
+    },
+    [setValue],
+  );
 
   useEffect(() => {
     if (initialData && editor && !isInitializedRef.current) {
@@ -628,10 +746,15 @@ export default function ArticleEditor({
       // Cache locally on every change, even while a save is in flight or a
       // conflict is unresolved. This is the copy that survives a crash, so it
       // must keep pace with the keystrokes rather than with the server.
+      // The snapshot is throttled to one per second *and* lazily evaluated, so
+      // serialising here is cheap in a way the old per-keystroke `onUpdate`
+      // serialisation never was. Reading the live editor rather than the form
+      // matters now that the form is updated on a debounce: at the instant a
+      // crash happens, `getValues("bodyHtml")` can be up to one debounce stale,
+      // and the cache is precisely the copy that has to be exact.
       cacheDraft(() => ({
         values: getValues(),
-        // onUpdate already serialized the current HTML into the form.
-        bodyHtml: getValues("bodyHtml") || "",
+        bodyHtml: editor && !editor.isDestroyed ? editor.getHTML() : getValues("bodyHtml") || "",
         bodyJson: editor && !editor.isDestroyed ? editor.getJSON() : null,
       }));
 
@@ -804,6 +927,13 @@ export default function ArticleEditor({
   };
 
   const handleSave = async (targetStatus: string, isAutosave = false, notesOverride?: string) => {
+    // The body sync is debounced; a save is exactly the moment the form value
+    // must be current, so the pending serialisation is flushed first. (The
+    // payload below reads the live editor regardless, so this is about keeping
+    // the form, its dirty state and the crash cache in step with what is being
+    // saved rather than about data integrity.)
+    flushBodyHtmlSync();
+
     if (['SUBMITTED', 'PUBLISHED', 'SCHEDULED'].includes(targetStatus)) {
       let incomplete = false;
       editor?.state.doc.descendants((node: any) => {
@@ -1384,8 +1514,8 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
             <EditorToolbar
               editor={editor}
               isFullscreen={isFullscreen}
-              toggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-              onToggleOutline={() => setOutlineOpen(!outlineOpen)}
+              toggleFullscreen={toggleFullscreen}
+              onToggleOutline={toggleOutline}
               outlineOpen={outlineOpen}
             />
           </div>
@@ -1454,7 +1584,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
       {/* ── 2-Column Workspace ── */}
       <div className="studio-workspace flex flex-row flex-1 w-full relative">
 
-        {outlineOpen && !isFullscreen && <DocumentOutline editor={editor} close={() => setOutlineOpen(false)} />}
+        {outlineOpen && !isFullscreen && <DocumentOutline editor={editor} close={closeOutline} />}
 
         {/* ── Main Writing Canvas (Left/Center) ── */}
         <main className="studio-canvas flex-1 min-w-0">
@@ -1548,7 +1678,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
         </main>
 
         {/* ── Document Inspector Rail (Right Sidebar) ── */}
-        <PublishingPanel open={isInspectorOpen} close={() => setIsInspectorOpen(false)}>
+        <PublishingPanel open={isInspectorOpen} close={closeInspector}>
 
           <div className="space-y-4">
             {/* ── Section A: Post Settings & Workflow ── */}
@@ -1562,12 +1692,9 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
               <div className="pt-4 space-y-4 animate-in fade-in duration-200">
                 <div>
                   <label className="ed-rail-label" htmlFor="edCat">Category</label>
-                  <CategorySelector 
+                  <CategorySelector
                     initialCategory={initialData?.category}
-                    onChange={(slug, parentSlug) => {
-                      setValue("cat", slug, { shouldDirty: true });
-                      setValue("categoryParentSlug", parentSlug || "", { shouldDirty: true });
-                    }}
+                    onChange={handleCategoryChange}
                   />
                   <input type="hidden" {...register("cat")} />
                 </div>
@@ -1600,7 +1727,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
                   categorySlug={watch("cat")}
                   parentSlug={watch("categoryParentSlug")}
                   authorName={watch("author")}
-                  onChange={value => setValue("isAnonymous", value, { shouldDirty: true })}
+                  onChange={handlePersonaChange}
                 />
 
                 {/* Author Override */}

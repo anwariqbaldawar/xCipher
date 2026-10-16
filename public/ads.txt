@@ -1,10 +1,16 @@
 # ads.txt — xsypher.com
 #
-# No advertising partner is enabled on this site yet (no AdSense account).
-# An empty records section is a valid ads.txt and declares "no authorised
-# sellers". A placeholder publisher ID would be an INVALID record and can
-# suppress demand — do not publish one until AdSense exists.
+# The records section below is currently empty. An empty records section is a
+# valid ads.txt file: it declares that no third party is authorised to sell
+# advertising inventory on this domain. Advertising is served on this site only
+# through the AdSense unit in the article template, and only after the reader
+# accepts the consent notice.
 #
-# WHEN ADSENSE IS APPROVED:
-#   replace the line below with the real record from AdSense -> Account:
-# google.com, pub-[16_DIGITS_HERE], DIRECT, f08c47fec0942fa0
+# WHEN THE ADSENSE ACCOUNT IS LIVE:
+#   copy the exact line from AdSense -> Account -> ads.txt and put it here,
+#   above this comment block:
+#
+#   google.com, pub-[16_DIGITS_HERE], DIRECT, f08c47fec0942fa0
+#
+# Do not publish a placeholder publisher ID: a malformed record is worse than an
+# empty one and can suppress demand for the domain.

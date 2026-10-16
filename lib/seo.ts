@@ -1,6 +1,58 @@
 import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 import { isStaleAsset } from "@/lib/stale-assets";
-import { BRAND_BANNER_PATH, optimizeImageUrl, resolveImageSrc } from "@/lib/image-url";
+import { BRAND_BANNER_PATH, optimizeImageUrl, resolveImageSrc, socialCardImageUrl } from "@/lib/image-url";
+
+/** The canonical production origin. Apex, because the middleware 308-redirects
+ *  `www.xsypher.com` to `xsypher.com` — a social card pointing at the www host
+ *  would spend a redirect before the crawler ever saw the image. */
+export const CANONICAL_ORIGIN = "https://xsypher.com";
+
+/**
+ * Resolve the site origin from the environment.
+ *
+ * `NEXT_PUBLIC_SITE_URL` is unset on plenty of deployments, and when it *is*
+ * set in a preview or staging build it is routinely `http://localhost:3000`.
+ * Either value leaking into metadata is what produces the two classic social
+ * bugs: `og:image` of `https://xsypher.com/og.png` on a preview host (fine) but
+ * a *relative* `og:image` on a build where the variable is absent, and a
+ * `localhost` image URL in production, which no crawler can fetch and which
+ * therefore renders as a bare text link on X.
+ *
+ * The rules: a real http(s) origin wins, except a loopback/private host or an
+ * insecure origin once NODE_ENV is production — those fall back to the
+ * canonical apex. Nothing here rewrites a legitimate custom domain.
+ */
+export function resolveSiteUrl(raw: string | undefined | null = process.env.NEXT_PUBLIC_SITE_URL): string {
+  const trimmed = raw?.trim();
+  if (!trimmed) return CANONICAL_ORIGIN;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`);
+  } catch {
+    return CANONICAL_ORIGIN;
+  }
+
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return CANONICAL_ORIGIN;
+
+  const host = parsed.hostname.toLowerCase();
+  const isLoopback =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "::1" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local");
+
+  // In production a loopback or plaintext origin cannot be crawled, cannot be
+  // fetched by a social scraper and would break every canonical URL on the
+  // site. Fall back rather than publish it.
+  if (process.env.NODE_ENV === "production" && (isLoopback || parsed.protocol === "http:")) {
+    return CANONICAL_ORIGIN;
+  }
+
+  return `${parsed.protocol}//${parsed.host}`;
+}
 
 export const siteConfig = {
   name: "xSypher",
@@ -8,11 +60,11 @@ export const siteConfig = {
   // the RSS channel and anywhere else the positioning is quoted (CON-002).
   tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
+  url: resolveSiteUrl(),
   twitter: "@ThexSypher",
   locale: "en_US",
   publisher: "xSypher Media",
-  logoUrl: new URL('/xsypher-logo-full.png', process.env.NEXT_PUBLIC_SITE_URL || 'https://xsypher.com').href,
+  logoUrl: new URL("/xsypher-logo-full.png", resolveSiteUrl()).href,
 };
 
 /* ───────────────────────────────────────────────────────────────────────────────
@@ -49,6 +101,50 @@ export function absoluteImageUrl(value?: string | null, base: string = siteConfi
 /** Absolute URL of the publication's brand card. */
 export function brandBannerUrl(base: string = siteConfig.url): string {
   return `${base}${BRAND_BANNER_PATH}`;
+}
+
+/** Raster formats every social scraper renders. SVG is excluded on purpose:
+ *  X, Facebook and WhatsApp do not rasterise it, so an SVG in `og:image` is the
+ *  same as having no image — and this repository can still explain that a
+ *  featured image must be PNG/JPEG/WebP. */
+const SOCIAL_RASTER = /\.(?:png|jpe?g|webp|gif|avif)(?:$|[?#])/i;
+
+/**
+ * The image value a social card may publish.
+ *
+ * Layered on {@link absoluteImageUrl} so a stale placeholder, a bare photo id
+ * and a missing value are all refused once, in one place. On top of that:
+ *
+ *   • the URL is forced to HTTPS in production — X and Facebook will not fetch
+ *     an `http://` card image from an HTTPS page, and the resulting silence is
+ *     indistinguishable from "no thumbnail";
+ *   • a non-raster extension is refused, because a logo SVG in `og:image`
+ *     renders as a text-only link on every platform that matters here;
+ *   • an empty result means "emit no tag", never a brand banner standing in for
+ *     a photograph that does not exist (the Google Images fix, unchanged).
+ */
+export function socialImageUrl(value?: string | null, base: string = siteConfig.url): string | undefined {
+  const absolute = absoluteImageUrl(value, base);
+  if (!absolute) return undefined;
+
+  // Callers may legitimately pass the generated card (`/api/og?...`), which has
+  // no file extension at all — only an explicit, non-raster file extension is
+  // rejected.
+  const path = (() => {
+    try {
+      return new URL(absolute).pathname;
+    } catch {
+      return absolute;
+    }
+  })();
+  const lastSegment = path.split("/").pop() || "";
+  if (lastSegment.includes(".") && !SOCIAL_RASTER.test(absolute)) return undefined;
+
+  if (process.env.NODE_ENV === "production" && absolute.startsWith("http://")) {
+    return `https://${absolute.slice("http://".length)}`;
+  }
+
+  return absolute;
 }
 
 export function constructMetadata({
@@ -96,8 +192,8 @@ export function constructMetadata({
         : `${siteConfig.url}${canonical.startsWith("/") ? canonical : `/${canonical}`}`)
     : siteConfig.url;
 
-  const absoluteImage = absoluteImageUrl(image);
-  const absoluteTwitterImage = twitterImage ? absoluteImageUrl(twitterImage) : absoluteImage;
+  const absoluteImage = socialImageUrl(image);
+  const absoluteTwitterImage = twitterImage ? socialImageUrl(twitterImage) : absoluteImage;
 
   // A story with no usable featured image simply has no og:image. Pointing it
   // at the brand banner would make the banner the photograph Google associates
@@ -214,6 +310,27 @@ export function articleFeaturedImageUrl(article: Pick<NewsArticleSource, "img">)
 export function articleFeaturedCrawlerUrl(article: Pick<NewsArticleSource, "img">): string | undefined {
   const absolute = articleFeaturedImageUrl(article);
   return absolute ? optimizeImageUrl(absolute, 1200) : undefined;
+}
+
+/**
+ * The featured image as a social card: absolute, HTTPS, width-capped and
+ * negotiated to JPEG (see `socialCardImageUrl` for why the format is pinned).
+ *
+ * Scrapers are less forgiving than a browser and less patient than Googlebot.
+ * A multi-megabyte PNG original can simply be refused by X, and the result
+ * looks identical to a site with no card at all — which is the report this
+ * function exists to answer. Where the configured media base cannot run
+ * transformations the stored URL is returned unchanged, so this is a
+ * best-effort optimisation, never a 404.
+ */
+export function articleFeaturedSocialUrl(article: Pick<NewsArticleSource, "img">): string | undefined {
+  const absolute = articleFeaturedImageUrl(article);
+  if (!absolute) return undefined;
+
+  const card = socialCardImageUrl(absolute);
+  // The card URL is derived locally, so it still passes through the same
+  // HTTPS/raster/placeholder gate as every other metadata image.
+  return socialImageUrl(card);
 }
 
 function resolveHeadline(article: NewsArticleSource): string {

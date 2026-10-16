@@ -10,7 +10,7 @@ interface SeoPreviewProps {
   siteName?: string;
 }
 
-export default function SeoPreview({
+function SeoPreview({
   title,
   description,
   slug,
@@ -78,3 +78,8 @@ export default function SeoPreview({
     </div>
   );
 }
+
+// Memoised: the SERP preview is pure string truncation, so it only needs to
+// re-render when one of the five fields behind it actually changes — not on
+// every render of the studio that hosts it.
+export default React.memo(SeoPreview);

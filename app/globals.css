@@ -63,6 +63,18 @@
     --drawer-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     --grid-line: rgba(22, 25, 29, .055);
 
+    /* Inline highlight glass. Light theme: deep enough that white text stays
+       >= 4.5:1 once it composites over --paper (see the <mark> rule). */
+    --hl-fill: rgba(158, 28, 34, 0.90);
+    --hl-fill-2: rgba(126, 18, 30, 0.93);
+    --hl-border: rgba(112, 20, 28, 0.55);
+    /* The bottom edge is the deliberate one: 1px on all sides would read as a
+       button, so the fill sits in a frame whose underside is weighted. */
+    --hl-border-strong: rgba(96, 14, 22, 0.72);
+    --hl-ink: #ffffff;
+    --hl-specular: rgba(255, 255, 255, 0.22);
+    --hl-shadow: rgba(120, 15, 25, 0.28);
+
     --r-sm: 4px;
     --r-md: 8px;
     --r-lg: 12px;
@@ -126,6 +138,16 @@
     --accent: #ff1a1a;
     --accent-deep: #ff4d4d;
     --accent-soft: rgba(255, 26, 26, .1);
+    /* Inline highlight glass, dark theme: low-opacity ruby over #121212
+       (composites to ≈ #461414) so the highlighted text glows instead of
+       sitting on a flat block of paint. */
+    --hl-fill: rgba(255, 26, 26, 0.22);
+    --hl-fill-2: rgba(214, 20, 34, 0.16);
+    --hl-border: rgba(255, 96, 108, 0.38);
+    --hl-border-strong: rgba(255, 122, 132, 0.52);
+    --hl-ink: #ffffff;
+    --hl-specular: rgba(255, 255, 255, 0.12);
+    --hl-shadow: rgba(255, 26, 26, 0.3);
     /* Dark theme brightens rather than darkens, so the press step continues up. */
     --accent-press: #ff8080;
     /* Foreground for text/icons sitting ON an accent fill. Must always remain pure white (#ffffff)
@@ -2767,14 +2789,57 @@ figcaption .credit::before {
     font: 400 0.85em var(--f-mono);
 }
 
-mark,
+/* ── Inline editorial highlight — glass ruby ─────────────────────────────────
+   The <mark> element is the writer's highlighter and nothing else: header CTAs,
+   active category pills, drawer chrome and status badges are painted from
+   --accent / --accent-deep and are deliberately untouched by the rules below.
+
+   This was a flat opaque `--bad` fill. It is now translucent ruby glass, which
+   costs contrast, so the fill is calibrated per theme rather than shared:
+
+     • Light — white text on a white page needs a deep surface. The fill is a
+       ~88% opaque ruby (composited result ≈ #a53636 on --paper), which holds
+       6.6:1 against #ffffff and keeps the glass edge readable.
+     • Dark — the same job in reverse: a low-opacity red over #121212 composites
+       to ≈ #461414, so the text glows on a 15.4:1 surface.
+
+   Both figures are computed against the token values declared in :root and
+   [data-theme="dark"]; if either fill changes, re-check the ratio.
+
+   `:not(.search-mark)` is load-bearing. The element-level selector would
+   otherwise reach the query matches in the Live Search dropdown, which share
+   the <mark> tag but are a different design: there the match is coloured text
+   on the card's own surface, with no box of any kind. The border, padding,
+   radius and blur below would have turned each of those matches into a
+   bordered pill. `.search-mark` (later in this file) keeps its transparent
+   background, but only the properties it declares — the box would still have
+   leaked through, and `!important` on the gradient would have beaten it. */
+mark:not(.search-mark),
 .ProseMirror mark,
 .prose mark,
-.ed-body mark {
-    background-color: var(--bad, #dc2626) !important;
-    color: #ffffff !important;
-    border-radius: 2px;
-    padding: 0.1em 0.2em;
+.ed-body mark,
+.tiptap-content mark,
+.ed-body-content mark {
+    /* One paint layer, not two: a translucent colour under a translucent
+       gradient composites to ~99% opacity, which is the flat fill this rule
+       exists to replace. The gradient alone carries the glass sheen. */
+    background-color: transparent !important;
+    background-image: linear-gradient(180deg, var(--hl-fill) 0%, var(--hl-fill-2) 100%) !important;
+    color: var(--hl-ink, #ffffff) !important;
+    border: 1px solid var(--hl-border);
+    border-bottom-color: var(--hl-border-strong);
+    border-radius: 6px;
+    padding: 0.08em 0.34em;
+    /* A highlight that wraps must look like one ribbon, not a stack of boxes:
+       clone carries the radius and border across every line fragment. */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    -webkit-backdrop-filter: blur(4px) saturate(150%);
+    backdrop-filter: blur(4px) saturate(150%);
+    box-shadow:
+        inset 0 1px 0 var(--hl-specular),
+        0 1px 2px var(--hl-shadow);
+    transition: background-color .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 
 mark * {
@@ -5569,6 +5634,50 @@ pre:hover .code-copy-btn {
     color: var(--muted);
     margin-top: 8px;
     text-align: center
+}
+
+/* ── Inserted figures sit where the caret was ────────────────────────────────
+   The node view wrapper had no explicit display, and the <img> inside the
+   centred figure stayed an inline element — so the position of an inserted
+   image was decided by the surrounding line box rather than by the block it was
+   inserted as. That is what let a freshly inserted picture be painted below the
+   paragraph it was dropped into, with the writer dragging it back up.
+
+   Pinning the whole chain to block layout (with the image centred by
+   `margin-inline` rather than by `text-align` on an inline box) makes the
+   rendered position identical to the position the transaction chose. Margins
+   are symmetric and come from the wrapper, so no half-written line above the
+   node can shift it. */
+.editorial-node {
+    display: block;
+    position: relative;
+    width: 100%;
+}
+
+/* Same rhythm as the public rule below (1.2em), stated here so the wrapper and
+   the figure do not stack two different margins at the insertion point. */
+.editorial-node > .ed-figure {
+    display: block;
+    margin: 1.2em 0;
+}
+
+.ed-body .ed-figure > img,
+.tiptap-content .ed-figure > img,
+.ed-body figure > img,
+.tiptap-content figure > img {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* The caption is the node's editable content, so it must stay in flow directly
+   beneath the image — never floated, never absolutely positioned. */
+.ed-body .ed-figure > figcaption,
+.tiptap-content .ed-figure > figcaption {
+    display: block;
+    margin-top: 8px;
+    break-inside: avoid;
 }
 
 /* ── Public figure / image ── */

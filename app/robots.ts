@@ -34,6 +34,28 @@ export default function robots(): MetadataRoute.Robots {
         allow: '/',
         disallow: DISALLOWED_PATHS,
       },
+      // Social link unfurlers.
+      //
+      // These are listed explicitly rather than left to the `*` group for one
+      // reason: a share preview is the first thing most readers ever see of a
+      // story, and a site that has drifted into blocking one of these
+      // user-agents (a WAF rule, a bot-fight mode, an over-eager rule added
+      // during an attack) will silently render shared links as bare text with
+      // no error anywhere. Naming them here makes that policy auditable, and
+      // the token paths stay closed even to a crawler.
+      {
+        userAgent: [
+          'Twitterbot', // X link previews (twitter:card)
+          'facebookexternalhit', // Facebook + Threads unfurls
+          'WhatsApp', // WhatsApp link previews
+          'LinkedInBot',
+          'Slackbot',
+          'TelegramBot',
+          'Discordbot',
+        ],
+        allow: '/',
+        disallow: DISALLOWED_PATHS,
+      },
       // AI search / retrieval bots — these are what produce AI citations.
       {
         userAgent: [

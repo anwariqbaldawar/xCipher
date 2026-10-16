@@ -594,15 +594,15 @@ export const PAGES: Record<string, PageData> = {
 <p>Spotted something? Email corrections@xsypher.news. We read everything, and we thank readers who make us more accurate.</p>`},
   privacy: {
     t: "Privacy Policy", h: `<h1>Privacy Policy</h1>
-<p>xSypher collects the minimum data needed to run a publication: basic analytics (aggregated, never sold), newsletter addresses (used only to send the newsletter) and account details where you create them.</p>
-<ul><li>We never sell personal data. Ever.</li><li>Advertising is served without cross-site tracking wherever our partners allow it.</li><li>You can request deletion of your data at any time via privacy@xsypher.news.</li><li>This demo build stores newsletter and comment preferences locally in your browser only.</li></ul>
-<p>Full policy text is available on request and updated as regulation requires.</p>`},
+<p>xSypher collects the minimum data needed to run a publication: newsletter addresses (used only to send the newsletter), account details where you create them, and aggregate read counts that are not linked to a reader.</p>
+<ul><li>We never sell personal data. Ever.</li><li>Advertising is delivered through Google's publisher platform and is gated behind the cookie banner; advertising cookies are set only after consent. Personalised advertising can be switched off at Google Ads Settings or aboutads.info.</li><li>You can request a copy of your data, or its deletion, at any time via privacy@xsypher.com.</li></ul>
+<p>The live policy — including the full processor list and retention schedule — is at /page/privacy-policy and is updated whenever the stack changes.</p>`},
   terms: {
     t: "Terms of Use", h: `<h1>Terms of Use</h1>
 <p>By reading xSypher you agree to the simple version: our content is for personal, non-commercial use; our reporting may not be republished without a licence; and we provide journalism as-is, with corrections published when we err. The complete legal terms govern disputes and liability and are available at legal@xsypher.news.</p>`},
   cookies: {
     t: "Cookie Policy", h: `<h1>Cookie Policy</h1>
-<p>xSypher uses essential cookies for theme and reading preferences (stored locally), aggregate analytics to understand which stories serve readers, and advertising cookies only where consent is given. You can clear all locally stored preferences from your browser at any time — this demo edition stores nothing server-side.</p>`},
+<p>xSypher uses essential session and security cookies, first-party aggregate read counting, and advertising cookies served by Google AdSense / DoubleClick — the last group only after you accept in the cookie banner. Theme and consent preferences are stored in your browser's local storage, not in cookies. Declining stops the advertising library from loading at all; you can opt out of personalised advertising separately at Google Ads Settings or aboutads.info. The cookie-by-cookie inventory is maintained at /page/cookie-policy.</p>`},
   advertising: {
     t: "Advertising", h: `<h1>Advertising on xSypher</h1>
 <p>xSypher carries clearly labelled, non-intrusive advertising in standard IAB placements — leaderboards, in-feed units and sidebar placements. We do not run native ads disguised as editorial, and our ad slots are structured for responsible programmatic partners (Google AdSense-ready).</p>

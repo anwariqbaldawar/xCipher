@@ -72,7 +72,7 @@ export const ARTICLE_FALLBACK_COVER = "/fallback-cover.webp";
  *
  * Non-HTTP sources (for example blob previews) remain unchanged.
  */
-export function optimizeImageUrl(src: string, width: number): string {
+export function optimizeImageUrl(src: string, width: number, format: OutputFormat = "auto"): string {
   if (!src || !/^https?:\/\//i.test(src)) return src;
 
   try {
@@ -82,12 +82,38 @@ export function optimizeImageUrl(src: string, width: number): string {
     if (!supportsImageTransformations(publicBase)) return src;
     if (url.pathname.startsWith(TRANSFORM_PATH)) return src;
 
-    const options = `width=${Math.max(1, Math.round(width))},format=auto,quality=82`;
+    const options = `width=${Math.max(1, Math.round(width))},format=${format},quality=82`;
     const path = `${TRANSFORM_PATH}${options}${url.pathname}`;
     return `${url.origin}${path}${url.search}`;
   } catch {
     return src;
   }
+}
+
+/**
+ * Output format for a Cloudflare Image Transformation.
+ *
+ * `auto` lets the edge negotiate AVIF/WebP, which is right for a browser
+ * (smaller bytes, universal support there) and wrong for a social scraper: X
+ * documents JPEG/PNG/WebP/GIF for `twitter:image` and renders nothing for a
+ * format it cannot decode, which is exactly the "link with no card" symptom.
+ * Card images therefore ask for `jpeg` explicitly.
+ */
+export type OutputFormat = "auto" | "jpeg" | "png" | "webp";
+
+/** Canonical social/OpenGraph card width. */ 
+export const SOCIAL_CARD_WIDTH = 1200;
+
+/**
+ * The URL a social crawler should fetch for a stored image.
+ *
+ * Deliberately a different function from {@link optimizeImageUrl} with `auto`:
+ * the card path needs a guaranteed-decodable raster at a bounded size (a
+ * 6 MB original can be refused by the scraper outright) while the page itself
+ * wants the smallest modern format the reader's browser can paint.
+ */
+export function socialCardImageUrl(src: string, width: number = SOCIAL_CARD_WIDTH): string {
+  return optimizeImageUrl(src, width, "jpeg");
 }
 
 /**

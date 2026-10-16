@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { getArticleRecommendations, getBenchmarkLeaderboard, getRecentArticleSlugs } from "@/lib/cached-queries";
 import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
-import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
+import { articleFeaturedImageUrl, articleFeaturedSocialUrl, constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
 import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
 import { getArticleAuthor } from "@/lib/personas";
 import nextDynamic from "next/dynamic";
@@ -111,8 +111,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // present. A stale placeholder resolves to undefined and the generated card
   // below covers social sharing; the brand banner is never substituted, because
   // that is what made article pages claim an image that is not theirs.
+  //
+  // The card URL is the width-capped JPEG variant (`articleFeaturedSocialUrl`)
+  // rather than the stored original: scrapers are stricter than browsers about
+  // both file size and codec, and a format they will not decode renders as the
+  // bare text link this route was reported for on X. Where the media host
+  // cannot transform, the original URL passes through unchanged.
   const featuredImage = articleFeaturedImageUrl(article);
-  const resolvedImage = featuredImage || ogUrl;
+  const socialImage = articleFeaturedSocialUrl(article);
+  const resolvedImage = socialImage || featuredImage || ogUrl;
 
   return constructMetadata({
     // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription

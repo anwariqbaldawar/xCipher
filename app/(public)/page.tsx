@@ -11,43 +11,50 @@ import BreakingTicker from "@/components/home/BreakingTicker";
 import EditorialTicker from "@/components/home/EditorialTicker";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import AdUnit from "@/components/common/AdUnit";
-import { brandBannerUrl, siteConfig } from "@/lib/seo";
+import { articleFeaturedSocialUrl, brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
 import { serializeJsonLd } from "@/lib/article-schema";
 import { headers } from "next/headers";
 import { getReadingTimeMinutes } from "@/lib/reading-time";
 
-export const metadata: Metadata = {
-  alternates: {
+/**
+ * Homepage metadata — a *dynamic* social card.
+ *
+ * The homepage used to publish the brand banner (`/og-fallback.png`, a black
+ * card with the wordmark on it) as its `og:image`. That is a correct fallback
+ * and a terrible first impression: sharing `xsypher.com` on Threads, Facebook,
+ * WhatsApp or X rendered a plain text card instead of the artwork of the story
+ * the publication is currently leading with.
+ *
+ * So the card is now the latest featured story's own featured image, resolved
+ * through the same ladder as everywhere else (`articleFeaturedSocialUrl`:
+ * absolute, HTTPS, 1200px, JPEG, stale placeholders refused). The brand banner
+ * is still the fallback when the publication has no usable featured image —
+ * a pre-launch or empty database must not emit an `og:image` that 404s.
+ *
+ * Google Images context (kept intact): the page-level *structured data* still
+ * declares the CollectionPage with the brand banner and never claims a story's
+ * photograph as the homepage's own image (see `generateCollectionPageJsonLd`
+ * below). Only the social card follows the lead story.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const title = `${siteConfig.name} — ${siteConfig.tagline}`;
+  const description = siteConfig.description;
+
+  const hero = (await getHomeHeroArticle()) || (await getHomeArticles())[0] || null;
+  const socialImage = hero ? articleFeaturedSocialUrl(hero) : undefined;
+  const image = socialImage || brandBannerUrl();
+  const imageAlt = socialImage ? (hero?.title ?? title) : title;
+
+  return constructMetadata({
+    title,
+    description,
+    image,
+    imageAlt,
     canonical: siteConfig.url,
-  },
-  // The homepage's own image is the brand banner — never the lead story's
-  // photograph. Previously the homepage emitted no image at all, which left
-  // Google Images free to bind whatever it found in the markup (a placeholder
-  // truck PNG at one point) to the homepage title.
-  openGraph: {
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-    url: siteConfig.url,
-    siteName: siteConfig.name,
-    images: [
-      {
-        url: brandBannerUrl(),
-        width: 1200,
-        height: 630,
-        alt: `${siteConfig.name} — ${siteConfig.tagline}`,
-      },
-    ],
     type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: `${siteConfig.name} — ${siteConfig.tagline}`,
-    description: siteConfig.description,
-    images: [brandBannerUrl()],
-    site: siteConfig.twitter,
-  },
-};
+  });
+}
 
 // Cached and revalidated on a timer, rather than force-dynamic.
 //

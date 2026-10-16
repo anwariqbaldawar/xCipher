@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
+import { memo, useEffect, useRef, useState, type ElementType, type ReactNode } from 'react';
 import { type Editor, useEditorState } from '@tiptap/react';
 import { Undo, Redo, Bold, Italic, Underline, Strikethrough, Code, List, ListOrdered, Quote, ImagePlus, Link2, FileCode, Minus, Maximize2, Minimize2, RemoveFormatting, MonitorPlay, Table as TableIcon, AlignLeft, AlignCenter, AlignRight, Subscript, Superscript, Highlighter, Search, ChevronDown, BarChart3, Workflow, ListChecks, ClipboardList, Star, Download, PanelLeft } from 'lucide-react';
 import { InsertMediaDialog, type MediaKind } from './InsertMediaDialog';
@@ -36,7 +36,14 @@ function Item({ children, onClick, disabled = false }: { children: ReactNode; on
   return <button type="button" disabled={disabled} onMouseDown={event => event.preventDefault()} onClick={onClick}>{children}</button>;
 }
 
-export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggleOutline, outlineOpen }: EditorToolbarProps) {
+/**
+ * Memoised: formatting state is read through `useEditorState`, so this toolbar
+ * never depended on the parent re-rendering — it was re-rendered anyway, which
+ * meant ~40 buttons rebuilt per keystroke during the editor's old
+ * per-transaction render. `React.memo` leaves the subscription as the only path
+ * that can repaint it.
+ */
+export const EditorToolbar = memo(function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggleOutline, outlineOpen }: EditorToolbarProps) {
   useEditorState({ editor, selector: ({ editor }) => getEditorFormattingState(editor) });
   const [tab, setTab] = useState<'write' | 'insert'>('write');
   const [findOpen, setFindOpen] = useState(false);
@@ -48,6 +55,8 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
   const [isConvertingDiagram, setIsConvertingDiagram] = useState(false);
   const linkDialog = useRef<HTMLDialogElement>(null);
   const linkSelection = useRef<{ from: number; to: number } | null>(null);
+  /** Caret position captured when the media dialog opened (see `openMedia`). */
+  const insertionPoint = useRef<{ from: number; to: number } | null>(null);
   const openLink = () => {
     const { from, to } = editor.state.selection;
     linkSelection.current = { from, to };
@@ -90,7 +99,66 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     chain.extendMarkRange('link').unsetLink().run();
     linkDialog.current?.close();
   };
-  const openMedia = (kind: MediaKind) => { setMediaSession(value => value + 1); setMediaKind(kind); };
+  const openMedia = (kind: MediaKind) => {
+    // Capture the caret before the dialog steals focus.
+    //
+    // The media dialog is a native <dialog>, so opening it moves DOM focus into
+    // a <form> outside the contenteditable. ProseMirror keeps its own selection
+    // in state, but that state is only trustable if nothing else has touched it
+    // in the meantime — and the report we are fixing is an image that lands at
+    // the bottom of the document instead of at the caret, which is what happens
+    // when the insertion runs against a selection that has been reset to the
+    // end of the doc. Capturing from/to here and restoring them immediately
+    // before the insert makes the placement deterministic.
+    if (!editor.isActive('figure') && !editor.isActive('image')) {
+      const { from, to } = editor.state.selection;
+      insertionPoint.current = { from, to };
+    } else {
+      // Editing an existing figure: no repositioning is wanted.
+      insertionPoint.current = null;
+    }
+    setMediaSession(value => value + 1);
+    setMediaKind(kind);
+  };
+
+  /**
+   * Put the caret back where the dialog was opened from, guard against a stale
+   * position (the document may have changed while the dialog was open — the
+   * user can still type with the dialog on screen on some platforms, and
+   * autosave can replace content), and then run `insert` against that point.
+   */
+  const insertAtCaret = (insert: () => unknown) => {
+    const point = insertionPoint.current;
+    insertionPoint.current = null;
+
+    if (point) {
+      const max = editor.state.doc.content.size;
+      const from = Math.min(Math.max(point.from, 0), max);
+      const to = Math.min(Math.max(point.to, from), max);
+      editor.chain().focus().setTextSelection({ from, to }).run();
+    } else {
+      editor.chain().focus().run();
+    }
+
+    insert();
+
+    // Bring the result into view without moving the page more than necessary.
+    //
+    // This is the other half of the report that a freshly inserted image ends up
+    // "at the bottom": the insertion itself can be correct while the viewport
+    // stays where it was, and the browser's own focus scrolling then parks the
+    // caret — now just after the figure — against the lower edge of the
+    // scrolling box. `block: 'nearest'` is the deliberate part: if the image is
+    // already on screen nothing moves at all, which is what "does not displace
+    // content" has to mean for someone inserting a picture into the paragraph
+    // they are already looking at.
+    requestAnimationFrame(() => {
+      const anchor = window.getSelection()?.anchorNode as HTMLElement | null;
+      const node = anchor?.nodeType === Node.TEXT_NODE ? anchor.parentElement : anchor;
+      (node?.closest('.editorial-node, figure') as HTMLElement | null)
+        ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  };
   const exportDocument = () => {
     const blob = new Blob([JSON.stringify(editor.getJSON(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -139,10 +207,11 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     <dialog ref={linkDialog} className="studio-dialog" aria-label="Insert or edit link"><h2>Insert link</h2><p>Link the selected text to a source.</p><label>URL<input autoFocus type="url" value={linkUrl} onChange={event => setLinkUrl(event.target.value)} placeholder="https://" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applyLink(); } }} /></label>{linkError && <p role="alert">{linkError}</p>}<div><button type="button" onClick={() => linkDialog.current?.close()}>Cancel</button><button type="button" onClick={removeLink}>Remove link</button><button type="button" className="studio-primary" onClick={applyLink}>Apply</button></div></dialog>
     <InsertMediaDialog key={mediaSession} kind={mediaKind || 'image'} open={mediaKind !== null} onClose={() => setMediaKind(null)} onInsertImage={value => {
       if (editor.isActive('figure') || editor.isActive('image')) {
-        editor.chain().focus().updateAttributes('figure', value).run();
+        // Editing the figure the caret is already inside: leave it where it is.
+        insertAtCaret(() => editor.chain().focus().updateAttributes('figure', value).run());
       } else {
-        (editor.chain().focus() as any).setFigure(value).run();
+        insertAtCaret(() => (editor.chain().focus() as any).setFigure(value).run());
       }
-    }} onInsertVideo={value => editor.chain().focus().setYouTubeVideo(value).run()} />
+    }} onInsertVideo={value => insertAtCaret(() => editor.chain().focus().setYouTubeVideo(value).run())} />
   </div>;
-}
+});

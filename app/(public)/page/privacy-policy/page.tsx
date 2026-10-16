@@ -1,239 +1,365 @@
-import { Info, Shield, Lock, FileText, Globe } from 'lucide-react';
-import type { Metadata } from 'next';
+import React from "react";
+import type { Metadata } from "next";
+import {
+  Cookie,
+  Database,
+  FileText,
+  Globe,
+  Info,
+  Lock,
+  Shield,
+  Users,
+} from "lucide-react";
+import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
+import { PolicyCallout, PolicyCard, PolicyFooter, PolicyHero, PolicyLayout, type PolicySection } from "@/components/common/PolicyShell";
 
-export const metadata: Metadata = {
-  title: 'Privacy Policy | xSypher',
-  description: 'Understand how xSypher collects, uses, and protects your personal data under GDPR and CCPA guidelines.',
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// Privacy Policy
+//
+// Three things were wrong with the previous revision and all three are fixed
+// by rewriting it against what the product actually does:
+//
+//   1. It described a hosting stack we do not run ("Vercel for hosting") and
+//      analytics we do not load ("Google Analytics or Plausible"), while the
+//      edge, the databases, the image store and the email paths are all named
+//      in .env.example. Every processor below is one this publication
+//      genuinely sends data to.
+//   2. It said nothing about advertising, while the site ships a Google
+//      AdSense integration gated behind the consent banner. A privacy policy
+//      that omits the advertising stack is not AdSense-compliant, so the
+//      advertising and vendor-cookie sections are now explicit and link to the
+//      Cookie Policy for the cookie-level detail.
+//   3. Reader-facing placeholder copy — sentences describing what a demo build
+//      stores locally — is gone from the live policy, and the same strings were
+//      removed from lib/mockData.ts so they cannot reappear through a stale
+//      seed path.
+//
+// Layout (and the mobile card fix) is shared with the other policy routes via
+// components/common/PolicyShell.tsx.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const metadata: Metadata = constructMetadata({
+  title: "Privacy Policy — xSypher",
+  description:
+    "What xSypher collects, why, how long it is kept and who processes it — including the advertising partners that serve ads on this site, your GDPR and CCPA rights, and how to exercise them.",
+  canonical: `${siteConfig.url}/page/privacy-policy`,
+  image: brandBannerUrl(),
+  imageAlt: "xSypher privacy policy",
+  type: "website",
+});
+
+const SECTIONS: PolicySection[] = [
+  { id: "tldr", label: "0. Summary" },
+  { id: "information-collection", label: "1. Information we collect" },
+  { id: "how-we-use", label: "2. How we use it" },
+  { id: "cookies", label: "3. Cookies & advertising" },
+  { id: "data-sharing", label: "4. Sharing & processors" },
+  { id: "your-rights", label: "5. Your rights (GDPR/CCPA)" },
+  { id: "security", label: "6. Security & retention" },
+  { id: "children", label: "7. Children" },
+  { id: "contact", label: "8. Contact" },
+];
 
 export default function PrivacyPolicyPage() {
   return (
-    <div className="bg-[var(--surface)] min-h-screen">
-      {/* HEADER HERO */}
-      <header className="border-b border-[var(--line)] bg-[var(--surface-2)]">
-        <div className="max-w-7xl mx-auto px-4 pt-32 pb-16 sm:pt-40 sm:px-8 lg:pt-44 lg:px-12">
-          <div className="max-w-3xl">
-            <span className="text-[var(--accent)] font-bold text-xs uppercase tracking-widest mb-3 block">
-              Legal & Compliance
-            </span>
-            <h1 className="font-[family:var(--f-display)] text-4xl sm:text-5xl font-bold mb-4 text-[var(--ink)] tracking-tight">
-              Privacy Policy
-            </h1>
-            <p className="font-[family:var(--f-body)] text-lg text-[var(--muted)] leading-relaxed">
-              We believe in digital transparency. This policy outlines exactly how we handle your data, your privacy rights, and how we protect your information.
-            </p>
-            <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-[var(--faint)]">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)]"></span>
-              Last Updated: September 19, 2026
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[var(--surface)] text-[var(--ink)]">
+      <PolicyHero
+        kicker="Legal & Compliance"
+        title="Privacy Policy"
+        deck="We collect the minimum needed to run a publication, we do not sell your data, and the newsletter list never touches an advertiser. This page states exactly what is collected, where it goes and how to get it deleted."
+        updated="15 October 2026"
+        badges={[
+          { label: "Applies to", value: "xsypher.com & newsletters" },
+          { label: "Compliance", value: "GDPR · UK GDPR · CCPA/CPRA" },
+          { label: "Controllers", value: "xSypher (independent publication)" },
+        ]}
+      />
 
-      {/* MAIN CONTENT WRAPPER */}
-      <div className="max-w-7xl mx-auto px-4 py-12 sm:px-8 lg:px-12 flex flex-col lg:flex-row gap-12">
-        
-        {/* SIDEBAR NAVIGATION (Sticky on Desktop) */}
-        <aside className="lg:w-1/4 hidden lg:block shrink-0">
-          <div className="sticky top-32">
-            <h4 className="font-[family:var(--f-display)] font-bold text-sm text-[var(--ink)] uppercase tracking-wider mb-4 border-b border-[var(--line)] pb-2">
-              Table of Contents
-            </h4>
-            <nav className="flex flex-col font-[family:var(--f-ui)] text-sm border-l-2 border-[var(--line-2)]">
-              <a href="#tldr" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">0. TL;DR Summary</a>
-              <a href="#information-collection" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">1. Information We Collect</a>
-              <a href="#how-we-use" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">2. How We Use Your Data</a>
-              <a href="#data-sharing" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">3. Data Sharing & Disclosure</a>
-              <a href="#your-rights" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">4. Your Privacy Rights (GDPR/CCPA)</a>
-              <a href="#security" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">5. Data Security & Retention</a>
-              <a href="#contact" className="-ml-[2px] py-2 pl-4 border-l-2 border-transparent text-[var(--muted)] hover:text-[var(--ink)] hover:border-[var(--accent)] transition-all font-medium">6. Contact Information</a>
-            </nav>
-          </div>
-        </aside>
+      <PolicyLayout
+        sections={SECTIONS}
+        footerNote={
+          <>
+            <strong className="text-[var(--ink)]">Data request?</strong> Email{" "}
+            <a href="mailto:privacy@xsypher.com" className="font-semibold text-[var(--accent)] underline">
+              privacy@xsypher.com
+            </a>{" "}
+            from the address concerned and we will confirm what we hold and delete it if you ask us to. Requests are
+            answered within 30 days.
+          </>
+        }
+      >
+        <PolicyCallout title="Summary: the short version" icon={Info} tone="accent">
+          <ul>
+            <li>
+              We collect what is necessary to publish, deliver and improve the site — an email address if you
+              subscribe or create an account, and aggregate read statistics that are not tied to you.
+            </li>
+            <li>
+              <strong>We do not sell your personal data.</strong> Your newsletter address is never given, rented or
+              exposed to an advertiser or a data broker.
+            </li>
+            <li>
+              Newsletter email is opt-in, sent through our email provider, and cancellable with one click in every
+              issue.
+            </li>
+            <li>
+              Advertising is delivered by Google&apos;s publisher platform and is gated behind the cookie banner:
+              non-essential advertising cookies are set only after you accept. Full detail is in the{" "}
+              <a href="/page/cookie-policy">Cookie Policy</a>.
+            </li>
+            <li>
+              You can request a copy of your data, correct it, or have it deleted at any time by writing to{" "}
+              <a href="mailto:privacy@xsypher.com">privacy@xsypher.com</a>.
+            </li>
+          </ul>
+        </PolicyCallout>
 
-        {/* CONTENT AREA */}
-        <article className="lg:w-3/4 max-w-3xl text-[var(--ink)] space-y-12">
-          
-          {/* TL;DR BOX */}
-          <section id="tldr" className="scroll-mt-28 bg-[var(--surface-2)] border border-[var(--line)] rounded-2xl p-6 sm:p-8 shadow-sm">
-            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-              <div className="p-3 bg-[var(--surface)] rounded-xl text-[var(--accent)] shadow-sm shrink-0">
-                <Info className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="font-[family:var(--f-display)] font-bold text-[var(--ink)] text-xl mb-3">TL;DR: The Short Version</h3>
-                <ul className="list-none space-y-3 font-[family:var(--f-body)] text-[var(--muted)] leading-relaxed">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We only collect data necessary to provide and improve our journalism and services.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed"><strong>We do not sell your personal data to third parties. Ever.</strong></span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">Newsletter emails are strictly opt-in, and you can unsubscribe with one click.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[var(--accent)] font-bold mt-0.5 shrink-0">•</span>
-                    <span className="text-[var(--muted)] leading-relaxed">We use standard analytics (like Google Analytics or Plausible) to optimize your reading experience without tracking you across the wider web.</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </section>
+        <PolicyCard id="information-collection" title="1. Information We Collect" eyebrow="Section 01" icon={FileText}>
+          <p>
+            We collect information in three ways: what you give us directly, what is recorded automatically when a
+            page is served, and what a third-party processor returns to us as part of running the site.
+          </p>
+          <h3>A. Information you provide</h3>
+          <ul>
+            <li>
+              <strong>Newsletter subscription:</strong> your email address, and the date you subscribed. Nothing else
+              is required to receive the newsletter.
+            </li>
+            <li>
+              <strong>Account and comments:</strong> your name or display name, email address and a hashed password if
+              you register to comment or to work in the editorial console.
+            </li>
+            <li>
+              <strong>Correspondence:</strong> the content of messages you send to the desk — including tips,
+              corrections and contact-form submissions, plus any file you choose to attach.
+            </li>
+          </ul>
+          <h3>B. Information recorded automatically</h3>
+          <ul>
+            <li>Request metadata needed to serve a page: the requested URL, a timestamp and standard browser and device headers.</li>
+            <li>
+              Security and abuse signals processed at our edge: IP address and request patterns, used for rate limiting,
+              bot mitigation and keeping the site online. Ordinary article reads are not used to build a profile of you.
+            </li>
+            <li>Aggregate read counts per article — a number attached to a story, not to a reader.</li>
+          </ul>
+          <h3>C. What we deliberately do not collect</h3>
+          <ul>
+            <li>No payment card data — there is no paywall and no paid tier on this site today.</li>
+            <li>No special-category data, no biometric data, and no data purchased from data brokers.</li>
+            <li>No cross-site behavioural profile built by us; advertising measurement is done by Google under its own terms.</li>
+          </ul>
+        </PolicyCard>
 
-          {/* SECTION 1 */}
-          <section id="information-collection" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <FileText className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                1. Information We Collect
-              </h2>
-            </div>
-            <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--muted)] font-[family:var(--f-body)]">
-              <p className="mb-4">
-                We collect information in three primary ways: information you provide directly to us, information we collect automatically when you use our platform, and information we may receive from third parties.
-              </p>
-              <h3 className="text-[var(--ink)] font-bold text-lg mt-6 mb-3">A. Information You Provide</h3>
-              <p className="mb-4">
-                When you sign up for the xSypher Daily Brief, register for an account, or contact our editorial desk, we collect:
-              </p>
-              <ul className="list-disc pl-5 mb-4 space-y-1">
-                <li>Your name and email address.</li>
-                <li>Account credentials (hashed passwords).</li>
-                <li>Communications and correspondence sent to our support or editorial teams.</li>
-              </ul>
-              <h3 className="text-[var(--ink)] font-bold text-lg mt-6 mb-3">B. Automatically Collected Information</h3>
-              <p className="mb-4">
-                To ensure platform security and optimize delivery, our servers automatically record standard log data:
-              </p>
-              <ul className="list-disc pl-5 mb-4 space-y-1">
-                <li>Device and browser type (e.g., Chrome on macOS).</li>
-                <li>IP address (anonymized where required by local law).</li>
-                <li>Referring URLs, pages viewed, and reading duration.</li>
-              </ul>
-            </div>
-          </section>
+        <PolicyCard id="how-we-use" title="2. How We Use Your Data" eyebrow="Section 02" icon={Database}>
+          <p>
+            Data is used to deliver, secure and improve the publication. We rely on your consent for optional cookies
+            and on legitimate interests (and the necessity of delivering a service you asked for) for the rest.
+          </p>
+          <ul>
+            <li>
+              <strong>Service delivery:</strong> sending the newsletter you subscribed to, authenticating your account,
+              and publishing your comment under the name you chose.
+            </li>
+            <li>
+              <strong>Platform security:</strong> detecting malicious traffic, rate limiting abuse, preventing CSRF and
+              credential-stuffing attempts, and enforcing our terms.
+            </li>
+            <li>
+              <strong>Editorial analytics:</strong> aggregate counting of which stories are read, so the desk knows what
+              to spend its reporting budget on. This data is not linked to an individual reader.
+            </li>
+            <li>
+              <strong>Advertising:</strong> serving and measuring advertising through Google&apos;s publisher platform,
+              which is what keeps the reporting free to read.
+            </li>
+            <li>
+              <strong>Legal compliance:</strong> keeping records needed to answer a lawful request or to defend a legal
+              claim.
+            </li>
+          </ul>
+        </PolicyCard>
 
-          {/* SECTION 2 */}
-          <section id="how-we-use" className="scroll-mt-28">
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-6">
-              2. How We Use Your Data
-            </h2>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                The data we gather is strictly used to deliver, maintain, and enhance the xSypher platform. We rely on your consent and our legitimate business interests to process this data.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
-                <div className="p-5 border border-[var(--line)] rounded-xl bg-[var(--surface-2)]">
-                  <h4 className="font-bold text-[var(--ink)] mb-2">Service Delivery</h4>
-                  <p className="text-sm">To send newsletters, authenticate your account, and provide access to premium content.</p>
-                </div>
-                <div className="p-5 border border-[var(--line)] rounded-xl bg-[var(--surface-2)]">
-                  <h4 className="font-bold text-[var(--ink)] mb-2">Platform Security</h4>
-                  <p className="text-sm">To detect malicious activity, prevent DDoS attacks, and enforce our Terms of Use.</p>
-                </div>
-                <div className="p-5 border border-[var(--line)] rounded-xl bg-[var(--surface-2)]">
-                  <h4 className="font-bold text-[var(--ink)] mb-2">Editorial Analytics</h4>
-                  <p className="text-sm">To understand which topics readers actually use, so we know what to cover in more depth.</p>
-                </div>
-              </div>
-            </div>
-          </section>
+        <PolicyCard id="cookies" title="3. Cookies, Advertising & Consent" eyebrow="Section 03" icon={Cookie} emphasis>
+          <p>
+            Cookies fall into three groups — essential session and security cookies, first-party performance
+            measurement, and third-party advertising cookies served by Google AdSense and its partners. Only the first
+            group is set without a choice, because the site cannot work without it.
+          </p>
+          <ul>
+            <li>
+              <strong>Advertising vendors.</strong> Google and its demand partners serve and measure ads on this site.
+              They may set cookies (for example <em>IDE</em>, <em>__gads</em> and <em>__gpi</em>) to sequence and cap
+              advertising, detect invalid traffic, and — where consent applies — personalise the ads you see.
+            </li>
+            <li>
+              <strong>Your control.</strong> Declining in our banner stops the advertising library from loading at all;
+              accepting allows it. You can opt out of personalised advertising independently at{" "}
+              <a href="https://adssettings.google.com" target="_blank" rel="noopener noreferrer">
+                Google Ads Settings
+              </a>{" "}
+              or{" "}
+              <a href="https://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer">
+                aboutads.info
+              </a>
+              , and we honour the Global Privacy Control signal.
+            </li>
+            <li>
+              <strong>Cookie-level detail.</strong> Names, purposes and durations for every cookie and browser-storage
+              key are listed in the <a href="/page/cookie-policy">Cookie Policy</a>.
+            </li>
+          </ul>
+          <p>
+            We do not sell personal information, and we do not let an advertising partner receive your newsletter
+            address, your account email or your comment history.
+          </p>
+        </PolicyCard>
 
-          {/* SECTION 3 */}
-          <section id="data-sharing" className="scroll-mt-28">
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-6">
-              3. Data Sharing & Disclosure
-            </h2>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                <strong>We do not sell, rent, or trade your personal information.</strong> We only share data with trusted third-party vendors who assist us in operating our platform (e.g., Vercel for hosting, Resend for emails). These vendors are legally bound by strict data processing agreements.
-              </p>
-              <p>
-                We may also disclose information if required to do so by law, such as to comply with a subpoena or similar legal process, or when we believe in good faith that disclosure is necessary to protect our rights, protect your safety, investigate fraud, or respond to a government request.
-              </p>
-            </div>
-          </section>
+        <PolicyCard id="data-sharing" title="4. Data Sharing & Processors" eyebrow="Section 04" icon={Globe}>
+          <p>
+            <strong>We do not sell, rent or trade your personal information.</strong> Data is shared only with the
+            service providers that make the publication work, each of which is bound by its own data-processing terms:
+          </p>
+          <ul>
+            <li>
+              <strong>Cloudflare</strong> — edge hosting, CDN, asset delivery and the image store (R2) that holds
+              article media.
+            </li>
+            <li>
+              <strong>Neon / Supabase (PostgreSQL)</strong> — the database holding article metadata, comments, accounts
+              and newsletter subscriptions.
+            </li>
+            <li>
+              <strong>Cloudinary</strong> — avatar image hosting and transformation for author profiles.
+            </li>
+            <li>
+              <strong>Email providers (Resend / Brevo)</strong> — delivery of the newsletter and transactional messages
+              such as password resets and comment replies.
+            </li>
+            <li>
+              <strong>Google (AdSense and advertising partners)</strong> — advertising delivery, measurement and
+              invalid-traffic protection, with cookie scope described in the{" "}
+              <a href="/page/cookie-policy">Cookie Policy</a>.
+            </li>
+            <li>
+              <strong>Error monitoring</strong> — aggregate crash and performance reporting used to keep pages
+              available, configured not to capture article content or reader form input.
+            </li>
+          </ul>
+          <p>
+            We may also disclose information where required by law — to comply with a subpoena, court order or other
+            lawful process, or where we believe in good faith that disclosure is necessary to protect rights, safety or
+            the integrity of the service. Where a request is unlawful or over-broad we contest it, and we do not
+            voluntarily identify confidential editorial sources to anyone.
+          </p>
+        </PolicyCard>
 
-          {/* SECTION 4 */}
-          <section id="your-rights" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <Globe className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                4. Your Privacy Rights (GDPR & CCPA)
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                Depending on your location (such as the EU/EEA, UK, or California), you are granted specific legal rights regarding your data:
-              </p>
-              <ul className="list-disc pl-5 mb-4 space-y-2">
-                <li><strong>Right to Access:</strong> You can request a copy of the personal data we hold about you.</li>
-                <li><strong>Right to Rectification:</strong> You can ask us to correct inaccurate or incomplete data.</li>
-                <li><strong>Right to Erasure ("Right to be Forgotten"):</strong> You can request that we delete your personal data from our systems.</li>
-                <li><strong>Right to Restrict Processing:</strong> You can ask us to pause processing your data under certain conditions.</li>
-                <li><strong>Right to Data Portability:</strong> You can request your data in a structured, machine-readable format.</li>
-              </ul>
-              <div className="mt-6 p-4 bg-[var(--accent)]/10 border border-[var(--accent)]/30 rounded-xl">
-                <p className="text-[var(--ink)] text-sm font-semibold">
-                  To exercise any of these rights, please email our Data Protection Officer at <a href="mailto:privacy@xsypher.com" className="text-[var(--accent)] hover:underline">privacy@xsypher.com</a>. We will respond to your request within 30 days.
-                </p>
-              </div>
-            </div>
-          </section>
+        <PolicyCard id="your-rights" title="5. Your Privacy Rights (GDPR & CCPA)" eyebrow="Section 05" icon={Shield}>
+          <p>
+            Depending on where you live — for example the EU/EEA, the UK, or California — you have specific legal
+            rights over your data. We honour these for everyone who asks, not only where a statute compels it:
+          </p>
+          <ul>
+            <li>
+              <strong>Access:</strong> a copy of the personal data we hold about you.
+            </li>
+            <li>
+              <strong>Rectification:</strong> correction of inaccurate or incomplete data.
+            </li>
+            <li>
+              <strong>Erasure:</strong> deletion of your personal data, including your newsletter subscription and
+              comment history.
+            </li>
+            <li>
+              <strong>Restriction:</strong> a pause on processing while a dispute about accuracy is resolved.
+            </li>
+            <li>
+              <strong>Portability:</strong> your data in a structured, machine-readable format.
+            </li>
+            <li>
+              <strong>Objection and withdrawal of consent:</strong> opt out of advertising cookies, analytics or the
+              newsletter at any time.
+            </li>
+            <li>
+              <strong>Non-discrimination (CCPA/CPRA):</strong> we do not degrade the site for readers who exercise a
+              privacy right. We do not sell personal information; you may opt out of sharing for targeted advertising
+              through the banner or your browser&apos;s privacy signal.
+            </li>
+          </ul>
+          <p>
+            To exercise any of these rights, email{" "}
+            <a href="mailto:privacy@xsypher.com">privacy@xsypher.com</a> from the address concerned — we may ask you to
+            confirm control of that address before acting, which is what stops someone else deleting your subscription.
+            Requests are answered within 30 days. If you are not satisfied with our response you can complain to your
+            national data-protection authority, and we will tell you which one applies if you ask.
+          </p>
+        </PolicyCard>
 
-          {/* SECTION 5 */}
-          <section id="security" className="scroll-mt-28">
-            <div className="flex items-center gap-3 mb-6">
-              <Shield className="w-6 h-6 text-[var(--accent)]" />
-              <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-                5. Data Security & Retention
-              </h2>
-            </div>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                We implement state-of-the-art cryptographic and structural security measures to protect your data. All data transmitted between your browser and our servers is encrypted using TLS 1.3. User passwords are computationally hashed using Bcrypt/Argon2.
-              </p>
-              <p>
-                We retain your personal information only for as long as necessary to fulfill the purposes outlined in this policy, unless a longer retention period is required by law. When data is no longer needed, it is securely destroyed or irreversibly anonymized.
-              </p>
-            </div>
-          </section>
+        <PolicyCard id="security" title="6. Data Security & Retention" eyebrow="Section 06" icon={Lock}>
+          <p>
+            Traffic is encrypted in transit and served over TLS. Account passwords are stored as salted hashes computed
+            with a purpose-built password algorithm and are never recoverable in plaintext. Access to production data
+            is restricted to the small number of people who operate the publication, protected by two-factor
+            authentication, and every editorial action is written to an audit log.
+          </p>
+          <p>
+            We keep personal data only as long as it is needed for the purpose it was collected for, unless a longer
+            period is required by law:
+          </p>
+          <ul>
+            <li>
+              <strong>Newsletter subscription:</strong> until you unsubscribe, plus a short suppression record so a
+              removal cannot be undone by an accidental re-import.
+            </li>
+            <li>
+              <strong>Account data:</strong> while the account exists, then deleted on request.
+            </li>
+            <li>
+              <strong>Contact and corrections correspondence:</strong> retained as an editorial record of what was
+              reported and how it was resolved.
+            </li>
+            <li>
+              <strong>Aggregate read counts:</strong> kept indefinitely, because they contain no personal data.
+            </li>
+          </ul>
+          <p>
+            When data is no longer needed it is deleted from the live database and rotated out of backups on their own
+            schedule. If a breach ever affects personal data, we will notify affected readers and the relevant
+            authority without undue delay.
+          </p>
+        </PolicyCard>
 
-          {/* SECTION 6 */}
-          <section id="contact" className="scroll-mt-28 pb-12">
-            <h2 className="font-[family:var(--f-display)] text-2xl sm:text-3xl font-bold text-[var(--ink)] mb-6">
-              6. Contact Information
-            </h2>
-            <div className="text-[var(--muted)] font-[family:var(--f-body)] leading-relaxed space-y-4">
-              <p>
-                If you have any questions, concerns, or requests regarding this Privacy Policy, our privacy practices, or your dealings with the xSypher platform, please contact us.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <a 
-                  href="mailto:privacy@xsypher.com"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 !bg-[var(--accent)] dark:!bg-[var(--accent)] !text-white dark:!text-white font-[family:var(--f-ui)] font-bold rounded-lg shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 group relative overflow-hidden"
-                >
-                  <span className="relative z-10 flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Email Privacy Team
-                  </span>
-                </a>
-                <a 
-                  href="/page/contact"
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-[var(--surface-2)] text-[var(--ink)] border border-[var(--line)] font-[family:var(--f-ui)] font-bold rounded-lg hover:bg-[var(--surface-3)] transition-all"
-                >
-                  General Contact
-                </a>
-              </div>
-            </div>
-          </section>
+        <PolicyCard id="children" title="7. Children's Privacy" eyebrow="Section 07" icon={Users}>
+          <p>
+            xSypher is a technology publication written for a general adult audience. We do not knowingly collect
+            personal data from children under 13 (or under 16 where local law sets that age for consent). If you
+            believe a child has given us personal data, write to{" "}
+            <a href="mailto:privacy@xsypher.com">privacy@xsypher.com</a> and we will delete it, along with any
+            subscription attached to it, without further questions.
+          </p>
+        </PolicyCard>
 
-        </article>
-      </div>
+        <PolicyCard id="contact" title="8. Contact & Changes" eyebrow="Section 08" icon={Globe}>
+          <p>
+            This policy is reviewed whenever the stack changes — a new processor, an advertising partner, a new data
+            type — and the &ldquo;last updated&rdquo; date at the top of the page always reflects the most recent
+            substantive revision. Material changes are announced on the site rather than slipped in behind a date
+            change.
+          </p>
+          <p>
+            Questions, requests and complaints about this policy go to{" "}
+            <a href="mailto:privacy@xsypher.com">privacy@xsypher.com</a>. General editorial enquiries go to the{" "}
+            <a href="/page/contact">contact desk</a>.
+          </p>
+        </PolicyCard>
+
+        <PolicyFooter
+          title="Ask us what we hold — or have it deleted"
+          body="Send a request from the address concerned and we will confirm what is stored and remove it on request. You never have to explain why."
+          primary={{ href: "mailto:privacy@xsypher.com", label: "Email the privacy desk", mail: true }}
+          secondary={{ href: "/page/cookie-policy", label: "Cookie Policy" }}
+        />
+      </PolicyLayout>
     </div>
   );
 }

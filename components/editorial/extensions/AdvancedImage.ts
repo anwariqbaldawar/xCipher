@@ -1,4 +1,4 @@
-import { mergeAttributes, Node } from '@tiptap/core'
+import { mergeAttributes, Node, type CommandProps } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import FigureBlock from './FigureBlock'
 
@@ -14,6 +14,17 @@ export const Figure = Node.create({
   name: 'figure',
   group: 'block',
   content: 'inline*',
+  /**
+   * A figure is a block, stated explicitly.
+   *
+   * `inline: false` is the default for a node in the `block` group, and it is
+   * written out because the failure it guards against is subtle: an inline node
+   * participates in the surrounding line box, so an image inserted into a
+   * paragraph can be laid out *below* the text around it — the baseline and
+   * line-height decide the position, not the caret. Insertion is meant to place
+   * a block between two paragraphs, never inside a line.
+   */
+  inline: false,
   draggable: true,
   isolating: true,
 
@@ -82,14 +93,36 @@ export const Figure = Node.create({
 
   addCommands() {
     return {
+      /**
+       * Insert a figure at the current selection.
+       *
+       * Two deliberate behaviours:
+       *
+       *  1. The node is inserted against the selection as it stands *now* — the
+       *     caller (toolbar or bubble menu) is responsible for having restored
+       *     the caret the media dialog was opened from, so the image lands where
+       *     the writer was typing rather than wherever focus ended up when the
+       *     dialog closed.
+       *  2. When the caret is at the very end of the document, an empty
+       *     paragraph is inserted after the figure. Without it the story ends on
+       *     an image and the writer has to hunt for the gap cursor to keep
+       *     typing below it; with it the document reads the way it looks, and
+       *     nothing that was already in the document moves.
+       */
       setFigure:
         (options: any) =>
-        ({ commands }: any) => {
-          return commands.insertContent({
+        ({ commands, state }: CommandProps) => {
+          const figure = {
             type: this.name,
             attrs: options,
             content: options.caption ? [{ type: 'text', text: options.caption }] : [],
-          })
+          };
+
+          const atDocumentEnd = state.selection.to >= state.doc.content.size - 1;
+
+          return commands.insertContent(
+            atDocumentEnd ? [figure, { type: 'paragraph' }] : figure,
+          )
         },
     }
   },
