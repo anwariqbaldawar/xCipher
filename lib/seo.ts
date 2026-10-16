@@ -1,6 +1,64 @@
 import { getArticleAuthor, type ArticleAuthorSource } from "@/lib/personas";
 import { isStaleAsset } from "@/lib/stale-assets";
-import { BRAND_BANNER_PATH, optimizeImageUrl, resolveImageSrc } from "@/lib/image-url";
+import {
+  BRAND_BANNER_PATH,
+  SOCIAL_CARD_SIZE,
+  isRasterImageUrl,
+  optimizeImageUrl,
+  resolveImageSrc,
+} from "@/lib/image-url";
+
+/** The production origin. Canonical URLs, `og:url` and every social card. */
+const PRODUCTION_SITE_URL = "https://xsypher.com";
+
+/**
+ * The origin this deployment must publish in metadata, canonical tags and
+ * `metadataBase`.
+ *
+ * `NEXT_PUBLIC_SITE_URL` is honoured when it points at a real host, because
+ * staging deployments need their own origin. What it must never do is leak into
+ * production metadata: a value of `http://localhost:3000` — the default in a
+ * local `.env`, and exactly what a developer copying `.env.example` gets —
+ * would publish `og:url`, `og:image` and every canonical tag as `localhost`,
+ * so X, Threads, Facebook and WhatsApp would render a broken or blank preview
+ * for the live site, and Google would be handed a non-canonical origin.
+ * Loopback hosts and non-HTTP protocols therefore resolve to production.
+ */
+function resolveSiteUrl(): string {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!raw) return PRODUCTION_SITE_URL;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return PRODUCTION_SITE_URL;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return PRODUCTION_SITE_URL;
+
+  const host = parsed.hostname.toLowerCase();
+  const isLoopback =
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "[::1]" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.endsWith(".internal");
+  if (isLoopback) return PRODUCTION_SITE_URL;
+
+  // `www.xsypher.com/*` permanently redirects (308) to the apex domain in
+  // next.config.ts. An env value pointing at www would therefore publish a
+  // canonical/og:url that immediately redirects elsewhere, which is the one
+  // thing a canonical tag must never do. Normalising the site's own domain to
+  // its final form keeps canonical, og:url, sitemap and the redirect rules on a
+  // single origin; any other host is returned exactly as configured.
+  if (host === "www.xsypher.com") parsed.hostname = "xsypher.com";
+
+  // Trailing slashes would produce `https://host//article/...` in every URL
+  // built by string concatenation across the app.
+  return parsed.href.replace(/\/+$/, "");
+}
 
 export const siteConfig = {
   name: "xSypher",
@@ -8,11 +66,11 @@ export const siteConfig = {
   // the RSS channel and anywhere else the positioning is quoted (CON-002).
   tagline: "Independent Technology News, Analysis and Reviews",
   description: "xSypher is an independent technology publication covering AI, cybersecurity, gadgets, software, programming, startups, gaming and the tech business.",
-  url: process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com",
+  url: resolveSiteUrl(),
   twitter: "@ThexSypher",
   locale: "en_US",
   publisher: "xSypher Media",
-  logoUrl: new URL('/xsypher-logo-full.png', process.env.NEXT_PUBLIC_SITE_URL || 'https://xsypher.com').href,
+  logoUrl: new URL('/xsypher-logo-full.png', resolveSiteUrl()).href,
 };
 
 /* ───────────────────────────────────────────────────────────────────────────────
@@ -49,6 +107,83 @@ export function absoluteImageUrl(value?: string | null, base: string = siteConfi
 /** Absolute URL of the publication's brand card. */
 export function brandBannerUrl(base: string = siteConfig.url): string {
   return `${base}${BRAND_BANNER_PATH}`;
+}
+
+/**
+ * Final gate before a URL becomes `og:image` / `twitter:image`.
+ *
+ * Social crawlers are far less forgiving than a browser: X, WhatsApp and
+ * Threads reject `image/svg+xml` outright and fall back to a bare text link, so
+ * a vector asset in an image slot means no thumbnail at all. A non-raster URL
+ * therefore resolves to the raster brand card.
+ *
+ * The URL is otherwise published exactly as stored, with no width-capped
+ * Cloudflare transform in front of it — that is a deliberate constraint, not an
+ * oversight. The same URL is the article's `image` in its BlogPosting JSON-LD
+ * and the photographed object Google Images indexes; rewriting it here would
+ * make the metadata claim a resized derivative the page never displays.
+ *
+ * Returns `undefined` for an absent value, so a route with no image still emits
+ * no tag (see the note in `constructMetadata`).
+ */
+export function socialCardUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  if (!isRasterImageUrl(url)) return brandBannerUrl();
+  return url;
+}
+
+/**
+ * The homepage's social card: the lead story's own photograph, not brand art.
+ *
+ * The root URL was previously published with `/og-fallback.png` — a near-black
+ * wordmark card — as its `og:image`. On X that reads as a failed preview, and on
+ * Facebook, Threads and WhatsApp it produced the same plain dark rectangle for
+ * every share of the domain, so the link looked identical to one with no image
+ * at all.
+ *
+ * A story image is used when one exists: highest-resolution editorial image the
+ * lead story has. The brand card remains the fallback for a newsroom with
+ * nothing published, for a lead story whose image is a stale placeholder, and
+ * for a non-raster (SVG) asset that the networks would reject.
+ */
+export function leadStorySocialCard(
+  lead: { title?: string | null; img?: string | null } | null | undefined,
+): { image: string; alt: string } {
+  const featured = lead ? articleFeaturedImageUrl(lead) : undefined;
+  const title = lead?.title?.trim();
+  return {
+    image: socialCardUrl(featured) ?? brandBannerUrl(),
+    alt: title ? `${title} — featured on ${siteConfig.name}` : `${siteConfig.name} — ${siteConfig.tagline}`,
+  };
+}
+
+/**
+ * MIME type for an `og:image`, when it can be stated truthfully.
+ *
+ * Two cases deliberately return `undefined` rather than a guess:
+ *
+ *   • a Cloudflare Image Transformations URL (`/cdn-cgi/image/…`), where
+ *     `format=auto` means the wire format depends on the crawler's `Accept`
+ *     header, not on the file extension;
+ *   • the generated `/api/og` card, whose path carries no extension at all
+ *     even though it answers with a PNG.
+ *
+ * A wrong `og:image:type` is worse than a missing one — Facebook uses the
+ * declared type to decide how to fetch, and can drop the image entirely.
+ */
+function ogImageMimeType(url: string): string | undefined {
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname.toLowerCase();
+  } catch {
+    pathname = url.toLowerCase();
+  }
+  if (pathname.includes("/cdn-cgi/image/")) return undefined;
+  if (pathname.endsWith(".png")) return "image/png";
+  if (pathname.endsWith(".webp")) return "image/webp";
+  if (pathname.endsWith(".jpg") || pathname.endsWith(".jpeg")) return "image/jpeg";
+  if (pathname.endsWith(".avif")) return "image/avif";
+  return undefined;
 }
 
 export function constructMetadata({
@@ -96,8 +231,8 @@ export function constructMetadata({
         : `${siteConfig.url}${canonical.startsWith("/") ? canonical : `/${canonical}`}`)
     : siteConfig.url;
 
-  const absoluteImage = absoluteImageUrl(image);
-  const absoluteTwitterImage = twitterImage ? absoluteImageUrl(twitterImage) : absoluteImage;
+  const absoluteImage = socialCardUrl(absoluteImageUrl(image));
+  const absoluteTwitterImage = twitterImage ? socialCardUrl(absoluteImageUrl(twitterImage)) : absoluteImage;
 
   // A story with no usable featured image simply has no og:image. Pointing it
   // at the brand banner would make the banner the photograph Google associates
@@ -120,8 +255,13 @@ export function constructMetadata({
         ? [
             {
               url: absoluteImage,
-              width: 1200,
-              height: 630,
+              // `secureUrl` is what the Open Graph protocol wants for an HTTPS
+              // image; some crawlers (LinkedIn among them) read it in
+              // preference to `og:image`, so both are emitted.
+              secureUrl: absoluteImage,
+              type: ogImageMimeType(absoluteImage),
+              width: SOCIAL_CARD_SIZE.width,
+              height: SOCIAL_CARD_SIZE.height,
               alt: imageAlt || title,
             },
           ]

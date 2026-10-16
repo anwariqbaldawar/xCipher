@@ -3,6 +3,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet } from '@tiptap/pm/view'
 import { ReactNodeViewRenderer } from '@tiptap/react'
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo'
 import { common, createLowlight } from 'lowlight'
 import { CodeBlockComponent } from './CodeBlockComponent'
 
@@ -238,7 +239,7 @@ export const CodeBlockLowlight = Node.create<CodeBlockLowlightOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(CodeBlockComponent)
+    return ReactNodeViewRenderer(CodeBlockComponent, { update: memoNodeViewUpdate })
   },
 
   addCommands() {

@@ -31,6 +31,14 @@
     --ok: #1a7f4e;
     --warn: #845a12;
     --bad: #c0392b;
+    /* Inline editorial highlight (<mark>). A wash thin enough to read as ink
+       sitting on paper rather than a solid block of colour, plus one hairline
+       along the baseline for definition. The ink stays at full contrast —
+       white-on-pink text was the failure mode this pair of tokens exists to
+       prevent. */
+    --mark-wash: rgba(230, 0, 0, .085);
+    --mark-rule: rgba(230, 0, 0, .30);
+    --mark-ink: #0a0a0a;
     /* Foreground for text placed ON a solid status fill. Flips per theme because
      the status tokens themselves flip from dark-on-light to light-on-dark. */
     --on-status: #ffffff;
@@ -138,6 +146,13 @@
     --warn: #e0a53a;
     --bad: #f2685c;
     --on-status: #0c0d10;
+    /* Crimson tint on a near-black page: translucent enough to sit *in* the
+       text rather than on top of it, with the hairline carrying the definition
+       that a low-opacity wash alone cannot. No glow — a blurred halo behind
+       highlighted words is what makes a highlight look synthetic. */
+    --mark-wash: rgba(255, 26, 26, .17);
+    --mark-rule: rgba(255, 26, 26, .42);
+    --mark-ink: #ffffff;
     --grid-line: rgba(233, 231, 225, .05);
 
     --shadow-1: 0 1px 3px rgba(0, 0, 0, .4), 0 4px 14px rgba(0, 0, 0, .3);
@@ -2767,17 +2782,38 @@ figcaption .credit::before {
     font: 400 0.85em var(--f-mono);
 }
 
-mark,
-.ProseMirror mark,
+/* ── Inline highlight (<mark>) ────────────────────────────────────────────────
+   Article prose and the editor canvas only. Deliberately NOT a bare `mark`
+   selector: the live-search overlay's matched characters are a different
+   treatment (see `.search-mark` below) and a global rule was bleeding a solid
+   red box — and white text — into the results list.
+
+   Both themes are tuned separately through the --mark-* tokens:
+     dark   crimson wash ≈17% over near-black, hairline at 42%, pure white ink
+     light  crimson wash ≈8.5% over white, hairline at 30%, near-black ink
+
+   Padding is vertical-only and small so highlighting a run cannot shift the
+   paragraph's leading, and `box-decoration-break: clone` keeps the corners and
+   the baseline rule correct when a highlight wraps across lines. */
 .prose mark,
-.ed-body mark {
-    background-color: var(--bad, #dc2626) !important;
-    color: #ffffff !important;
-    border-radius: 2px;
-    padding: 0.1em 0.2em;
+.tiptap-content mark,
+.ed-body mark,
+.ed-body-content mark,
+.ProseMirror mark {
+    background-color: var(--mark-wash, rgba(230, 0, 0, .09)) !important;
+    color: var(--mark-ink, #0a0a0a) !important;
+    border-radius: 3px;
+    padding: 0.06em 0.22em;
+    border-bottom: 1px solid var(--mark-rule, rgba(230, 0, 0, .3));
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
 }
 
-mark * {
+.prose mark *,
+.tiptap-content mark *,
+.ed-body mark *,
+.ed-body-content mark *,
+.ProseMirror mark * {
     color: inherit !important;
 }
 
@@ -8844,11 +8880,19 @@ body.is-article .prose pre {
 }
 
 /* The characters the reader actually typed: brand-red text, no highlight
-   box behind them. */
+   box behind them.
+   `!important` is load-bearing. The prose highlight rule above sets a
+   background and an ink colour with `!important` of its own, and a plain
+   declaration here — however specific — cannot beat it, which is how matched
+   characters in titles and author names ended up white-on-red inside a box
+   instead of red text on the panel. */
 .search-mark {
-    background: transparent;
-    color: var(--accent);
+    background: transparent !important;
+    color: var(--accent) !important;
     font-weight: 700;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
 }
 
 /* ── Footer, empty and hint states ─────────────────────────────────────── */

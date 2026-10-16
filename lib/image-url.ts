@@ -91,6 +91,39 @@ export function optimizeImageUrl(src: string, width: number): string {
 }
 
 /**
+ * The 1.91:1 canvas every social card is declared at.
+ *
+ * X, Facebook, Threads, WhatsApp and LinkedIn all render a link preview in this
+ * aspect ratio, and a declared size is what tells them the image is large
+ * enough for a big card instead of a thumbnail. It is kept in one place rather
+ * than repeated as a literal in each route's metadata.
+ *
+ * Note this is the *card* canvas, not a claim about the file: an editorial
+ * featured image is published at its own upload URL (deliberately — that is
+ * what keeps Google Images bound to the object the article actually shows),
+ * and the network scales it into this frame.
+ */
+export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
+
+/**
+ * Whether a URL is a raster format the social networks accept.
+ *
+ * X, WhatsApp and Threads refuse `image/svg+xml` in a card — the preview falls
+ * back to a bare text link — so an SVG must never be allowed to reach
+ * `og:image`. The extension is read from the pathname only: a `.svg` inside a
+ * query string (a cache-buster, say) says nothing about the payload.
+ */
+export function isRasterImageUrl(src: string | undefined | null): boolean {
+  if (!src) return false;
+  try {
+    const pathname = new URL(src, "https://placeholder.invalid").pathname.toLowerCase();
+    return !pathname.endsWith(".svg") && !pathname.endsWith(".svgz");
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Single entry point for turning a stored image value into something safe to
  * put in an `<img src>`.
  *

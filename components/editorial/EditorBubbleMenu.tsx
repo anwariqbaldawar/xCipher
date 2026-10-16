@@ -23,6 +23,7 @@ import {
   Columns2,
 } from "lucide-react";
 import { InsertMediaDialog } from "./InsertMediaDialog";
+import { captureSelection, insertFigureAtSelection, type EditorSelection } from "@/lib/editor/figure-insert";
 import { CODE_LANGUAGES } from "./extensions/CodeBlockLowlight";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -103,19 +104,40 @@ export function EditorBubbleMenu({ editor }: Props) {
   const [mediaKind, setMediaKind] = useState<"image" | "video" | null>(null);
   const [initialMedia, setInitialMedia] = useState<any>(null);
 
+  // The caret as it stood when the dialog opened, plus whether that position
+  // belonged to an existing figure. Both are read while the editor still owns
+  // the selection: by the time the (async) upload resolves, the live selection
+  // has been through a focus change and can no longer be trusted.
+  const mediaSelection = useRef<EditorSelection | null>(null);
+  const mediaEditsExistingFigure = useRef(false);
+
   const openMedia = useCallback((kind: "image", currentAttrs?: any) => {
+    mediaSelection.current = captureSelection(editor);
+    mediaEditsExistingFigure.current = Boolean(currentAttrs);
     setMediaSession((n) => n + 1);
     setMediaKind(kind);
     setInitialMedia(currentAttrs || null);
-  }, []);
+  }, [editor]);
 
   const insertImage = useCallback(
     (v: { src: string; alt: string; caption: string; credit: string }) => {
-      if (editor?.isActive('figure') || editor?.isActive('image')) {
-        editor.chain().focus().updateAttributes('figure', v).run();
-      } else {
-        (editor?.chain().focus() as any).setFigure(v).run();
+      if (!editor) return;
+      const saved = mediaSelection.current;
+      const editsExisting = mediaEditsExistingFigure.current;
+      mediaSelection.current = null;
+      mediaEditsExistingFigure.current = false;
+
+      if (editsExisting) {
+        const size = editor.state.doc.content.size;
+        const clamp = (position: number) => Math.max(0, Math.min(position, size));
+        const from = saved ? clamp(saved.from) : editor.state.selection.from;
+        const to = saved ? clamp(saved.to) : editor.state.selection.to;
+        editor.chain().focus().setTextSelection({ from, to }).updateAttributes('figure', v).run();
+        return;
       }
+
+      // New image: insert at the captured caret, never at the document end.
+      insertFigureAtSelection(editor, saved, v);
     },
     [editor]
   );
@@ -362,7 +384,11 @@ export function EditorBubbleMenu({ editor }: Props) {
         key={mediaSession}
         kind={mediaKind ?? 'image'}
         open={mediaKind !== null}
-        onClose={() => setMediaKind(null)}
+        onClose={() => {
+          setMediaKind(null);
+          mediaSelection.current = null;
+          mediaEditsExistingFigure.current = false;
+        }}
         onInsertImage={insertImage}
         onInsertVideo={() => {}}
         initialImage={initialMedia}

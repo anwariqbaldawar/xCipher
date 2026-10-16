@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { BLOCK_LABELS, type BlockKind } from '@/lib/editorial-blocks'
+import { insertFigureAt } from '@/lib/editor/figure-insert'
 
 interface SlashCommandItem {
   title: string
@@ -270,13 +271,17 @@ export const getSuggestionItems = ({ query }: { query: string }): SlashCommandIt
       description: 'Insert an image with caption',
       icon: '🖼️',
       command: ({ editor, range }) => {
-        editor.chain().focus().deleteRange(range).run()
         const url = window.prompt("Image URL (e.g. https://images.pexels.com/...)")
         if (!url) return
         const alt = window.prompt("Alt Text (for accessibility/SEO):") || ""
         const caption = window.prompt("Caption (optional):") || ""
         const credit = window.prompt("Image Credit (optional):") || "";
-        (editor.chain().focus() as any).setFigure({ src: url, alt, caption, credit }).run()
+        // Clear the "/image" query first, then insert the figure at the position
+        // it occupied. The prompts above are synchronous but the insert is not
+        // allowed to depend on the selection they may have disturbed.
+        const at = range.from
+        editor.chain().focus().deleteRange(range).run()
+        insertFigureAt(editor, at, { src: url, alt, caption, credit })
       },
     },
     {

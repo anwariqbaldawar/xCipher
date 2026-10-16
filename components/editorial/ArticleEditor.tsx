@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, startTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showToast } from "@/lib/utils";
-import { useEditor, EditorContent, ReactRenderer } from "@tiptap/react";
+import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Heading from "@tiptap/extension-heading";
 import Underline from "@tiptap/extension-underline";
@@ -56,11 +56,29 @@ import { authorize } from "@/lib/capabilities";
 import { EditorialBlock } from "./extensions/EditorialBlock";
 import { parseEditorialBlock } from "@/lib/editorial-blocks";
 import DocumentOutline from "./DocumentOutline";
+import { getDocumentCounts } from "@/lib/editor/document-state";
 import DocumentStatus from "./DocumentStatus";
 import PublishingPanel from "./PublishingPanel";
 import EditorialPersonaSettings from "./EditorialPersonaSettings";
 import { getPersonaForCategory } from "@/lib/personas";
 import "./styles/studio.css";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live word count
+// ─────────────────────────────────────────────────────────────────────────────
+// Subscribed to the editor state on its own, so a keystroke re-renders this one
+// span instead of the whole studio (form, inspector rail, toolbar, footer).
+// `getDocumentCounts` is memoised per immutable document in lib/editor.
+function EditorWordCount({ editor }: { editor: Editor }) {
+  const words = useEditorState({ editor, selector: ({ editor }) => getDocumentCounts(editor).words });
+  const isBelowMin = words < 50;
+  return (
+    <span className={`text-xs ml-2 font-medium flex items-center gap-1 ${isBelowMin ? "text-[var(--warn)] hidden sm:flex" : "text-[var(--muted)] hidden md:flex"}`}>
+      Word count: {words}
+      {isBelowMin && <span className="hidden sm:inline">(Min 50)</span>}
+    </span>
+  );
+}
 
 function hasEmptyMermaidSource(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
@@ -234,6 +252,27 @@ export default function ArticleEditor({
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const router = useRouter();
+
+  // ── Typing performance ──────────────────────────────────────────────────
+  //
+  // The editor used to call setValue("bodyHtml", editor.getHTML()) on every
+  // single keystroke. That did two expensive things per character:
+  //
+  //   1. serialized the entire document to HTML, and
+  //   2. pushed a react-hook-form state update, which re-rendered this whole
+  //      component — header, toolbar, canvas and the entire inspector rail.
+  //
+  // At 1,200 words that is a full-page render between keystrokes: visible lag,
+  // dropped clicks and a caret that will not follow the mouse. Serialization
+  // now happens on a trailing debounce instead, so a burst of typing produces
+  // one state update rather than one per character. Nothing that needs the
+  // document reads from this debounced form value — saves and the crash cache
+  // both read the live editor.
+  const editorRef = useRef<Editor | null>(null);
+  const bodySyncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const bodyDirtyRef = useRef(false);
+  const lastSerializedHtmlRef = useRef<string | null>(null);
+
 
   // Overlap guard. On a slow connection a save can still be in flight when the
   // next debounce fires; two concurrent upserts for the same article race each
@@ -415,6 +454,32 @@ export default function ArticleEditor({
     defaultValues,
   });
 
+  const flushEditorBody = useCallback(() => {
+    const active = editorRef.current;
+    if (!active || active.isDestroyed) return;
+    const html = active.getHTML();
+    // Identical output means nothing to tell react-hook-form about. Skipping
+    // the write also keeps the autosave subscription from being re-armed by a
+    // no-op change.
+    if (html === lastSerializedHtmlRef.current) return;
+    lastSerializedHtmlRef.current = html;
+    bodyDirtyRef.current = false;
+    setValue("bodyHtml", html, { shouldDirty: true });
+  }, [setValue]);
+
+  const scheduleBodySync = useCallback(() => {
+    bodyDirtyRef.current = true;
+    if (bodySyncTimerRef.current) clearTimeout(bodySyncTimerRef.current);
+    bodySyncTimerRef.current = setTimeout(() => {
+      bodySyncTimerRef.current = null;
+      flushEditorBody();
+    }, 400);
+  }, [flushEditorBody]);
+
+  useEffect(() => () => {
+    if (bodySyncTimerRef.current) clearTimeout(bodySyncTimerRef.current);
+  }, []);
+
   const editor = useEditor({
     extensions: [
       Markdown,
@@ -535,10 +600,22 @@ export default function ArticleEditor({
       },
     },
     content: defaultValues.bodyHtml,
-    onUpdate: ({ editor }: any) => {
-      setValue("bodyHtml", editor.getHTML(), { shouldDirty: true });
+    // Mark the document dirty and let the debounce do the serializing. See the
+    // note above editorRef: this is the line that used to make long articles
+    // unusable.
+    onUpdate: () => {
+      scheduleBodySync();
     },
   });
+
+  // Keep a live handle on the editor for the debounce, the unmount flush and
+  // the beforeunload guard.
+  useEffect(() => {
+    editorRef.current = editor;
+    return () => {
+      if (editorRef.current === editor) flushEditorBody();
+    };
+  }, [editor, flushEditorBody]);
 
   useEffect(() => {
     if (initialData && editor && !isInitializedRef.current) {
@@ -608,6 +685,8 @@ export default function ArticleEditor({
       // still means it never reached the server, which is worth a prompt.
       const unsynced =
         typingTimeoutRef.current !== null ||
+        bodySyncTimerRef.current !== null ||
+        bodyDirtyRef.current ||
         saveInFlightRef.current ||
         resaveQueuedRef.current ||
         autosaveStatus === "error" ||
@@ -639,8 +718,10 @@ export default function ArticleEditor({
       if (isPending || autosaveStatus === "conflict") return;
 
       // "edited" rather than "idle": there are now unsaved changes, and the
-      // indicator should say so while the debounce runs.
-      setAutosaveStatus("edited");
+      // indicator should say so while the debounce runs. The updater form keeps
+      // an already-"edited" status referentially unchanged, so React bails out
+      // instead of re-rendering the studio on every debounced sync.
+      setAutosaveStatus(current => (current === "edited" ? current : "edited"));
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
       typingTimeoutRef.current = setTimeout(() => {
@@ -1192,16 +1273,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
               {currentFormStatus === 'SUBMITTED' ? 'In Review' : currentFormStatus}
             </span>
 
-            {(() => {
-              const words = editor.storage.characterCount.words();
-              const isBelowMin = words < 50;
-              return (
-                <span className={`text-xs ml-2 font-medium flex items-center gap-1 ${isBelowMin ? 'text-[var(--warn)] hidden sm:flex' : 'text-[var(--muted)] hidden md:flex'}`}>
-                  Word count: {words}
-                  {isBelowMin && <span className="hidden sm:inline">(Min 50)</span>}
-                </span>
-              );
-            })()}
+            <EditorWordCount editor={editor} />
 
             <span
               role="status"

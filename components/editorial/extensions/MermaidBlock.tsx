@@ -1,6 +1,7 @@
 import { Node, mergeAttributes, type Editor } from '@tiptap/core';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { ReactNodeViewRenderer } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 import { MermaidNodeView } from './MermaidNodeView';
 
 export interface MermaidBlockOptions {
@@ -169,7 +170,7 @@ export const MermaidBlock = Node.create<MermaidBlockOptions>({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(MermaidNodeView);
+    return ReactNodeViewRenderer(MermaidNodeView, { update: memoNodeViewUpdate });
   },
 
   // Let the code-block extension handle typed fences: an atomic diagram cannot

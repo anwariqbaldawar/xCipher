@@ -1,11 +1,21 @@
-import { mergeAttributes, Node } from '@tiptap/core'
+import { mergeAttributes, Node, type Editor } from '@tiptap/core'
 import { ReactNodeViewRenderer } from '@tiptap/react'
 import FigureBlock from './FigureBlock'
+import { insertFigureAt, type FigureAttrs } from '@/lib/editor/figure-insert'
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     figure: {
-      setFigure: (options: { src: string; alt?: string; caption?: string; credit?: string; title?: string }) => ReturnType
+      /**
+       * Insert a figure block.
+       *
+       * `at` is the caret position captured before the media dialog opened. Pass
+       * it whenever the insert follows an async step (upload, external import) or
+       * any focus change — omitting it falls back to the live selection, which is
+       * what used to drop the image at the end of the document.
+       */
+      setFigure: (options: FigureAttrs, at?: number | null) => ReturnType
     }
   }
 }
@@ -64,7 +74,10 @@ export const Figure = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(FigureBlock)
+    // `update` skips the React re-render when this figure's node object and
+    // decorations are untouched, so typing elsewhere in a long story does not
+    // re-render every image block on the page.
+    return ReactNodeViewRenderer(FigureBlock, { update: memoNodeViewUpdate })
   },
 
   renderHTML({ HTMLAttributes }) {
@@ -83,14 +96,9 @@ export const Figure = Node.create({
   addCommands() {
     return {
       setFigure:
-        (options: any) =>
-        ({ commands }: any) => {
-          return commands.insertContent({
-            type: this.name,
-            attrs: options,
-            content: options.caption ? [{ type: 'text', text: options.caption }] : [],
-          })
-        },
+        (options: FigureAttrs, at: number | null = null) =>
+        ({ editor }: { editor: Editor }) =>
+          insertFigureAt(editor, at, options),
     }
   },
 })

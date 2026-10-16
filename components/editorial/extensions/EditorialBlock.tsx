@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 
 import { useState } from 'react';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -27,7 +28,7 @@ export const EditorialBlock = Node.create({
   },
   parseHTML() { return [{ tag: 'div[data-type="editorial-block"]' }]; },
   renderHTML({ HTMLAttributes }) { return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'editorial-block' })]; },
-  addNodeView() { return ReactNodeViewRenderer(EditorialNodeView); },
+  addNodeView() { return ReactNodeViewRenderer(EditorialNodeView, { update: memoNodeViewUpdate }); },
 
   addCommands() { return { insertEditorialBlock: kind => ({ commands }) => commands.insertContent([{ type: this.name, attrs: { data: newEditorialBlock(kind) } }, { type: 'paragraph' }]) }; },
 });

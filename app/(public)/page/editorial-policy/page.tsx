@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, Bot, BadgeDollarSign, FileWarning, FlaskConical, Handshake } from "lucide-react";
+import { ShieldCheck, Bot, BadgeDollarSign, FileWarning, FlaskConical, Handshake, IdCard } from "lucide-react";
 import { brandBannerUrl, constructMetadata, siteConfig } from "@/lib/seo";
 
 export const metadata: Metadata = constructMetadata({
@@ -50,7 +50,7 @@ export default function EditorialPolicyPage() {
           
           {/* Section 1: Editorial Independence */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <ShieldCheck className="w-6 h-6" />
               </div>
@@ -63,7 +63,10 @@ export default function EditorialPolicyPage() {
                     xSypher&apos;s core reporting, reviews and benchmarks are editorially independent. Payment never buys a positive review, a favourable conclusion, a score or a ranking — and no gift or favor changes what we conclude.
                   </p>
                   <p>
-                    Our editorial decisions — including what we cover, how we rate products, and the conclusions we draw — are made separately from advertising and partnerships. Commercial partners support the publication through the clearly labelled formats described below; no sponsor, vendor or investor has prior review, copy approval or veto power over any piece of our journalism.
+                    Our editorial decisions — including what we cover, how we rate products, and the conclusions we draw — are made separately from advertising and partnerships. Commercial partners support the publication through the clearly labelled formats described below; no sponsor, vendor or investor has prior review, copy approval or veto power over any piece of our journalism, and none receives advance warning of critical coverage.
+                  </p>
+                  <p>
+                    Accepting a hospitality invitation, review sample or embargoed briefing never obliges us to publish, and it never obliges us to be kind. Where a company we have covered commercially is later the subject of a critical story, the commercial relationship is disclosed in that story. The full charter, including the corrections protocol, is on our <Link href="/page/editorial-standards" className="text-[var(--accent)] font-semibold hover:underline">Editorial Standards</Link> page.
                   </p>
                 </div>
               </div>
@@ -72,7 +75,7 @@ export default function EditorialPolicyPage() {
 
           {/* Section: Sponsored Content & Native Advertising */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <Handshake className="w-6 h-6" />
               </div>
@@ -105,7 +108,7 @@ export default function EditorialPolicyPage() {
 
           {/* Section 2: Fact-Checking & Sourcing */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <FlaskConical className="w-6 h-6" />
               </div>
@@ -128,12 +131,37 @@ export default function EditorialPolicyPage() {
             </div>
           </div>
 
+          {/* Section: Byline Accountability & Engineering Expertise */}
+          <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+              <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
+                <IdCard className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-[family:var(--f-display)] text-xl sm:text-2xl font-bold text-[var(--ink)] mb-3">
+                  Byline Accountability &amp; Engineering Expertise
+                </h2>
+                <div className="font-[family:var(--f-body)] text-sm sm:text-base text-[var(--muted)] leading-relaxed space-y-4">
+                  <p>
+                    Every byline on xSypher is a named human being who stands behind the work and can be asked to defend it. We do not publish fictitious bylines, invented personas, or a house account presented as a person. Where a piece is genuinely the output of the whole desk — a live briefing, a news round-up — the article says so, and a responsible editor is named.
+                  </p>
+                  <p>
+                    Reviewers, security writers and benchmark authors have hands-on engineering or laboratory experience in the subject they cover, and their specialism is stated on their author profile. Authority on a topic is verified before commissioning, not after publication, and freelancers are held to the same standard as staff.
+                  </p>
+                  <p>
+                    Authors disclose material interests — holdings, employment, paid advisory roles — and are reassigned when a conflict of interest cannot be resolved. A byline is never sold, never rented, and never used to lend credibility to material the named author did not write.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Section 3: AI & Automation Policy */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md relative overflow-hidden">
             {/* Subtle highlight accent for AI policy */}
             <div className="absolute left-0 top-0 bottom-0 w-1 bg-[var(--accent)]" aria-hidden="true" />
             
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <Bot className="w-6 h-6" />
               </div>
@@ -155,7 +183,7 @@ export default function EditorialPolicyPage() {
 
           {/* Section 4: Affiliate & Advertising Disclosure */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <BadgeDollarSign className="w-6 h-6" />
               </div>
@@ -177,7 +205,7 @@ export default function EditorialPolicyPage() {
 
           {/* Section 5: Corrections Policy */}
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl p-6 sm:p-10 shadow-sm transition-all hover:border-[var(--line-2)] hover:shadow-md">
-            <div className="flex items-start gap-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
               <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] flex items-center justify-center text-[var(--accent)]">
                 <FileWarning className="w-6 h-6" />
               </div>

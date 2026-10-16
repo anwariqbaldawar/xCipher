@@ -26,6 +26,40 @@ const DISALLOWED_PATHS = [
   '/*?_rsc=*',
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Social preview crawlers (2026-10-16)
+//
+// These agents are what build the link preview on X, Facebook, Threads,
+// WhatsApp, LinkedIn and Slack, and none of them executes JavaScript or follows
+// a client-side redirect. If one is blocked — or is served a page whose
+// `og:image` it cannot fetch — the share renders as a bare text URL or a plain
+// black placeholder card, which is exactly the failure this group exists to
+// prevent.
+//
+// They are declared explicitly rather than relying on the `*` group for two
+// reasons: it records the intent, and a future tightening of the wildcard rule
+// (a common reaction to scrapers) then cannot silently break every share of the
+// site. `/api/og` stays allowed here even though `/api/` is disallowed for
+// everyone else: the generated fallback card is an image endpoint, and blocking
+// it would leave every article without a featured image with no preview at all.
+// ─────────────────────────────────────────────────────────────────────────────
+const SOCIAL_CRAWLERS = [
+  'Twitterbot',
+  'facebookexternalhit',
+  'facebookcatalog',
+  'WhatsApp',
+  'Threads',
+  'LinkedInBot',
+  'Slackbot',
+  'Slackbot-LinkExpanding',
+  'Discordbot',
+  'TelegramBot',
+  'Pinterestbot',
+  'redditbot',
+  'Embedly',
+  'SkypeUriPreview',
+];
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -33,6 +67,21 @@ export default function robots(): MetadataRoute.Robots {
         userAgent: '*',
         allow: '/',
         disallow: DISALLOWED_PATHS,
+      },
+      // Link-preview agents: full access to pages and image URLs, including the
+      // generated social card at /api/og.
+      {
+        userAgent: SOCIAL_CRAWLERS,
+        allow: ['/', '/api/og'],
+        disallow: [
+          '/admin/',
+          '/search',
+          '/preview',
+          '/invite',
+          '/unsubscribe',
+          '/_next/',
+          '/*?_rsc=*',
+        ],
       },
       // AI search / retrieval bots — these are what produce AI citations.
       {

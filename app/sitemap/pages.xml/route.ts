@@ -64,8 +64,15 @@ async function safely<T>(label: string, query: Promise<T>): Promise<T | null> {
   }
 }
 
-export async function GET(request?: NextRequest) {
-  const requestedPage = Number(request?.nextUrl?.searchParams.get("page") || "1");
+// The request parameter is required, not optional.
+//
+// Next 16 generates a type check for every route handler and rejects an
+// optional first parameter (`request?: NextRequest` is not assignable to
+// `NextRequest | Request`), which fails `next build` outright. Next always
+// supplies a request to a route handler, so the optional form bought nothing
+// and cost the build.
+export async function GET(request: NextRequest) {
+  const requestedPage = Number(request.nextUrl.searchParams.get("page") || "1");
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const offset = (page - 1) * SITEMAP_ARTICLE_LIMIT;
 

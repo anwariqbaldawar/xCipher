@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 import React, { useState } from 'react';
 import { Plus, X, List, Table } from 'lucide-react';
 
@@ -48,7 +49,7 @@ export const SpecSheetBlock = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(SpecSheetNodeView);
+    return ReactNodeViewRenderer(SpecSheetNodeView, { update: memoNodeViewUpdate });
   },
 
   addCommands() {

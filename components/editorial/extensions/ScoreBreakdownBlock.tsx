@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 import React, { useState } from 'react';
 import { Plus, X, BarChart3, Table } from 'lucide-react';
 import { calculateXSypherScore, isNAScore, type ScoreItem, BENCHMARK_TABS } from '@/lib/scoringEngine';
@@ -70,7 +71,7 @@ export const ScoreBreakdownBlock = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ScoreBreakdownNodeView);
+    return ReactNodeViewRenderer(ScoreBreakdownNodeView, { update: memoNodeViewUpdate });
   },
 
   addCommands() {

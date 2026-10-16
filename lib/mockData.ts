@@ -595,7 +595,7 @@ export const PAGES: Record<string, PageData> = {
   privacy: {
     t: "Privacy Policy", h: `<h1>Privacy Policy</h1>
 <p>xSypher collects the minimum data needed to run a publication: basic analytics (aggregated, never sold), newsletter addresses (used only to send the newsletter) and account details where you create them.</p>
-<ul><li>We never sell personal data. Ever.</li><li>Advertising is served without cross-site tracking wherever our partners allow it.</li><li>You can request deletion of your data at any time via privacy@xsypher.news.</li><li>This demo build stores newsletter and comment preferences locally in your browser only.</li></ul>
+<ul><li>We never sell personal data. Ever.</li><li>Advertising is served without cross-site tracking wherever our partners allow it.</li><li>You can request deletion of your data at any time via privacy@xsypher.news.</li></ul>
 <p>Full policy text is available on request and updated as regulation requires.</p>`},
   terms: {
     t: "Terms of Use", h: `<h1>Terms of Use</h1>

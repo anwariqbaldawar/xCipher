@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 import React, { useState } from 'react';
 import { Plus, X, Table } from 'lucide-react';
 
@@ -46,7 +47,7 @@ export const ProsConsBlock = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ProsConsNodeView);
+    return ReactNodeViewRenderer(ProsConsNodeView, { update: memoNodeViewUpdate });
   },
 
   addCommands() {

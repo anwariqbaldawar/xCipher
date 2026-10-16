@@ -9,8 +9,8 @@ import { db } from "@/lib/db";
 import { getArticleRecommendations, getBenchmarkLeaderboard, getRecentArticleSlugs } from "@/lib/cached-queries";
 import { eq, and, sql } from "drizzle-orm";
 import { article as articleTable } from "@/lib/db/schema";
-import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd } from "@/lib/seo";
-import { IMAGE_WIDTHS, resolveImageSrc } from "@/lib/image-url";
+import { articleFeaturedImageUrl, constructMetadata, generateNewsArticleJsonLd, siteConfig } from "@/lib/seo";
+import { IMAGE_WIDTHS, isRasterImageUrl, resolveImageSrc } from "@/lib/image-url";
 import { getArticleAuthor } from "@/lib/personas";
 import nextDynamic from "next/dynamic";
 import { serializeJsonLd, withEditorialSchema } from "@/lib/article-schema";
@@ -104,15 +104,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   ogParams.set("title", article.metaTitle || article.seoTitle || article.title);
   ogParams.set("author", authorName);
   ogParams.set("category", catName);
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
-  const ogUrl = `${baseUrl}/api/og?${ogParams.toString()}`;
+  // `siteConfig.url` rather than the raw env var: it is the resolver that keeps
+  // a localhost or www value out of published URLs (see lib/seo.ts).
+  const ogUrl = `${siteConfig.url}/api/og?${ogParams.toString()}`;
 
   // The article's own featured image is the ONLY editorial image this route may
   // present. A stale placeholder resolves to undefined and the generated card
   // below covers social sharing; the brand banner is never substituted, because
   // that is what made article pages claim an image that is not theirs.
+  //
+  // The raster check is a social-platform constraint, not a preference: X,
+  // Threads and WhatsApp refuse `image/svg+xml` and fall back to a bare text
+  // link, so a vector asset in the featured slot is replaced by the generated
+  // PNG card rather than shipped and silently dropped.
   const featuredImage = articleFeaturedImageUrl(article);
-  const resolvedImage = featuredImage || ogUrl;
+  const usableFeaturedImage = featuredImage && isRasterImageUrl(featuredImage) ? featuredImage : undefined;
+  const resolvedImage = usableFeaturedImage || ogUrl;
 
   return constructMetadata({
     // TSEO-002/TSEO-003: the editor's PRIMARY fields are metaTitle/metaDescription
@@ -193,7 +200,7 @@ export default async function ArticlePage({ params }: Props) {
     alt: a.title
   }));
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://xsypher.com";
+  const siteUrl = siteConfig.url;
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

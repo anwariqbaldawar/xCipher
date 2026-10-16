@@ -10,6 +10,7 @@ import { getAuthorArticles } from "@/lib/cached-queries";
 import { publicFeedWhere } from "@/lib/feed";
 import PaginatedFeed from "@/components/article/PaginatedFeed";
 import { siteConfig } from "@/lib/seo";
+import { isRasterImageUrl } from "@/lib/image-url";
 import { generatePersonJsonLd, generateProfilePageJsonLd, parseAuthorSocialLinks } from "@/lib/entity-schema";
 import { serializeJsonLd } from "@/lib/article-schema";
 import AuthorProfileView from "@/components/author/AuthorProfileView";
@@ -34,10 +35,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   
   const authorName = author.name || "Author";
   const articles = await getAuthorArticles(author.id, slug);
+  const description = author.overview || author.bio?.slice(0, 160) || `${authorName} on ${siteConfig.name}.`;
+
+  // Absolute avatar URL, resolved once. `imageUrl` is the browser-facing value
+  // (public assets are root-relative in the database); `ogAvatar` is the same
+  // URL only when it is a raster format, because X, Threads and WhatsApp reject
+  // SVG in a card and fall back to no thumbnail at all.
+  const imageUrl = author.avatar
+    ? author.avatar.startsWith("http")
+      ? author.avatar
+      : `${siteConfig.url}${author.avatar.startsWith("/") ? "" : "/"}${author.avatar}`
+    : undefined;
+  const ogAvatar = imageUrl && isRasterImageUrl(imageUrl) ? imageUrl : undefined;
 
   return {
     title: `${authorName} — ${siteConfig.name}`,
-    description: author.overview || author.bio?.slice(0, 160) || `${authorName} on ${siteConfig.name}.`,
+    description,
     alternates: {
       canonical: `${siteConfig.url}/author/${slug}`,
     },
@@ -50,31 +63,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       : { robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "none" as const } } }),
     openGraph: {
       title: `${authorName} — ${siteConfig.name}`,
-      description: author.overview || author.bio?.slice(0, 160) || "",
-      images: author.avatar
-        ? [
-            {
-              url: author.avatar.startsWith("http")
-                ? author.avatar
-                : `${siteConfig.url}${author.avatar.startsWith("/") ? "" : "/"}${author.avatar}`,
-              width: 400,
-              height: 400,
-              alt: authorName,
-            },
-          ]
-        : [],
+      description,
+      url: `${siteConfig.url}/author/${slug}`,
+      siteName: siteConfig.name,
+      // A square avatar belongs in a `summary` card, not the 1.91:1 large card,
+      // so it is emitted at its own dimensions rather than cropped to 1200×630.
+      images: ogAvatar ? [{ url: ogAvatar, width: 400, height: 400, alt: authorName }] : [],
+      type: "profile",
     },
     twitter: {
       card: "summary",
       title: `${authorName} — ${siteConfig.name}`,
-      description: author.overview || author.bio?.slice(0, 160) || "",
-      images: author.avatar
-        ? [
-            author.avatar.startsWith("http")
-              ? author.avatar
-              : `${siteConfig.url}${author.avatar.startsWith("/") ? "" : "/"}${author.avatar}`,
-          ]
-        : undefined,
+      description,
+      images: ogAvatar ? [ogAvatar] : undefined,
+      site: siteConfig.twitter,
+      creator: siteConfig.twitter,
     },
   };
 }

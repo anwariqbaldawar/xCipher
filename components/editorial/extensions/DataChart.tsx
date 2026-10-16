@@ -1,5 +1,6 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper } from '@tiptap/react';
+import { memoNodeViewUpdate } from '@/lib/editor/node-view-memo';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import React from 'react';
 import DynamicChart from '@/components/article/DynamicChart';
@@ -53,7 +54,7 @@ export const DataChart = Node.create({
   },
 
   addNodeView() {
-    return ReactNodeViewRenderer(ChartNodeView);
+    return ReactNodeViewRenderer(ChartNodeView, { update: memoNodeViewUpdate });
   },
 
   addCommands() {

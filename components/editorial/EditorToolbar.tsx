@@ -8,6 +8,7 @@ import { BLOCK_LABELS, type BlockKind } from '@/lib/editorial-blocks';
 import type { CalloutType } from './extensions/Callout';
 import FindReplace from './FindReplace';
 import { getEditorFormattingState } from '@/lib/editor/document-state';
+import { captureSelection, insertFigureAtSelection, type EditorSelection } from '@/lib/editor/figure-insert';
 import { convertMermaidSelection } from './extensions/MermaidBlock';
 
 interface EditorToolbarProps {
@@ -48,6 +49,12 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
   const [isConvertingDiagram, setIsConvertingDiagram] = useState(false);
   const linkDialog = useRef<HTMLDialogElement>(null);
   const linkSelection = useRef<{ from: number; to: number } | null>(null);
+  // The caret as it stood when the media dialog was opened. Everything the
+  // dialog does (focus the URL field, upload a file, import a remote image)
+  // happens after the editor has lost focus, so the live selection cannot be
+  // trusted by the time the figure is finally inserted.
+  const mediaSelection = useRef<EditorSelection | null>(null);
+  const mediaEditsExistingFigure = useRef(false);
   const openLink = () => {
     const { from, to } = editor.state.selection;
     linkSelection.current = { from, to };
@@ -90,7 +97,18 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     chain.extendMarkRange('link').unsetLink().run();
     linkDialog.current?.close();
   };
-  const openMedia = (kind: MediaKind) => { setMediaSession(value => value + 1); setMediaKind(kind); };
+  const openMedia = (kind: MediaKind) => {
+    // Capture before the dialog steals focus — this is the whole fix for the
+    // "image jumps to the bottom of the document" bug.
+    mediaSelection.current = captureSelection(editor);
+    // Whether the dialog should *edit* the figure under the caret instead of
+    // inserting a new one has to be decided now too: after the dialog opens the
+    // live selection may point at a different node entirely.
+    mediaEditsExistingFigure.current =
+      kind === 'image' && (editor.isActive('figure') || editor.isActive('image'));
+    setMediaSession(value => value + 1);
+    setMediaKind(kind);
+  };
   const exportDocument = () => {
     const blob = new Blob([JSON.stringify(editor.getJSON(), null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -137,12 +155,33 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     {diagramError && <p role="alert" className="max-h-32 overflow-auto whitespace-pre-wrap px-3 py-2 text-xs text-red-600 dark:text-red-400">{diagramError}</p>}
     {findOpen && <FindReplace editor={editor} close={() => setFindOpen(false)} />}
     <dialog ref={linkDialog} className="studio-dialog" aria-label="Insert or edit link"><h2>Insert link</h2><p>Link the selected text to a source.</p><label>URL<input autoFocus type="url" value={linkUrl} onChange={event => setLinkUrl(event.target.value)} placeholder="https://" onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); applyLink(); } }} /></label>{linkError && <p role="alert">{linkError}</p>}<div><button type="button" onClick={() => linkDialog.current?.close()}>Cancel</button><button type="button" onClick={removeLink}>Remove link</button><button type="button" className="studio-primary" onClick={applyLink}>Apply</button></div></dialog>
-    <InsertMediaDialog key={mediaSession} kind={mediaKind || 'image'} open={mediaKind !== null} onClose={() => setMediaKind(null)} onInsertImage={value => {
-      if (editor.isActive('figure') || editor.isActive('image')) {
-        editor.chain().focus().updateAttributes('figure', value).run();
+    <InsertMediaDialog key={mediaSession} kind={mediaKind || 'image'} open={mediaKind !== null} onClose={() => { setMediaKind(null); mediaSelection.current = null; mediaEditsExistingFigure.current = false; }} onInsertImage={value => {
+      // Editing the figure that was selected when the dialog opened keeps
+      // writing to that node; anything else is a fresh block image and goes to
+      // the captured caret.
+      const saved = mediaSelection.current;
+      const editsExisting = mediaEditsExistingFigure.current;
+      mediaSelection.current = null;
+      mediaEditsExistingFigure.current = false;
+      if (editsExisting) {
+        const size = editor.state.doc.content.size;
+        const clamp = (position: number) => Math.max(0, Math.min(position, size));
+        const from = saved ? clamp(saved.from) : editor.state.selection.from;
+        const to = saved ? clamp(saved.to) : editor.state.selection.to;
+        editor.chain().focus().setTextSelection({ from, to }).updateAttributes('figure', value).run();
       } else {
-        (editor.chain().focus() as any).setFigure(value).run();
+        insertFigureAtSelection(editor, saved, value);
       }
-    }} onInsertVideo={value => editor.chain().focus().setYouTubeVideo(value).run()} />
+    }} onInsertVideo={value => {
+      // Same caret-anchoring rule as images: the video lands where the author
+      // was writing, not at the end of the story. The saved position is clamped
+      // because the document may have been revalidated since it was captured.
+      const saved = mediaSelection.current;
+      mediaSelection.current = null;
+      const size = editor.state.doc.content.size;
+      const at = saved && Number.isFinite(saved.from) ? Math.max(0, Math.min(saved.from, size)) : null;
+      const chain = at === null ? editor.chain().focus() : editor.chain().focus(at);
+      chain.setYouTubeVideo(value).run();
+    }} />
   </div>;
 }
