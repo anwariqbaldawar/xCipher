@@ -217,12 +217,14 @@ export default async function Home() {
       <section className="lead-grid wrap" aria-label="Lead story">
         <article className="lead-story story">
           <Link href={`/article/${lead.slug}`} className="ph r-169" tabIndex={-1} aria-hidden="true">
+              {/* The homepage card is rendered far narrower than an article hero;
+                  keep its responsive source capped to the card's 960px budget. */}
               <Image 
-                src={resolveImageSrc(lead.img, IMAGE_WIDTHS.articleHero, 720)} 
+                src={resolveImageSrc(lead.img, IMAGE_WIDTHS.cardHero, 720)}
                 alt={lead.alt || lead.title} 
                 fill
-                sizes="(max-width: 640px) 100vw, (max-width: 900px) 100vw, 66vw"
-                priority 
+                sizes="(max-width: 1023px) calc(100vw - 2rem), (max-width: 1400px) 56vw, 800px"
+                preload
                 className="object-cover"
               />
           </Link>

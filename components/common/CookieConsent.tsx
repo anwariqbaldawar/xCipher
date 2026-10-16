@@ -52,7 +52,7 @@ export default function CookieConsent() {
   if (savedPreference !== null) return null;
 
   return (
-    <aside aria-label="Cookie preferences" className="fixed bottom-4 left-4 right-4 md:w-96 z-[999] rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-[var(--ink)] shadow-lg">
+    <aside aria-label="Cookie preferences" className="fixed bottom-4 left-4 right-4 z-[999] rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-4 text-[var(--ink)] shadow-lg md:left-auto md:right-4 md:w-96">
       <p className="text-sm font-semibold">Cookie preferences</p>
       <p className="mt-2 text-sm text-[var(--muted)]">
         Choose whether to allow optional cookies. Essential cookies remain enabled.{" "}
