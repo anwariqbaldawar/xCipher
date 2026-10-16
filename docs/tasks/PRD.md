@@ -23,6 +23,8 @@ xSypher is a premium editorial newsroom CMS and publication built with modern we
       dismissal + history trap for the search overlay.
 * [ ] Task 5 — purge stale asset references from live rows (`scripts/purge-stale-assets.ts --apply`; needs `DATABASE_URL`),
       and confirm `lib/search.ts` full-text uses `Article_search_idx` via `EXPLAIN ANALYZE`.
+      (The second half is moot after Task 10: live search issues no SQL, so there is no plan to
+      analyse; the index itself is no longer on any read path and can be reviewed for removal.)
 * [x] Task 6 — identity pass: replace the enterprise/roleplay copy on the transparency report,
       the advertising page and the surrounding trust surfaces with the voice of an independent,
       founder-led engineering publication, and make About / Footer / contact / corrections /
@@ -35,8 +37,95 @@ xSypher is a premium editorial newsroom CMS and publication built with modern we
       red-text match highlighting incl. author names, no match badges, distinct
       Clear/Close), monetization-friendly editorial copy, the 6-profile social set
       (with Reddit) in strict order, and system-aware theme synchronisation.
+* [x] Task 10 — zero-database-wakeup caching layer: live search answers from an in-memory
+      snapshot of published stories, every public read is cached under structured tags, and
+      Neon is only touched when new content is actually published. Compute that used to be
+      held awake by keystrokes, crawls and page views is now allowed to suspend.
 
 ## 5. Task log
+
+### Task 10 — zero-database-wakeup caching layer
+
+**The cost being attacked.** Neon bills compute in CU-hours and suspends a project only
+after roughly five idle minutes. A site that is read all day and edited a few times a day
+therefore pays for two very different things: the seconds an editor spends writing, and
+the wake-ups a crawler, a page view or an open search box triggers. The work below removes
+the second category from the public read path entirely, and keeps the first: publishing and
+editing still invalidate the affected caches immediately, and only then does the compute
+have to be warm.
+
+**Live search no longer queries at all (Task 1).** `lib/search.ts` used to issue one
+`LEFT JOIN LATERAL` statement per keystroke. It now reads a snapshot:
+`lib/cached-queries.ts::getPublishedSearchIndex()` runs a single lightweight query over
+`PUBLISHED` stories (title, slug, deck, category, author, dates, tags, views, reading time,
+a capped slice of the body text, and the R2 key) under
+`tags: ["search-index", "articles"], revalidate: 86400`, and `lib/search-index.ts` filters,
+scores and ranks it in memory. The new ranker is a transcription of the old `CASE` ladder —
+exact title 100, title prefix 80, title contains 65, slug 50, tag 40, deck 30,
+section/author 22, body 14, plus the full-text fraction and a views bonus capped at 5 — with
+the same `ORDER BY` (score, then `publishedAt DESC NULLS LAST`, then `id ASC`) and the same
+40-row ceiling, so results and the "See all results" pager are unchanged. The response
+contract (`{ query, results, count, took }`, `matchField`/`matchLabel`/`matchedTags`/`score`,
+anonymity masking, resolved R2 thumbnails) is untouched; it is simply answered in
+microseconds from an array that is already in the process. A small process-local memo
+(`lib/search-index-memory.ts`, a `Map` with a 15 s window, dropped by `lib/revalidate.ts`)
+keeps even the data-cache read off the keystroke path.
+
+**Public reads are cached, the right things stay dynamic (Task 2).** Homepage, article,
+category, tag, author, latest, `feed.xml`, `sitemap.xml` and both sitemap children read
+through `unstable_cache` with structured tags, so a warm request never reaches the pool.
+Two details matter more than the wrapping itself. Failure paths are kept *outside* the
+cached callbacks — a caught error returning `[]` would otherwise be frozen for the whole
+window, which is exactly how a cold database becomes a blank homepage for an hour. And
+every date is normalised to an ISO string inside the callback and rehydrated at the edge of
+the route, because the data cache round-trips through JSON and a `Date` would come back as
+a string on a hit and an object on a miss. The sitemap index and its children moved from
+`force-dynamic` to an hourly cache, so crawlers no longer wake the compute to be told
+nothing changed; the news sitemap keeps its fallback to the latest ten stories when the
+48-hour window is empty.
+
+**The quiet wake-ups (Task 3).** Three unrelated pieces of traffic were keeping the compute
+alive:
+
+* the view counter. A view is now gated on a real browser (`lib/bot-detection.ts`: search
+  engines, social unfurlers, AI crawlers, uptime monitors, `curl`/`python-requests`/HTTP
+  clients, and a missing user agent all count as machines), then rate-limited, then
+  buffered in Redis — and when Redis is unavailable the view is **dropped** with a single
+  process-wide warning rather than falling back to a synchronous `UPDATE`. Losing a view is
+  cheaper than paying for a wake-up;
+* the connection pool. `lib/db.ts` now keys its pool by connection string on `globalThis`
+  (a dev reload can no longer leak a socket per edit) and releases idle connections after
+  ten seconds, so Neon can actually reach its suspend window instead of being held awake by
+  an idle TCP session;
+* the health endpoint. `/api/health` probes Postgres at most once per five minutes
+  (`lib/db-health.ts`, `HEALTH_DB_PROBE_MS`); a thirty-second uptime monitor now costs one
+  query per five minutes, and a failing probe is never cached, so an outage cannot be
+  reported as healthy.
+
+**Invalidation reaches everything cached (Task 4).** Article saves, status transitions,
+scheduled publication, deletion, taxonomy renames, author/profile edits and comment
+moderation all fan out through `revalidateTag`/`revalidatePath` in `lib/revalidate.ts`,
+which also drops the search memo — so a publish, edit or delete is visible on the site, in
+the feeds, in the sitemaps and in live search immediately, with no timer to wait for.
+Taxonomy mutations invalidate both the old and the new slug, and merge operations
+invalidate source and target.
+
+**Verification.** `npx tsc --noEmit` clean; `npx vitest run` green at 67 files / 798 tests,
+including a new `tests/zero-db-search.test.ts` whose `@/lib/db` mock throws on any property
+access, so a future change that reintroduces a query in the search path fails the suite
+instead of the invoice. `next build` succeeds and its route table is *identical* to the
+commit before this work except for the three sitemap endpoints, which changed from dynamic
+to hourly-cached — the intended difference.
+
+**Limits of this run.** There is no live Neon, Redis or R2 in the build environment, so the
+wake-up trace is structural — every statement reachable from reader traffic was enumerated
+and is behind a cache, a memo, a bot gate or a Redis buffer, and the search path is proven
+query-free by test — rather than a measured `pg_stat_statements` diff. Two Task 5 items from
+the earlier roadmap still need the live database for the same reason: the
+`scripts/purge-stale-assets.ts --apply` sweep and the `EXPLAIN ANALYZE` confirmation for
+`Article_search_idx`. The build also needed the three `next/font/google` families replaced
+with a local stand-in, because this environment cannot reach `fonts.googleapis.com`; that
+shim is a sandbox-only patch and is not part of the commit.
 
 ### Task 9 — UI/UX refinements, search modal, social set, theme sync
 Six workstreams, each inspected in the live components before editing:
