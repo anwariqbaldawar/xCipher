@@ -79,7 +79,29 @@ const ALLOWED_CONNECT_HOSTS = [
   "https://*.twimg.com",
 ].join(" ");
 
-function buildCsp(nonce: string, isStaticPublic: boolean): string {
+// ─────────────────────────────────────────────────────────────────────────────
+// Who is allowed to embed the site in a frame.
+//
+// Production is `'none'`: nothing may iframe xsypher.com, and every response is
+// sent with X-Frame-Options: DENY alongside it. A hosted development preview,
+// however, renders the app *inside* an iframe, and with the production policy
+// the browser refuses to display it — the preview pane stays blank while the
+// server logs a perfectly healthy 200.
+//
+// PREVIEW_FRAME_ANCESTORS (comma-separated origins) opts a development server
+// into a wider policy. It is ignored in a production build, so a stray variable
+// in a deployment environment cannot widen the deployed policy, and the empty
+// default reproduces the previous behaviour exactly.
+// ─────────────────────────────────────────────────────────────────────────────
+function frameAncestors(): string {
+  const extra = process.env.PREVIEW_FRAME_ANCESTORS?.trim();
+  if (process.env.NODE_ENV === "production" || !extra) return "'none'";
+  return `'self' ${extra}`;
+}
+
+const FRAME_ANCESTORS = frameAncestors();
+
+function buildCsp(nonce: string, isStaticPublic: boolean, ancestors: string = FRAME_ANCESTORS): string {
   const isDev = process.env.NODE_ENV === "development";
   const scriptSrc = isStaticPublic
     ? `script-src 'self' 'unsafe-inline' ${ALLOWED_SCRIPT_HOSTS}${isDev ? " 'unsafe-eval'" : ""}`
@@ -96,14 +118,21 @@ function buildCsp(nonce: string, isStaticPublic: boolean): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "frame-ancestors 'none'",
+    `frame-ancestors ${ancestors}`,
     `connect-src 'self' ${ALLOWED_CONNECT_HOSTS}`,
   ].join("; ");
 }
 
+
 function applySecurityHeaders(response: NextResponse, nonce: string, isStaticPublic: boolean): NextResponse {
   response.headers.set("Content-Security-Policy", buildCsp(nonce, isStaticPublic));
-  response.headers.set("X-Frame-Options", "DENY");
+  // X-Frame-Options has no allow-list form — it is DENY, SAMEORIGIN, or absent.
+  // When the frame policy has been widened for a preview, CSP is the only
+  // mechanism that can express it, so the legacy header is omitted rather than
+  // sent with a value that would contradict it.
+  if (FRAME_ANCESTORS === "'none'") {
+    response.headers.set("X-Frame-Options", "DENY");
+  }
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");

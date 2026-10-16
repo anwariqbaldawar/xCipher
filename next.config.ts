@@ -45,6 +45,27 @@ function localNetworkOrigins(): string[] {
   return [...origins];
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Dev-only, opt-in: extra origins allowed to load /_next/* resources.
+//
+// The LAN addresses above cover a phone on the same Wi-Fi. They do not cover a
+// hosted preview, which serves the same dev server from a per-port *hostname*
+// (e.g. 34733-<id>.e2b.app) rather than a private address — a different origin,
+// so the blocked-chunk failure described above applies unchanged.
+//
+// Kept behind an environment variable rather than hardcoded so no sandbox or
+// personal hostname reaches the repository, and read with the same semantics as
+// the list above: an entry matches the host itself or, with a leading `*`, any
+// subdomain of it. Unset in production (and `next build` ignores the field
+// entirely), so nothing widens in a deployed environment.
+// ─────────────────────────────────────────────────────────────────────────────
+function extraDevOrigins(): string[] {
+  return (process.env.ALLOWED_DEV_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
 
 /**
  * The R2 public host as a remotePatterns entry, or nothing when unconfigured.
@@ -72,7 +93,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
   // env block removed because Auth.js infers host dynamically via trustHost
-  allowedDevOrigins: localNetworkOrigins(),
+  allowedDevOrigins: [...localNetworkOrigins(), ...extraDevOrigins()],
   async redirects() {
     return [
       {
