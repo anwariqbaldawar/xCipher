@@ -235,8 +235,8 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       >
         <div
           ref={mediaRef}
-          className="absolute left-1/2 top-1/2 flex max-h-full max-w-full items-center justify-center will-change-transform"
-          style={{ transform: `translate3d(calc(-50% + ${zoom.x}px), calc(-50% + ${zoom.y}px), 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out", maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100dvh - 2rem)" }}
+          className="flex max-h-full max-w-full items-center justify-center will-change-transform"
+          style={{ transform: `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out", maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100dvh - 2rem)" }}
         >
           {media}
         </div>
@@ -249,7 +249,13 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
           <button type="button" onClick={onClose} aria-label="Close image viewer" className="flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><X size={20} /></button>
         </div>
       </div>
-      {visibleCaption && <div className="shrink-0 px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 text-center text-sm text-white/75">{visibleCaption}</div>}
+      {visibleCaption && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 px-6 text-center text-sm text-white/80">
+          <span className="pointer-events-auto inline-block max-w-[85vw] rounded-full border border-white/10 bg-black/70 px-4 py-2 shadow-lg backdrop-blur-md sm:max-w-xl">
+            {visibleCaption}
+          </span>
+        </div>
+      )}
       {summary && summary.length > 0 && (
         <aside className="max-h-[38dvh] w-full shrink-0 overflow-y-auto border-t border-neutral-800 bg-neutral-900/95 p-5 text-white md:h-full md:max-h-none md:w-[360px] md:border-l md:border-t-0">
           <h2 className="mb-4 text-lg font-semibold">{title}</h2>
