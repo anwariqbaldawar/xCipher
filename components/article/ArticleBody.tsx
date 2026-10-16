@@ -15,6 +15,10 @@ import EditorialBlockViewer from './EditorialBlockViewer';
 import SingleImageViewer from './SingleImageViewer';
 import { parseEditorialBlock } from '@/lib/editorial-blocks';
 
+function stripLeadingEmptyParagraphs(content: string): string {
+  return content.replace(/^(?:\s|<p\b[^>]*>(?:(?:\s|&nbsp;|&#160;|&#xA0;|<br\s*\/?\s*>| )*)<\/p>)+/i, "");
+}
+
 function textContent(nodes: DOMNode[]): string {
   return nodes
     .map((node) => {
@@ -36,7 +40,7 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Content is strictly sanitized via DOMPurify before storing to R2 on publish
-  const safeHtml = html || "<p>No content available.</p>";
+  const safeHtml = stripLeadingEmptyParagraphs(html || "<p>No content available.</p>") || "<p>No content available.</p>";
 
   // Add copy buttons to code blocks after render
   useEffect(() => {

@@ -323,10 +323,10 @@ export default async function ArticlePage({ params }: Props) {
       <ProgressBar />
       <ViewCounter articleId={article.id} />
       <article className="art pb-16" itemScope itemType="https://schema.org/NewsArticle">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
+        <div className="article-layout grid grid-cols-1 lg:grid-cols-12 gap-x-8 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10">
           
           {/* HEADER ROW */}
-          <header className="mb-4 flex flex-col min-w-0 lg:col-start-2 lg:col-span-10 xl:col-start-2 xl:col-span-8">
+          <header className="mb-0 flex flex-col min-w-0 lg:col-start-2 lg:col-span-10 xl:col-start-2 xl:col-span-8">
               <nav className="crumb mb-6 hidden md:flex" aria-label="Breadcrumb">
                 <Link href="/">Home</Link>
                 <span className="sep">/</span>
@@ -356,7 +356,7 @@ export default async function ArticlePage({ params }: Props) {
                 </div>
               </div>
               
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap", marginTop: "14px", marginBottom: "32px" }}>
+              <div className="art-action-row">
                 <ListenButton />
                 <a
                   href="#comments"
@@ -384,7 +384,7 @@ export default async function ArticlePage({ params }: Props) {
               {/* No card framing: the photograph and its caption sit directly
                   in the article column — no border, background box or padded
                   wrapper around them. */}
-              <figure className="art-hero my-8" data-image-role="featured">
+              <figure className="art-hero" data-image-role="featured">
                 <div className="ph r-169 relative w-full aspect-[16/9]" style={{ aspectRatio: "16 / 9" }}>
                   <Image
                     src={resolveImageSrc(article.img, IMAGE_WIDTHS.articleHero, 788)}

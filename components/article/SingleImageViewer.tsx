@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Maximize } from "lucide-react";
-import MediaModal, { type MediaSummary } from "./MediaModal";
+import MediaModal from "./MediaModal";
 import { optimizeImageUrl } from "@/lib/image-url";
 import { isStaleAsset } from "@/lib/stale-assets";
 
@@ -29,12 +29,6 @@ export default function SingleImageViewer({
   // Rendering the neutral cover here instead would put a picture the editor
   // never chose in the middle of a published story.
   if (isStaleAsset(src)) return null;
-
-  const summary: MediaSummary[] = [
-    { label: "Caption", value: caption || "—" },
-    { label: "Alt text", value: alt || "—" },
-    { label: "Credit", value: credit || "—" },
-  ];
 
   return (
     <>
@@ -81,6 +75,7 @@ export default function SingleImageViewer({
         open={open}
         onClose={() => setOpen(false)}
         title={caption || alt || "Image full view"}
+        caption={caption?.trim() && caption.trim() !== alt.trim() ? caption : undefined}
         media={
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -88,10 +83,10 @@ export default function SingleImageViewer({
             alt={alt}
             width={width || 1200}
             height={height || 675}
-            className="max-h-[calc(50vh-2rem)] max-w-full object-contain md:max-h-[calc(100vh-4rem)]"
+            draggable={false}
+            className="block max-h-[88dvh] max-w-[94vw] object-contain"
           />
         }
-        summary={summary}
       />
     </>
   );
