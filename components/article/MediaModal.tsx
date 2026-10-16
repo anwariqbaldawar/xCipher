@@ -218,10 +218,11 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
 
   if (!open || typeof document === "undefined") return null;
   const visibleCaption = caption?.trim() || "";
+  const hasSummary = Boolean(summary?.length && !visibleCaption);
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col overflow-hidden bg-black/95 text-white backdrop-blur-sm ${summary?.length ? "md:flex-row" : ""}`}
+      className={`fixed inset-0 z-[100] flex h-[100dvh] w-screen flex-col overflow-hidden bg-black/95 text-white backdrop-blur-sm ${hasSummary ? "md:flex-row" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -229,7 +230,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     >
       <div
         ref={canvasRef}
-        className={`relative flex w-full min-h-0 flex-1 touch-none select-none items-center justify-center overflow-hidden p-4 sm:p-8 ${summary?.length ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+        className={`relative flex w-full min-h-0 flex-1 touch-none select-none items-center justify-center overflow-hidden p-4 sm:p-8 ${hasSummary ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
         onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
         aria-label="Interactive image canvas. Pinch or double-tap to zoom on touchscreens; use the wheel or double-click to zoom on desktop."
       >
@@ -248,15 +249,18 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
           <span className="mx-0.5 h-6 w-px bg-white/20" aria-hidden="true" />
           <button type="button" onClick={onClose} aria-label="Close image viewer" className="flex h-10 w-10 items-center justify-center rounded-full text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><X size={20} /></button>
         </div>
+        {visibleCaption && (
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-4 z-20 px-6 text-center text-sm text-white/80"
+            style={{ position: "absolute", insetInline: 0, bottom: "1rem", zIndex: 20, pointerEvents: "none" }}
+          >
+            <span className="pointer-events-auto inline-block max-w-[85vw] rounded-full border border-white/10 bg-black/70 px-4 py-2 shadow-lg backdrop-blur-md sm:max-w-xl">
+              {visibleCaption}
+            </span>
+          </div>
+        )}
       </div>
-      {visibleCaption && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 px-6 text-center text-sm text-white/80">
-          <span className="pointer-events-auto inline-block max-w-[85vw] rounded-full border border-white/10 bg-black/70 px-4 py-2 shadow-lg backdrop-blur-md sm:max-w-xl">
-            {visibleCaption}
-          </span>
-        </div>
-      )}
-      {summary && summary.length > 0 && (
+      {hasSummary && summary && (
         <aside className="max-h-[38dvh] w-full shrink-0 overflow-y-auto border-t border-neutral-800 bg-neutral-900/95 p-5 text-white md:h-full md:max-h-none md:w-[360px] md:border-l md:border-t-0">
           <h2 className="mb-4 text-lg font-semibold">{title}</h2>
           <table className="w-full text-left text-sm">
