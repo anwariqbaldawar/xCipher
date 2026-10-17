@@ -82,6 +82,13 @@ async function migrate() {
       await tx`ALTER TABLE "Article" ADD COLUMN IF NOT EXISTS "editorPickedAt" timestamp(3)`;
       await tx`UPDATE "Article" SET "editorPickedAt" = COALESCE("publishedAt", "updatedAt") WHERE "homepagePlacement" = 'picks' AND "editorPickedAt" IS NULL`;
 
+      // 0005_sad_maverick.sql
+      await tx`CREATE TABLE IF NOT EXISTS "DeletedArticleSlug" (
+        "slug" text PRIMARY KEY NOT NULL,
+        "title" text,
+        "deletedAt" timestamp(3) DEFAULT now() NOT NULL
+      )`;
+
       // Record baseline migrations in ledger
       const drizzleDir = join(process.cwd(), "drizzle");
       const sqlFiles = readdirSync(drizzleDir)

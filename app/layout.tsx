@@ -12,6 +12,7 @@ const kremlin = localFont({
 import "./globals.css";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { headers } from "next/headers";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type system — three roles, one family each.
@@ -153,6 +154,7 @@ export default async function RootLayout({
           {children}
           <div id="toast-root" className="pointer-events-none fixed inset-0 z-[9999]" aria-live="assertive"></div>
         </ThemeProvider>
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID || "G-MTVGJEQKS5"} nonce={nonce} />
       </body>
     </html>
   );

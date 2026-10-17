@@ -70,6 +70,7 @@ async function isManifestTombstone(slug: string, origin: string): Promise<boolea
     try {
       const res = await fetch(`${origin}/api/deleted-slugs`, {
         headers: { accept: "application/json" },
+        signal: AbortSignal.timeout(2000),
       });
       if (res.ok) {
         const body = (await res.json()) as { slugs?: unknown };
@@ -166,6 +167,7 @@ function buildGoneResponse(slug: string): NextResponse {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const ALLOWED_SCRIPT_HOSTS = [
+  "https://www.googletagmanager.com",
   "https://www.tiktok.com",
   "https://static.cloudflareinsights.com",
   "https://pagead2.googlesyndication.com",
