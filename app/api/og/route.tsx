@@ -42,7 +42,7 @@ function pngResponse(buffer: Buffer, cacheControl: string = CACHE_CONTROL): Resp
 /** Static brand card shipped with the app; used whenever rendering fails. */
 async function fallbackResponse(): Promise<Response> {
   try {
-    const file = await readFile(path.join(process.cwd(), 'public', 'og-fallback.png'));
+    const file = await readFile(path.join(process.cwd(), 'public', 'og-image.png'));
     return pngResponse(Buffer.from(file), FALLBACK_CACHE_CONTROL);
   } catch (fallbackError) {
     console.error('[og] Fallback image unavailable:', fallbackError);

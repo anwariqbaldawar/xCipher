@@ -48,7 +48,7 @@ export function supportsImageTransformations(publicBase: string): boolean {
  * Used for routes that have no single editorial image of their own: the
  * homepage, category and tag archives. Never for an article.
  */
-export const BRAND_BANNER_PATH = "/og-fallback.png";
+export const BRAND_BANNER_PATH = "/og-image.png";
 
 /** Dimensions of {@link BRAND_BANNER_PATH}. Social cards are 1.91:1. */
 export const BRAND_BANNER_SIZE = { width: 1200, height: 630 } as const;

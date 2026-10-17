@@ -78,8 +78,8 @@ export const metadata: Metadata = {
     siteName: siteConfig.name,
     images: [
       {
-        url: `${siteConfig.url}/og-fallback.png`,
-        secureUrl: `${siteConfig.url}/og-fallback.png`,
+        url: `${siteConfig.url}/og-image.png`,
+        secureUrl: `${siteConfig.url}/og-image.png`,
         type: "image/png",
         width: 1200,
         height: 630,
@@ -93,7 +93,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${siteConfig.name} — ${siteConfig.tagline}`,
     description: siteConfig.description,
-    images: [`${siteConfig.url}/og-fallback.png`],
+    images: [`${siteConfig.url}/og-image.png`],
     creator: siteConfig.twitter,
     site: siteConfig.twitter,
   },
