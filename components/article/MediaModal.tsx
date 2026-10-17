@@ -19,6 +19,8 @@ interface MediaModalProps {
   summary?: MediaSummary[];
   /** Only a real, reader-facing caption belongs in the lightbox. */
   caption?: string;
+  /** Enables native chart scrolling without changing image-lightbox gestures. */
+  chartInteraction?: boolean;
 }
 
 type ZoomState = { scale: number; x: number; y: number };
@@ -27,7 +29,7 @@ type Point = { x: number; y: number };
 const INITIAL_ZOOM: ZoomState = { scale: 1, x: 0, y: 0 };
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-export default function MediaModal({ open, onClose, title, media, caption, summary }: MediaModalProps) {
+export default function MediaModal({ open, onClose, title, media, caption, summary, chartInteraction = false }: MediaModalProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef<ZoomState>(INITIAL_ZOOM);
@@ -101,7 +103,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       zoomAt(current * Math.exp(-event.deltaY * 0.002), event.clientX, event.clientY);
     };
     const onPointerDown = (event: PointerEvent) => {
-      if ((event.target as Element).closest("button")) return;
+      if (chartInteraction || (event.target as Element).closest("button")) return;
       pointersRef.current.set(event.pointerId, pointFrom(event));
       pointerStartRef.current.set(event.pointerId, pointFrom(event));
       setIsInteracting(true);
@@ -122,7 +124,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       }
     };
     const onPointerMove = (event: PointerEvent) => {
-      if (!pointersRef.current.has(event.pointerId)) return;
+      if (chartInteraction || !pointersRef.current.has(event.pointerId)) return;
       event.preventDefault();
       pointersRef.current.set(event.pointerId, pointFrom(event));
       if (pointersRef.current.size >= 2 && pinchRef.current) {
@@ -230,7 +232,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     >
       <div
         ref={canvasRef}
-        className={`relative flex w-full min-h-0 flex-1 touch-none select-none items-center justify-center overflow-hidden p-4 sm:p-8 ${hasSummary ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+        className={`relative flex w-full min-h-0 flex-1 ${chartInteraction ? "touch-pan-x touch-pan-y overflow-auto [webkit-overflow-scrolling:touch]" : "touch-none overflow-hidden"} select-none items-center justify-center p-4 sm:p-8 ${hasSummary ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
         onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
         aria-label="Interactive image canvas. Pinch or double-tap to zoom on touchscreens; use the wheel or double-click to zoom on desktop."
       >

@@ -65,7 +65,7 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
   }, [config, chartType, keys]);
 
   const scrollMinWidth = useMemo(() => {
-    if (chartType === 'pie') return '100%';
+    if (chartType === 'pie' || chartType === 'horizontal-bar') return '100%';
     const count = config?.length || 1;
     return Math.max(500, count * 95);
   }, [config, chartType]);
@@ -359,7 +359,8 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
             type={isHorizontal ? "category" : "number"}
             stroke="var(--muted)" 
             tick={{ fill: 'var(--muted)', fontSize: 11 }} 
-            width={isHorizontal ? (isMobile ? 110 : 130) : 40}
+            width={isHorizontal ? (isMobile ? 0 : 130) : 40}
+            hide={isHorizontal && isMobile}
             tickFormatter={(value) => {
               if (typeof value === 'string' && value.length > 15) {
                 return value.substring(0, 13) + '…';
@@ -520,7 +521,8 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
         open={isFullViewOpen}
         onClose={() => setIsFullViewOpen(false)}
         title="Chart full view"
-        media={<div className="w-[min(70vw,900px)] max-w-full">{renderChart()}</div>}
+        media={<div className={`w-full ${chartType === 'pie' ? 'max-w-[min(90vw,900px)]' : 'max-w-[min(96vw,1100px)]'}`}>{renderChart()}</div>}
+        chartInteraction
         summary={chartSummary}
       />
     </motion.div>
