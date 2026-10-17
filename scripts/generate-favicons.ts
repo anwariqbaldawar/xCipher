@@ -1,73 +1,42 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Favicon generator — full-bleed, halo-free assets for Google Search
+// Favicon generator — full-bleed, halo-free assets for Google Search & Devices
 // ─────────────────────────────────────────────────────────────────────────────
 //
-// Google Search masks the favicon into a circle. The previous asset
-// had transparent rounded corners (and white padding), so Google
-// filled the transparent pixels around the rounded square with
-// solid white — a white ring/halo around the dark logo on every
-// result, including dark-background SERP features.
-//
-// The fix, per Google's favicon guidelines:
-//   • a 100% full-bleed, edge-to-edge square canvas of solid deep
-//     black — ZERO transparent corners, ZERO rounded outer mask,
-//     ZERO white border, so there is no transparent pixel left for
-//     Google to paint white;
-//   • the 2x2 xSypher grid mark (three white/grey squares and one
-//     red X square) scaled to ~70% of the canvas and centred in the
-//     safe circular zone, so it survives the circular crop without
-//     touching the edge;
-//   • clean multiples of 48px plus a multi-size favicon.ico and a
-//     180x180 apple-touch-icon.png, all opaque.
+// Generates all required favicon variants from the master public/icon-512.png:
+//   • 100% opaque, solid black (#000000) canvas — ZERO transparency
+//   • Full-bleed edge-to-edge canvas with centered safe mark
+//   • Multiples of 48px (48, 96, 144, 192, 512) for Google Search / Android
+//   • Multi-size favicon.ico (16, 32, 48) for desktop browsers
+//   • 180x180 apple-touch-icon.png & apple-icon.png for iOS
+//   • PWA manifest sync in public/manifest.webmanifest
 //
 // Run: npx tsx scripts/generate-favicons.ts
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import sharp from "sharp";
 
 const PUBLIC_DIR = join(process.cwd(), "public");
+const SOURCE_IMAGE = join(PUBLIC_DIR, "icon-512.png");
+const CANVAS_COLOR = "#000000";
 
-// The full-bleed canvas: solid deep black, sharp corners, no
-// transparency anywhere. Google's circular mask can only ever
-// crop into black.
-const CANVAS = "#000000";
-
-// The mark in its original 32-unit coordinate space: three
-// squares (white, and two at 40% opacity) plus the red X.
-// Wrapped in <g transform="translate(24 24) scale(14.5)"> to move
-// it from a 24/32 = 75% span to a 348/512 = 68% span, centred —
-// inside the safe circular centre zone (≈70–75% of the canvas),
-// with the mark's own corners ~10px clear of the circle Google
-// crops, so no square ever touches the circular edge.
-const MARK = `
-  <rect fill="#ffffff" x="4" y="4" width="10" height="10" rx="1.5"/>
-  <rect fill="#ffffff" opacity="0.4" x="18" y="4" width="10" height="10" rx="1.5"/>
-  <rect fill="#ffffff" opacity="0.4" x="4" y="18" width="10" height="10" rx="1.5"/>
-  <path d="M18.5 18.5 27.5 27.5M27.5 18.5 18.5 27.5" stroke="#f04552" stroke-width="3.2" stroke-linecap="round" fill="none"/>
-`;
-
-const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="${CANVAS}"/>
-  <g transform="translate(24 24) scale(14.5)">${MARK}
-  </g>
-</svg>`.trim();
-
-/** PNG bytes for the mark rasterised at an exact pixel size. */
-async function renderPng(size: number): Promise<Buffer> {
-  // density above the target size keeps the rasterisation sharp
-  // for the small multiples before the final resize.
-  return sharp(Buffer.from(SVG), { density: 1024 })
-    .resize(size, size, { fit: "fill" })
+/** Render PNG bytes from the source image at exact pixel dimensions */
+async function renderPngFromSource(sourceBuffer: Buffer, size: number): Promise<Buffer> {
+  return sharp(sourceBuffer)
+    .flatten({ background: CANVAS_COLOR })
+    .resize(size, size, {
+      fit: "contain",
+      background: CANVAS_COLOR,
+      kernel: sharp.kernel.lanczos3,
+    })
     .png({ compressionLevel: 9 })
     .toBuffer();
 }
 
 /**
  * A multi-size favicon.ico (16, 32, 48) carrying PNG-compressed
- * images — the format every modern browser and Google's favicon
- * crawler accept, in one request.
+ * images — the format modern browsers and Google's favicon crawler accept.
  */
 function buildIco(pngs: { size: number; data: Buffer }[]): Buffer {
   const count = pngs.length;
@@ -95,34 +64,41 @@ function buildIco(pngs: { size: number; data: Buffer }[]): Buffer {
 }
 
 async function main() {
+  console.log(`[favicons] reading source from ${SOURCE_IMAGE}...`);
+  const sourceBuffer = readFileSync(SOURCE_IMAGE);
+
   const sizes = [48, 96, 144, 192, 512];
 
-  // The vector original: full-bleed black, mark centred.
-  writeFileSync(join(PUBLIC_DIR, "icon.svg"), `${SVG}\n`);
-
-  // Clean multiples of 48px, plus the Next.js-convention
-  // app-agnostic /icon.png at the largest size.
+  // 1. Multiples of 48px + app-agnostic icon.png
   for (const size of sizes) {
-    const png = await renderPng(size);
+    const png = await renderPngFromSource(sourceBuffer, size);
     writeFileSync(join(PUBLIC_DIR, `icon-${size}.png`), png);
   }
-  writeFileSync(join(PUBLIC_DIR, "icon.png"), await renderPng(512));
+  const icon512 = await renderPngFromSource(sourceBuffer, 512);
+  writeFileSync(join(PUBLIC_DIR, "icon.png"), icon512);
+  writeFileSync(join(PUBLIC_DIR, "icon-512.png"), icon512);
 
-  // Apple touch icon: 180x180, opaque black (iOS applies its own
-  // rounded mask; transparency is what caused the halo, and the
-  // touch icon must have none).
-  const apple = await renderPng(180);
+  // 2. Apple touch icons: 180x180, solid black (no transparency)
+  const apple = await renderPngFromSource(sourceBuffer, 180);
   writeFileSync(join(PUBLIC_DIR, "apple-touch-icon.png"), apple);
   writeFileSync(join(PUBLIC_DIR, "apple-icon.png"), apple);
 
-  // Multi-size favicon.ico.
+  // 3. Multi-size favicon.ico (16, 32, 48)
   const icoPngs: { size: number; data: Buffer }[] = [];
   for (const size of [16, 32, 48]) {
-    icoPngs.push({ size, data: await renderPng(size) });
+    icoPngs.push({ size, data: await renderPngFromSource(sourceBuffer, size) });
   }
   writeFileSync(join(PUBLIC_DIR, "favicon.ico"), buildIco(icoPngs));
 
-  // Web app manifest pointing at the opaque raster icons.
+  // 4. SVG vector wrapper with embedded high-res raster & solid background
+  const base64Data = icon512.toString("base64");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" fill="${CANVAS_COLOR}"/>
+  <image href="data:image/png;base64,${base64Data}" width="512" height="512"/>
+</svg>\n`;
+  writeFileSync(join(PUBLIC_DIR, "icon.svg"), svg);
+
+  // 5. Web app manifest
   const manifest = {
     name: "xSypher — Independent Technology News, Analysis and Reviews",
     short_name: "xSypher",
@@ -145,11 +121,22 @@ async function main() {
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 
-  console.log("[favicons] wrote icon.svg, icon.png, icon-{48,96,144,192,512}.png,");
-  console.log("[favicons] apple-touch-icon.png, apple-icon.png, favicon.ico, manifest.webmanifest");
+  console.log("[favicons] successfully generated:");
+  console.log("  ✓ icon-48.png (48x48)");
+  console.log("  ✓ icon-96.png (96x96)");
+  console.log("  ✓ icon-144.png (144x144)");
+  console.log("  ✓ icon-192.png (192x192)");
+  console.log("  ✓ icon-512.png (512x512)");
+  console.log("  ✓ icon.png (512x512)");
+  console.log("  ✓ apple-touch-icon.png (180x180)");
+  console.log("  ✓ apple-icon.png (180x180)");
+  console.log("  ✓ favicon.ico (16x16, 32x32, 48x48 multi-size)");
+  console.log("  ✓ icon.svg (512x512 SVG wrapper)");
+  console.log("  ✓ manifest.webmanifest (PWA)");
 }
 
 main().catch((error) => {
   console.error("[favicons] generation failed:", error);
   process.exit(1);
 });
+

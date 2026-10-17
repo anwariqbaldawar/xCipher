@@ -11,7 +11,7 @@ import BreakingTicker from "@/components/home/BreakingTicker";
 import EditorialTicker from "@/components/home/EditorialTicker";
 import NewsletterSignup from "@/components/newsletter/NewsletterSignup";
 import AdUnit from "@/components/common/AdUnit";
-import { constructMetadata, leadStorySocialCard, siteConfig } from "@/lib/seo";
+import { constructMetadata, brandBannerUrl, siteConfig } from "@/lib/seo";
 import { generateCollectionPageJsonLd } from "@/lib/entity-schema";
 import { serializeJsonLd } from "@/lib/article-schema";
 import { headers } from "next/headers";
@@ -20,42 +20,18 @@ import { getReadingTimeMinutes } from "@/lib/reading-time";
 const HOME_TITLE = `${siteConfig.name} — ${siteConfig.tagline}`;
 
 /**
- * The homepage social card is the lead story's photograph, not brand art.
- *
- * The root URL was previously published with `/og-fallback.png` — a near-black
- * wordmark card — as its `og:image`/`twitter:image`. On X that card is a solid
- * dark rectangle that reads as a failed preview, and on Facebook, Threads and
- * WhatsApp it produced an identical plain black card for every share of the
- * domain, so the root link looked the same as it does with no image at all.
- *
- * Resolving the newest Featured (or, failing that, newest Published) story here
- * means a link to xsypher.com previews with that story's 1200×630 editorial
- * image, colour and all. The brand banner stays as the fallback for a
- * newsroom with nothing published yet, so the tags are never empty.
- *
- * Both queries are the tagged, `unstable_cache`d listings the page body already
- * uses, so this adds no query on a warm cache entry and is invalidated by the
- * same `articles` tag that publishing already revalidates.
+ * The homepage social card publishes the official brand banner (/og-fallback.png).
+ * This ensures that when the root domain (xsypher.com) is shared on X (Twitter),
+ * LinkedIn, WhatsApp, or Facebook, the rich branded social preview card is
+ * always displayed with summary_large_image.
  */
 export async function generateMetadata(): Promise<Metadata> {
-  let lead: { title?: string | null; img?: string | null } | null = null;
-
-  try {
-    lead = (await getHomeHeroArticle()) ?? (await getHomeArticles())[0] ?? null;
-  } catch (error) {
-    // A cold database must not take the homepage's metadata with it: an absent
-    // lead story resolves to the brand card below, which is still a valid,
-    // absolute, raster social preview.
-    console.warn("[home] lead story unavailable for the social card:", error);
-  }
-
-  const card = leadStorySocialCard(lead);
   return constructMetadata({
     title: HOME_TITLE,
     description: siteConfig.description,
     canonical: siteConfig.url,
-    image: card.image,
-    imageAlt: card.alt,
+    image: brandBannerUrl(),
+    imageAlt: `${siteConfig.name} — ${siteConfig.tagline}`,
   });
 }
 
