@@ -21,8 +21,21 @@ const PUBLIC_DIR = join(process.cwd(), "public");
 const SOURCE_IMAGE = join(PUBLIC_DIR, "icon-512.png");
 const CANVAS_COLOR = "#000000";
 
-/** Render PNG bytes from the source image at exact pixel dimensions */
-async function renderPngFromSource(sourceBuffer: Buffer, size: number): Promise<Buffer> {
+const CORNER_RADIUS = 52; // ~10% smooth corner radius on 512 canvas
+
+/** Render PNG bytes from the rounded source at exact pixel dimensions */
+async function renderPngFromBuffer(buffer: Buffer, size: number): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(size, size, {
+      fit: "contain",
+      kernel: sharp.kernel.lanczos3,
+    })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+}
+
+/** Render solid square PNG bytes (specifically for Apple iOS which applies its own squircle mask) */
+async function renderAppleTouchIcon(sourceBuffer: Buffer, size: number): Promise<Buffer> {
   return sharp(sourceBuffer)
     .flatten({ background: CANVAS_COLOR })
     .resize(size, size, {
@@ -67,33 +80,43 @@ async function main() {
   console.log(`[favicons] reading source from ${SOURCE_IMAGE}...`);
   const sourceBuffer = readFileSync(SOURCE_IMAGE);
 
+  // Apply smooth rounded corner mask to the 512x512 canvas
+  const maskSvg = Buffer.from(`
+    <svg width="512" height="512">
+      <rect x="0" y="0" width="512" height="512" rx="${CORNER_RADIUS}" ry="${CORNER_RADIUS}" fill="#fff"/>
+    </svg>
+  `);
+  const roundedBuffer = await sharp(sourceBuffer)
+    .composite([{ input: maskSvg, blend: "dest-in" }])
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+
   const sizes = [48, 96, 144, 192, 512];
 
-  // 1. Multiples of 48px + app-agnostic icon.png
+  // 1. Multiples of 48px + app-agnostic icon.png with rounded corners
   for (const size of sizes) {
-    const png = await renderPngFromSource(sourceBuffer, size);
+    const png = await renderPngFromBuffer(roundedBuffer, size);
     writeFileSync(join(PUBLIC_DIR, `icon-${size}.png`), png);
   }
-  const icon512 = await renderPngFromSource(sourceBuffer, 512);
+  const icon512 = await renderPngFromBuffer(roundedBuffer, 512);
   writeFileSync(join(PUBLIC_DIR, "icon.png"), icon512);
   writeFileSync(join(PUBLIC_DIR, "icon-512.png"), icon512);
 
-  // 2. Apple touch icons: 180x180, solid black (no transparency)
-  const apple = await renderPngFromSource(sourceBuffer, 180);
+  // 2. Apple touch icons: 180x180, solid square (iOS automatically adds squircle mask)
+  const apple = await renderAppleTouchIcon(sourceBuffer, 180);
   writeFileSync(join(PUBLIC_DIR, "apple-touch-icon.png"), apple);
   writeFileSync(join(PUBLIC_DIR, "apple-icon.png"), apple);
 
-  // 3. Multi-size favicon.ico (16, 32, 48)
+  // 3. Multi-size favicon.ico (16, 32, 48) with rounded corners
   const icoPngs: { size: number; data: Buffer }[] = [];
   for (const size of [16, 32, 48]) {
-    icoPngs.push({ size, data: await renderPngFromSource(sourceBuffer, size) });
+    icoPngs.push({ size, data: await renderPngFromBuffer(roundedBuffer, size) });
   }
   writeFileSync(join(PUBLIC_DIR, "favicon.ico"), buildIco(icoPngs));
 
-  // 4. SVG vector wrapper with embedded high-res raster & solid background
+  // 4. SVG vector wrapper with embedded high-res rounded raster
   const base64Data = icon512.toString("base64");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" fill="${CANVAS_COLOR}"/>
   <image href="data:image/png;base64,${base64Data}" width="512" height="512"/>
 </svg>\n`;
   writeFileSync(join(PUBLIC_DIR, "icon.svg"), svg);
@@ -121,15 +144,15 @@ async function main() {
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 
-  console.log("[favicons] successfully generated:");
+  console.log("[favicons] successfully generated with rounded corners (R=52px):");
   console.log("  ✓ icon-48.png (48x48)");
   console.log("  ✓ icon-96.png (96x96)");
   console.log("  ✓ icon-144.png (144x144)");
   console.log("  ✓ icon-192.png (192x192)");
   console.log("  ✓ icon-512.png (512x512)");
   console.log("  ✓ icon.png (512x512)");
-  console.log("  ✓ apple-touch-icon.png (180x180)");
-  console.log("  ✓ apple-icon.png (180x180)");
+  console.log("  ✓ apple-touch-icon.png (180x180, iOS square standard)");
+  console.log("  ✓ apple-icon.png (180x180, iOS square standard)");
   console.log("  ✓ favicon.ico (16x16, 32x32, 48x48 multi-size)");
   console.log("  ✓ icon.svg (512x512 SVG wrapper)");
   console.log("  ✓ manifest.webmanifest (PWA)");
