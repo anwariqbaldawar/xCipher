@@ -336,6 +336,22 @@ export const benchmarkLeaderboard = pgTable('BenchmarkLeaderboard', {
   };
 });
 
+// Tombstones for permanently deleted article slugs.
+//
+// A deleted article's row is gone, so nothing else in the schema can
+// answer "was this slug an article that is now permanently removed?" —
+// which is exactly the question the HTTP 410 handler needs to answer
+// without a database round-trip per request (lib/tombstones.ts caches
+// the answer, middleware.ts matches the compiled-in half of the
+// registry at the edge). The slug is the primary key: a slug is either
+// tombstoned or it is not, and the title is kept only so an operator
+// can tell one tombstone from another.
+export const deletedArticleSlug = pgTable('DeletedArticleSlug', {
+  slug: text('slug').primaryKey(),
+  title: text('title'),
+  deletedAt: timestamp('deletedAt', { mode: 'date', precision: 3 }).defaultNow().notNull(),
+});
+
 export const _articleToTag = pgTable('_ArticleToTag', {
   A: text('A').notNull().references(() => article.id, { onDelete: 'cascade' }),
   B: text('B').notNull().references(() => tag.id, { onDelete: 'cascade' }),

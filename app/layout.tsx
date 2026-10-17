@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
-import { siteConfig } from "@/lib/seo";
+import { siteConfig, BRAND_ALTERNATE_NAMES } from "@/lib/seo";
 import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google';
 import localFont from 'next/font/local';
 
@@ -71,11 +71,24 @@ export const metadata: Metadata = {
   title: `${siteConfig.name} — ${siteConfig.tagline}`,
   description: siteConfig.description,
   icons: {
+    // Explicit, size-declared favicon set. Every raster is a
+    // full-bleed opaque black square (see
+    // scripts/generate-favicons.ts), so Google's circular
+    // SERP mask has no transparent pixel to paint white —
+    // the white halo around the old rounded-corner icon
+    // cannot come back.
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon-48.png", type: "image/png", sizes: "48x48" },
+      { url: "/icon-96.png", type: "image/png", sizes: "96x96" },
+      { url: "/icon-144.png", type: "image/png", sizes: "144x144" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
     ],
-    apple: "/apple-icon.png",
+    shortcut: "/favicon.ico",
+    apple: { url: "/apple-touch-icon.png", sizes: "180x180" },
+    other: [{ rel: "manifest", url: "/manifest.webmanifest" }],
   },
   // NOTE (MON-002): these meta tags are evaluated at BUILD time for the
   // statically generated pages, and `.env.*` is excluded from the Docker build
@@ -94,6 +107,10 @@ const websiteJsonLd = JSON.stringify({
   "@context": "https://schema.org",
   "@type": "WebSite",
   "name": siteConfig.name,
+  // Same rationale as the Organization entity: every phonetic
+  // variant and common misspelling of the brand name resolves
+  // to this one website in the Knowledge Graph.
+  "alternateName": BRAND_ALTERNATE_NAMES,
   "url": siteConfig.url,
   "potentialAction": {
     "@type": "SearchAction",

@@ -28,6 +28,7 @@
 import { collectArticleAssetKeys, isArticleAssetKey, type ArticleContentPayload } from "./article-assets";
 import { articleMutationTags } from "./cache-tags";
 import { revalidatePath, revalidateTag } from "./revalidate";
+import { registerDeletedSlug } from "./tombstones";
 import { siteConfig } from "./seo";
 import { deleteKeysFromR2, getR2Config, r2KeyFromUrl } from "./storage";
 
@@ -277,6 +278,14 @@ export function deletionPaths(article: DeletionPathArticle): string[] {
  * costs nothing.
  */
 export async function revalidateArticleDeletion(article: DeletableArticle): Promise<void> {
+  // Tombstone the slug first: every delete path (permanent, own-draft,
+  // bulk) and the offline ghost sweep funnels through here, so this is
+  // the one place a deletion becomes visible to the edge. From this
+  // moment the URL answers 410 Gone instead of 404, and a slug that
+  // is later reused for a new article is un-tombstoned by the upsert
+  // path (forgetDeletedSlug) rather than by time.
+  await registerDeletedSlug(article.slug, article.title);
+
   const tags = articleMutationTags({
     slug: article.slug,
     category: article.category,

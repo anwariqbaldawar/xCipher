@@ -86,6 +86,7 @@ import {
 } from "../lib/ghost-content";
 import { isStaleAsset } from "../lib/stale-assets";
 import { purgeArticleAssets, type DeletableArticle } from "../lib/article-deletion";
+import { registerDeletedSlug } from "../lib/tombstones";
 import { deleteKeysFromR2, getR2Config, listR2Objects, r2KeyFromUrl } from "../lib/storage";
 
 // ── Flags ────────────────────────────────────────────────────────────────────
@@ -270,6 +271,12 @@ async function sweepGhostRows(): Promise<number> {
           r2KeysFailed: report.failed.length,
         },
       });
+
+      // Tombstone the slug so its URL answers 410 Gone at the
+      // edge instead of 404 forever. The dashboard delete paths
+      // register through revalidateArticleDeletion; this script
+      // deletes rows directly, so it tombstones here.
+      await registerDeletedSlug(row.slug, row.title);
 
       purged++;
       console.log(

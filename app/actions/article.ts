@@ -21,6 +21,7 @@ import { uploadToR2, deleteKeyFromR2 } from "@/lib/storage";
 import { notifyGoogleIndexing } from "@/lib/google-indexing";
 import { siteConfig } from "@/lib/seo";
 import { publishingQueue } from "@/lib/queue";
+import { forgetDeletedSlug } from "@/lib/tombstones";
 
 import type { Role } from "@/lib/types";
 
@@ -380,6 +381,14 @@ export async function upsertArticle(data: any) {
     // after() uses the platform request lifetime for secondary work; it does
     // not grant an additional Cloudflare CPU allowance.
     after(async () => {
+      // A slug freed by a deletion stays tombstoned so its URL can
+      // answer 410 Gone, but nothing stops a new story from reusing
+      // it (getUniqueSlug only checks live article rows). Saving an
+      // article therefore clears any tombstone holding its slug, so
+      // the edge stops answering 410 for a story that exists again.
+      // Secondary work: a save must not wait on it, inline.
+      await forgetDeletedSlug(finalArticle.slug);
+
       if (finalArticle.status === "PUBLISHED" && data.bodyJson) {
         try {
           const bodyObj = typeof data.bodyJson === "string" ? JSON.parse(data.bodyJson) : data.bodyJson;

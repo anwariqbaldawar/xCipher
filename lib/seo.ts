@@ -73,6 +73,32 @@ export const siteConfig = {
   logoUrl: new URL('/xsypher-logo-full.png', resolveSiteUrl()).href,
 };
 
+/**
+ * The phonetic and common misspelling variants of the brand name.
+ *
+ * Readers search for this publication in more ways than the one
+ * spelling: xCipher (the name it was founded under), the traditional
+ * "cipher" spelling, "sypher", and the phonetic typos xcyper and
+ * cyper all reach the site. Listing them as `alternateName` on the
+ * Organization and WebSite entities is the schema.org way to tell
+ * the Knowledge Graph that every one of those queries resolves to
+ * this one entity — without a single redirect or a page per variant.
+ *
+ * `name` stays exactly "xSypher"; these are alternates, never
+ * replacements, so a crawler cannot read the variants as a
+ * competing entity.
+ */
+export const BRAND_ALTERNATE_NAMES: readonly string[] = [
+  "xCipher",
+  "Cypher",
+  "Sypher",
+  "xCyper",
+  "Cyper",
+  "xSypher Tech",
+  "xCipher Tech",
+  "xsypher.com",
+];
+
 /* ───────────────────────────────────────────────────────────────────────────────
  * Image resolution for metadata
  *

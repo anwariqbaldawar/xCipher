@@ -21,6 +21,7 @@ import StoryCard from "@/components/article/StoryCard";
 import ProgressBar from "@/components/article/ProgressBar";
 import ListenButton from "@/components/article/ListenButton";
 import { fetchFromR2 } from "@/lib/storage";
+import { isTombstonedSlug } from "@/lib/tombstones";
 import ArticleMobileToolbar from "@/components/article/ArticleMobileToolbar";
 import ViewCounter from "@/components/article/ViewCounter";
 import ActiveCategorySetter from "@/components/layout/ActiveCategorySetter";
@@ -159,6 +160,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     // however, is not a page in its own right and must never be indexed.
     if (historicalArticle) return { robots: { index: false, follow: true } };
 
+    // A tombstoned slug is permanently gone, not merely unknown. The
+    // middleware answers these with a true HTTP 410 before the page
+    // ever runs; this check is the belt to that braces — it keeps a
+    // deleted URL from rendering as a live page if middleware is
+    // bypassed (origin hit, stale edge cache), falling back to the
+    // noindex 404 document rather than a soft 200.
+    if (await isTombstonedSlug(slug)) notFound();
+
     // Unknown, unpublished or deleted slug. Throwing notFound() here is what
     // makes the response a 404 with the 404 document: without it Next served
     // the route's empty metadata, so a dead article URL answered with the
@@ -237,6 +246,10 @@ export default async function ArticlePage({ params }: Props) {
     if (historicalArticle) {
       redirect(`/article/${historicalArticle.slug}`);
     }
+    // Same tombstone fallback as generateMetadata: permanently
+    // deleted slugs must never render, even when the request
+    // reached the page without the middleware's 410.
+    if (await isTombstonedSlug(slug)) notFound();
     notFound();
   }
 

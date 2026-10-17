@@ -33,6 +33,12 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Next's middleware fetch instrumentation (and the middleware
+    // testing utilities) expect AsyncLocalStorage to exist as a
+    // global. It is a global in every runtime Next deploys to,
+    // but not in a bare Node process, so expose the built-in
+    // implementation here before any test imports next/server.
+    setupFiles: ["tests/setup/async-local-storage.ts"],
     include: ["tests/**/*.test.{ts,tsx}"],
   },
 });

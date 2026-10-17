@@ -1,4 +1,4 @@
-import { siteConfig, absoluteImageUrl, brandBannerUrl } from "@/lib/seo";
+import { siteConfig, absoluteImageUrl, brandBannerUrl, BRAND_ALTERNATE_NAMES } from "@/lib/seo";
 import { BRAND_BANNER_SIZE } from "@/lib/image-url";
 
 function webUrl(value: unknown, base?: string): string | undefined {
@@ -34,6 +34,11 @@ export function generateOrganizationJsonLd() {
     "@type": "Organization",
     "@id": new URL("/#organization", siteConfig.url).href,
     name: siteConfig.name,
+    // The phonetic and misspelling variants (xCipher, Cypher, Sypher,
+    // xCyper, Cyper …) are alternates of this one entity, so the
+    // Knowledge Graph resolves every variant query to xSypher instead
+    // of treating them as separate, unaffiliated publications.
+    alternateName: BRAND_ALTERNATE_NAMES,
     url: siteConfig.url,
     logo: siteConfig.logoUrl,
     // Only advertise profiles that verifiably exist for this publication; do

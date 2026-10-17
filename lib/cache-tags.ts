@@ -42,6 +42,14 @@ export const CACHE_TAGS = {
   authors: "authors",
   /** Publication-wide settings: site name, tagline, description. */
   settings: "settings",
+  /**
+   * The tombstone registry of permanently deleted article slugs
+   * (lib/tombstones.ts). Read by the article pages and by the
+   * cached manifest the middleware consults to answer 410 Gone
+   * at the edge, so a permanent delete has to drop it exactly
+   * like any other publication-state change.
+   */
+  deletedSlugs: "deleted-slugs",
 } as const;
 
 export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];

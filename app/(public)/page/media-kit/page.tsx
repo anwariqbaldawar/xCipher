@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Download, Palette, Type, ShieldCheck, User } from 'lucide-react';
+import { Download, Palette, Type, ShieldCheck, User, SpellCheck } from 'lucide-react';
 import type { Metadata } from 'next';
 import { brandBannerUrl, constructMetadata, siteConfig } from '@/lib/seo';
 import CopyButton from './CopyButton';
@@ -8,7 +8,7 @@ import DownloadAssetCard from './DownloadAssetCard';
 export const metadata: Metadata = constructMetadata({
   title: 'Media Kit & Brand Assets | xSypher',
   description:
-    'Official xSypher logos, typography, brand colours and boilerplate copy for press, conference programmes and partners.',
+    'Official xSypher logos, typography, brand colours, name pronunciation and spelling guidelines, and boilerplate copy for press, conference programmes and partners.',
   canonical: `${siteConfig.url}/page/media-kit`,
   image: brandBannerUrl(),
   imageAlt: 'xSypher media kit',
@@ -56,6 +56,54 @@ export default function MediaKitPage() {
                 Built by engineers for engineers, it favours primary sources, reproducible benchmarks and hands-on testing over press-release reporting. The publication takes no venture capital and has no corporate parent; it is funded by clearly labelled sponsorship, affiliate commissions and reader support, so a verdict is never for sale. Sponsored material is disclosed before the first paragraph, and every correction lives on the article it corrects, with a timestamp.
               </p>
               <CopyButton text="xSypher is an independent, founder-led engineering publication covering software architecture, cybersecurity, AI systems and developer hardware. Built by engineers for engineers, it favours primary sources, reproducible benchmarks and hands-on testing over press-release reporting. The publication takes no venture capital and has no corporate parent; it is funded by clearly labelled sponsorship, affiliate commissions and reader support, so a verdict is never for sale. Sponsored material is disclosed before the first paragraph, and every correction lives on the article it corrects, with a timestamp." />
+            </div>
+          </div>
+        </section>
+
+        {/* Brand Identity, Pronunciation & Spelling Guidelines */}
+        <section className="mb-16">
+          <h2 className="font-[family:var(--f-display)] text-2xl font-bold text-[var(--ink)] mb-6 border-b border-[var(--line)] pb-4 flex items-center gap-2">
+            <SpellCheck className="w-5 h-5 text-[var(--accent)]" />
+            Brand Identity, Pronunciation &amp; Spelling Guidelines
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-sm p-6 shadow-sm">
+              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">How to say the name</h3>
+              <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed mb-4">
+                xSypher is pronounced <b className="text-[var(--ink)]">“ex-sy-fer”</b> — the letter x spoken aloud (“ex”), followed by “sy-fer”, rhyming with the traditional word <i>cipher</i> it is built from.
+              </p>
+              <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed">
+                The name comes from <i>cipher</i>: a transformation you can specify exactly, verify, and repeat — the same standard every technical claim on this publication is held to. The leading <b className="text-[var(--ink)]">x</b> is the unknown we are still working out, which in engineering is most of it.
+              </p>
+            </div>
+            <div className="bg-[var(--surface-2)] border border-[var(--line)] rounded-sm p-6 shadow-sm">
+              <h3 className="font-bold text-[var(--ink)] mb-3 text-sm uppercase tracking-wider">The official spelling</h3>
+              <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed mb-4">
+                Whether you search for it or spell it as <b className="text-[var(--ink)]">xCipher</b>, the traditional <b className="text-[var(--ink)]">Cypher</b>, <b className="text-[var(--ink)]">Sypher</b>, or the common phonetic typos <b className="text-[var(--ink)]">xcyper</b> and <b className="text-[var(--ink)]">cyper</b> — <b className="text-[var(--ink)]">xSypher</b> is the official canonical name of our independent technology and security publication, and the only spelling that appears in our masthead, metadata and structured data.
+              </p>
+              <p className="text-[var(--muted)] font-[family:var(--f-body)] text-sm leading-relaxed">
+                The publication was founded under the name xCipher and later became xSypher, so older coverage, archives and search queries still use the earlier spellings. They all refer to this same publication at <a className="text-[var(--accent)] hover:underline" href="https://www.xsypher.com">https://www.xsypher.com</a>.
+              </p>
+            </div>
+          </div>
+          <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-4xl text-[var(--muted)] font-[family:var(--f-body)] mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 not-prose">
+              <div className="border border-green-500/30 bg-green-500/5 rounded-sm p-6">
+                <h4 className="font-bold text-green-500 mb-2 uppercase text-sm tracking-wide">Do:</h4>
+                <ul className="text-sm space-y-2 text-[var(--ink)] list-disc pl-4">
+                  <li>Write the name as <b>xSypher</b> — one word, lowercase x, capital S.</li>
+                  <li>Say it as “ex-sy-fer” in interviews, conference programmes and video scripts.</li>
+                  <li>Link to <code>https://www.xsypher.com</code> as the canonical domain.</li>
+                </ul>
+              </div>
+              <div className="border border-red-500/30 bg-red-500/5 rounded-sm p-6">
+                <h4 className="font-bold text-red-500 mb-2 uppercase text-sm tracking-wide">Don&apos;t:</h4>
+                <ul className="text-sm space-y-2 text-[var(--ink)] list-disc pl-4">
+                  <li>Do not style it as a separate publication (“xCipher”, “xCipher Tech”) — those are legacy and phonetic variants of xSypher, not rival outlets.</li>
+                  <li>Do not hyphenate, space or capitalise it mid-sentence (“X Sypher”, “X-Sypher”, “XSypher”).</li>
+                  <li>Do not invent a backronym — the x is the unknown variable, not an abbreviation.</li>
+                </ul>
+              </div>
             </div>
           </div>
         </section>
