@@ -262,7 +262,7 @@ export default async function AdminDashboard() {
 
       {/* ── Quick Actions Strip ────────────────────────────────────── */}
       <div className="dashboard-shortcuts grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {canWrite && <Link href="/admin/editor" className="flex flex-col p-4 bg-surface border border-line rounded-xl hover:border-accent hover:shadow-md transition-all group">
+        {canWrite && <Link href="/admin/editor" className="flex flex-col p-4 glass-panel glass-panel-hover bg-surface border border-line rounded-xl hover:border-accent hover:shadow-md transition-all group">
           <div className="p-2 bg-accent/10 text-accent rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
             <Plus className="w-5 h-5" />
           </div>
@@ -270,7 +270,7 @@ export default async function AdminDashboard() {
           <span className="text-xs text-muted mt-1">Open the Tiptap editor</span>
         </Link>}
         {canReview && (
-          <Link href="/admin/review" className="flex flex-col p-4 bg-surface border border-line rounded-xl hover:border-purple-500 hover:shadow-md transition-all group">
+          <Link href="/admin/review" className="flex flex-col p-4 glass-panel glass-panel-hover bg-surface border border-line rounded-xl hover:border-purple-500 hover:shadow-md transition-all group">
             <div className="p-2 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
               <CheckCircle2 className="w-5 h-5" />
             </div>
@@ -278,14 +278,14 @@ export default async function AdminDashboard() {
             <span className="text-xs text-muted mt-1">{awaitingReview} awaiting review</span>
           </Link>
         )}
-        {authorize(actorRole, 'taxonomy.create') && <Link href="/admin/taxonomy" className="flex flex-col p-4 bg-surface border border-line rounded-xl hover:border-blue-500 hover:shadow-md transition-all group">
+        {authorize(actorRole, 'taxonomy.create') && <Link href="/admin/taxonomy" className="flex flex-col p-4 glass-panel glass-panel-hover bg-surface border border-line rounded-xl hover:border-blue-500 hover:shadow-md transition-all group">
           <div className="p-2 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
             <Folder className="w-5 h-5" />
           </div>
           <span className="font-semibold text-ink text-sm">Manage Taxonomy</span>
           <span className="text-xs text-muted mt-1">Categories & tags</span>
         </Link>}
-        {authorize(actorRole, 'user.invite') && <Link href="/admin/users/invite" className="flex flex-col p-4 bg-surface border border-line rounded-xl hover:border-emerald-500 hover:shadow-md transition-all group">
+        {authorize(actorRole, 'user.invite') && <Link href="/admin/users/invite" className="flex flex-col p-4 glass-panel glass-panel-hover bg-surface border border-line rounded-xl hover:border-emerald-500 hover:shadow-md transition-all group">
           <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg w-fit mb-3 group-hover:scale-110 transition-transform">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
           </div>
@@ -382,7 +382,7 @@ export default async function AdminDashboard() {
       {/* ── High-Contrast KPI Metric Cards ──────────────────────────── */}
       <div className="dashboard-metrics grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* Card 1: Total Stories */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
+        <div className="glass-panel bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-muted">
             <span className="text-[11px] font-semibold tracking-wider uppercase">
               {canViewAll ? "Total Articles" : "Your Stories"}
@@ -400,7 +400,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Card 2: Published Stories */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
+        <div className="glass-panel bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-muted">
             <span className="text-[11px] font-semibold tracking-wider uppercase">
               Published
@@ -418,7 +418,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Card 3: Drafts & In Progress */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
+        <div className="glass-panel bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-muted">
             <span className="text-[11px] font-semibold tracking-wider uppercase">
               In Progress
@@ -436,7 +436,7 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Card 4: Total Readers / Views */}
-        <div className="bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
+        <div className="glass-panel bg-surface border border-line rounded-xl p-5 shadow-sm transition-all duration-200 hover:shadow-md hover:border-line-2 hover:-translate-y-0.5 relative overflow-hidden group">
           <div className="flex items-center justify-between text-muted">
             <span className="text-[11px] font-semibold tracking-wider uppercase">
               Total Reads
@@ -494,8 +494,8 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         {/* Left Column: Top Stories by Reads (7 cols) */}
-        <div className="lg:col-span-7 bg-surface border border-line rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface">
+        <div className="lg:col-span-7 bg-surface border border-line rounded-xl shadow-sm overflow-hidden glass-panel">
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface glass-panel-header">
             <div>
               <h2 className="text-sm font-bold text-ink tracking-wide uppercase font-[var(--f-ui)] flex items-center gap-2">
                 <span className="w-1.5 h-3.5 bg-accent rounded-sm" />
@@ -518,8 +518,8 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Right Column: Drafts & In Progress (5 cols) */}
-        <div className="lg:col-span-5 bg-surface border border-line rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface">
+        <div className="lg:col-span-5 bg-surface border border-line rounded-xl shadow-sm overflow-hidden glass-panel">
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface glass-panel-header">
             <div>
               <h2 className="text-sm font-bold text-ink tracking-wide uppercase font-[var(--f-ui)] flex items-center gap-2">
                 <span className="w-1.5 h-3.5 bg-amber-500 rounded-sm" />
@@ -605,8 +605,8 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mt-6">
         
         {/* Pending Moderation Panel */}
-        <div className="bg-surface border border-line rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface">
+        <div className="bg-surface border border-line rounded-xl shadow-sm overflow-hidden glass-panel">
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface glass-panel-header">
             <h2 className="text-sm font-bold text-ink tracking-wide uppercase font-[var(--f-ui)] flex items-center gap-2">
               <span className="w-1.5 h-3.5 bg-red-500 rounded-sm" />
               Action Required
@@ -644,8 +644,8 @@ export default async function AdminDashboard() {
         </div>
 
         {/* Recent Activity Feed */}
-        <div className="bg-surface border border-line rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface">
+        <div className="bg-surface border border-line rounded-xl shadow-sm overflow-hidden glass-panel">
+          <div className="px-5 py-4 border-b border-line flex items-center justify-between bg-surface glass-panel-header">
             <h2 className="text-sm font-bold text-ink tracking-wide uppercase font-[var(--f-ui)] flex items-center gap-2">
               <span className="w-1.5 h-3.5 bg-blue-500 rounded-sm" />
               Newsroom Activity

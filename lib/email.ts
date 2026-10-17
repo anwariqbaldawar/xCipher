@@ -1,5 +1,12 @@
 // Edge-safe email utility using native fetch API against Resend REST endpoint
 
+import {
+  articleForRole,
+  emailMetaPill,
+  emailShell,
+  EMAIL_BRAND,
+} from "@/lib/email-templates";
+
 export async function sendEmail({ to, subject, html, from }: { to: string; subject: string; html: string; from?: string }) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
@@ -40,31 +47,52 @@ export async function sendInvitationEmail({ to, role, inviteUrl }: SendInvitatio
     console.error("[email] RESEND_API_KEY is not set; invitation not sent to", to);
     return { success: false, error: "Email delivery is not configured." };
   }
-  
+
+  // The role arrives from user input; it is interpolated into
+  // HTML, so it is escaped before it reaches the template.
+  const safeRole = escapeHtml(String(role || "CONTRIBUTOR").toUpperCase());
+  const safeInviteUrl = escapeHtml(inviteUrl);
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.xsypher.com";
+
   try {
     const data = await sendEmail({
       to,
       subject: "You have been invited to join xSypher",
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0c0d10; color: #ffffff; padding: 40px 32px; border-radius: 12px; border: 1px solid #1f2127;">
-          <div style="text-align: center; margin-bottom: 32px; border-bottom: 1px solid #1f2127; padding-bottom: 24px;">
-            <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.05em; margin: 0;">x<span style="color: #f04552;">Sypher</span></h1>
-          </div>
-          <h2 style="font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #ffffff;">Welcome to xSypher</h2>
-          <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 24px;">
-            You have been invited to join the xSypher team as a <strong>${role}</strong>.
+      html: emailShell({
+        preheader: `You have been invited to join the xSypher team as ${articleForRole(safeRole)} ${safeRole}.`,
+        title: "You have been invited to join xSypher",
+        siteUrl,
+        cta: { label: "Accept Invitation", href: safeInviteUrl },
+        ctaPlainTextUrl: safeInviteUrl,
+        footerNote: "This invitation is addressed to you alone. If you were not expecting it, you can safely ignore this email — the link expires on its own.",
+        bodyHtml: `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;">
+            <tr>
+              <td align="center" style="padding:0 0 22px 0;">
+                <span style="display:inline-block;padding:6px 14px;border:1px solid ${EMAIL_BRAND.crimson};border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:bold;letter-spacing:0.24em;text-transform:uppercase;color:${EMAIL_BRAND.crimson};">Editorial Workspace Invitation</span>
+              </td>
+            </tr>
+          </table>
+          <h2 style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;letter-spacing:-0.02em;line-height:1.3;margin:0 0 14px 0;color:${EMAIL_BRAND.ink};" class="xsypher-email-ink">Welcome to the newsroom.</h2>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;margin:0 0 22px 0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
+            You have been invited to join the xSypher team as <strong style="color:${EMAIL_BRAND.ink};" class="xsypher-email-ink">${articleForRole(safeRole)} ${safeRole}</strong>.
           </p>
-          <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 32px;">
-            Please click the button below to accept your invitation and join the workspace. This link expires in 48 hours.
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border-spacing:0 8px;width:100%;">
+            <tr>
+              <td style="padding:0;">${emailMetaPill("Assigned role", safeRole)}</td>
+            </tr>
+            <tr>
+              <td style="padding:0;">${emailMetaPill("Workspace", "xSypher Editorial Console")}</td>
+            </tr>
+            <tr>
+              <td style="padding:0;">${emailMetaPill("Link expires", "48 hours from now")}</td>
+            </tr>
+          </table>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.65;margin:24px 0 0 0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
+            Accept within 48 hours — after that the invitation expires and a new one has to be issued from the console.
           </p>
-          <div style="margin: 32px 0; text-align: center;">
-            <a href="${inviteUrl}" style="background-color: #f04552; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Accept Invitation</a>
-          </div>
-          <p style="font-size: 13px; color: #52525b; border-top: 1px solid #1f2127; padding-top: 24px; margin-bottom: 0; text-align: center;">
-            If you did not expect this invitation, you can safely ignore this email.
-          </p>
-        </div>
-      `,
+        `,
+      }),
     });
 
     return { success: true, data };
@@ -86,29 +114,34 @@ export async function sendPasswordResetEmail({ to, resetUrl }: SendPasswordReset
   }
   
   try {
+    const safeResetUrl = escapeHtml(resetUrl);
     const data = await sendEmail({
       to,
       subject: "Reset your xSypher password",
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0c0d10; color: #ffffff; padding: 40px 32px; border-radius: 12px; border: 1px solid #1f2127;">
-          <div style="text-align: center; margin-bottom: 32px; border-bottom: 1px solid #1f2127; padding-bottom: 24px;">
-            <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.05em; margin: 0;">x<span style="color: #f04552;">Sypher</span></h1>
-          </div>
-          <h2 style="font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #ffffff;">Security Alert: Credential Reset Request.</h2>
-          <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 24px;">
+      html: emailShell({
+        preheader: "A password reset was requested for your xSypher account.",
+        title: "Reset your xSypher password",
+        siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://www.xsypher.com",
+        cta: { label: "Reset Password", href: safeResetUrl },
+        ctaPlainTextUrl: safeResetUrl,
+        footerNote: "If you did not initiate this password reset, you can safely ignore this email — your current credentials remain intact.",
+        bodyHtml: `
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;">
+            <tr>
+              <td align="center" style="padding:0 0 22px 0;">
+                <span style="display:inline-block;padding:6px 14px;border:1px solid ${EMAIL_BRAND.crimson};border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:9px;font-weight:bold;letter-spacing:0.24em;text-transform:uppercase;color:${EMAIL_BRAND.crimson};">Security Alert · Credential Reset</span>
+              </td>
+            </tr>
+          </table>
+          <h2 style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;letter-spacing:-0.02em;line-height:1.3;margin:0 0 14px 0;color:${EMAIL_BRAND.ink};" class="xsypher-email-ink">Credential reset requested.</h2>
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;margin:0 0 8px 0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
             We received a request to reset the master password for your xSypher account.
           </p>
-          <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 32px;">
-            Click the secure button below to establish a new password. This authentication token will expire in exactly 1 hour.
+          <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;margin:0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
+            This authentication token expires in exactly <strong style="color:${EMAIL_BRAND.ink};" class="xsypher-email-ink">1 hour</strong>.
           </p>
-          <div style="margin: 32px 0; text-align: center;">
-            <a href="${resetUrl}" style="background-color: #f04552; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Reset Password</a>
-          </div>
-          <p style="font-size: 13px; color: #52525b; border-top: 1px solid #1f2127; padding-top: 24px; margin-bottom: 0; text-align: center;">
-            If you did not initiate this password reset protocol, you can safely ignore this email. Your current credentials will remain intact.
-          </p>
-        </div>
-      `,
+        `,
+      }),
     });
 
     return { success: true, data };

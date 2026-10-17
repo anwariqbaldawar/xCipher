@@ -35,6 +35,7 @@ import TableOfContents from "../article/TableOfContents";
 import { EditorToolbar } from "./EditorToolbar";
 import { Markdown } from "tiptap-markdown";
 import { Figure } from "./extensions/AdvancedImage";
+import { FindReplaceHighlight } from "@/lib/editor/find-replace";
 import { Callout } from "./extensions/Callout";
 import { DataChart } from "./extensions/DataChart";
 import { SlashMenu } from "./extensions/SlashMenu";
@@ -504,6 +505,7 @@ export default function ArticleEditor({
       Subscript,
       Superscript,
       Figure,
+      FindReplaceHighlight,
       Callout,
       DataChart,
       Link.configure({

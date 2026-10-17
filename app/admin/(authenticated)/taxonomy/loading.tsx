@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonTable } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading categories and tags">
-      <SkeletonHeader />
-      <SkeletonTable rows={6} columns={3} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="MAPPING TAXONOMY..." />;
 }

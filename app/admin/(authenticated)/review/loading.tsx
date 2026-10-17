@@ -1,14 +1,5 @@
-import {
-  SkeletonPage,
-  SkeletonHeader,
-  SkeletonArticleList,
-} from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading the review queue">
-      <SkeletonHeader />
-      <SkeletonArticleList rows={5} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="FETCHING REVIEW QUEUE..." />;
 }

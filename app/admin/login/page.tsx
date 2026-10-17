@@ -4,18 +4,24 @@ import { useState, Suspense, useEffect, useRef } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, CheckCircle2, ArrowLeft, Eye, EyeOff, Mail, KeyRound, ShieldCheck } from "lucide-react";
 import Logo, { LogoIcon } from "@/components/common/Logo";
+import BrandLoader from "@/components/common/BrandLoader";
 
-function LoginForm() {
+function LoginForm({
+  loading,
+  setLoading,
+}: {
+  loading: boolean;
+  setLoading: (value: boolean) => void;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [needsOtp, setNeedsOtp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  
+
   const emailInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,7 +65,7 @@ function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
       {setupSuccess && (
-        <div 
+        <div
           className="flex items-start gap-3 p-3.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-lg text-sm"
           role="status"
         >
@@ -69,9 +75,9 @@ function LoginForm() {
           </p>
         </div>
       )}
-      
+
       {error && (
-        <div 
+        <div
           className="flex items-start gap-3 p-3.5 bg-bad/10 border border-bad/25 text-bad rounded-lg text-sm"
           role="alert"
           aria-live="assertive"
@@ -83,56 +89,61 @@ function LoginForm() {
 
       {/* Email Form Group */}
       <div className="flex flex-col gap-2">
-        <label 
-          htmlFor="email" 
-          className="block text-xs font-semibold uppercase tracking-wider text-neutral-300"
+        <label
+          htmlFor="email"
+          className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]"
         >
           Email Address
         </label>
-        <input 
-          id="email"
-          type="email" 
-          ref={emailInputRef}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="editor@xsypher.com"
-          required 
-          autoComplete="email"
-          className="block w-full h-11 px-3.5 py-2.5 bg-neutral-900/90 border border-neutral-700/80 rounded-lg text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-accent/70 focus:ring-1 focus:ring-accent/40 transition-all box-border [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_50px_#171717_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]" 
-        />
+        <div className="relative">
+          <Mail className="auth-field-icon" aria-hidden="true" />
+          <input
+            id="email"
+            type="email"
+            ref={emailInputRef}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="editor@xsypher.com"
+            required
+            autoComplete="email"
+            className="auth-field"
+          />
+        </div>
       </div>
 
       {/* Password Form Group */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
-          <label 
-            htmlFor="password" 
-            className="block text-xs font-semibold uppercase tracking-wider text-neutral-300"
+          <label
+            htmlFor="password"
+            className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]"
           >
             Password
           </label>
-          <Link 
-            href="/admin/forgot-password" 
-            className="text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors focus:outline-none focus-visible:underline"
+          <Link
+            href="/admin/forgot-password"
+            className="text-xs font-medium text-[var(--muted)] hover:text-[var(--ink)] transition-colors focus:outline-none focus-visible:underline"
           >
             Forgot password?
           </Link>
         </div>
         <div className="relative">
-          <input 
+          <KeyRound className="auth-field-icon" aria-hidden="true" />
+          <input
             id="password"
-            type={showPassword ? "text" : "password"} 
+            type={showPassword ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••••••"
-            required 
+            required
             autoComplete="current-password"
-            className="block w-full h-11 px-3.5 py-2.5 pr-10 bg-neutral-900/90 border border-neutral-700/80 rounded-lg text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-accent/70 focus:ring-1 focus:ring-accent/40 transition-all box-border [&:-webkit-autofill]:bg-transparent [&:-webkit-autofill]:[-webkit-box-shadow:0_0_0_50px_#171717_inset] [&:-webkit-autofill]:[-webkit-text-fill-color:white]" 
+            className="auth-field auth-field-has-action"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 focus:outline-none transition-colors"
+            className="auth-field-action"
+            aria-label={showPassword ? "Hide password" : "Show password"}
           >
             {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
@@ -144,7 +155,7 @@ function LoginForm() {
         <div className="flex flex-col gap-2">
           <label
             htmlFor="otp"
-            className="block text-xs font-semibold uppercase tracking-wider text-neutral-300"
+            className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]"
           >
             Authenticator Code
           </label>
@@ -159,9 +170,9 @@ function LoginForm() {
             placeholder="123456"
             required
             autoFocus
-            className="block w-full h-11 px-3.5 py-2.5 bg-neutral-900/90 border border-neutral-700/80 rounded-lg text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-accent/70 focus:ring-1 focus:ring-accent/40 transition-all tracking-[0.5em] text-center"
+            className="auth-field auth-field-otp"
           />
-          <p className="text-[11px] text-neutral-500">
+          <p className="text-[11px] text-[var(--muted)]">
             Open your authenticator app and enter the 6-digit code. A backup code also works.
           </p>
         </div>
@@ -169,19 +180,21 @@ function LoginForm() {
 
       {/* Primary CTA Action */}
       <div className="pt-1">
-        <button 
-          type="submit" 
-          disabled={loading} 
-          style={{ backgroundColor: loading ? '#b91c1c' : '#dc2626' }}
-          className="w-full h-11 flex items-center justify-center gap-2 bg-accent hover:bg-accent-deep active:bg-accent-press text-white font-medium text-sm tracking-wide rounded-lg shadow-md shadow-accent/25 transition-all duration-200 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed disabled:active:scale-100 cursor-pointer"
+        <button
+          type="submit"
+          disabled={loading}
+          className="auth-submit"
         >
           {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin text-white" />
-              <span>Signing in...</span>
-            </>
+            <span className="flex items-center gap-2">
+              <span className="auth-submit-spinner" aria-hidden="true" />
+              <span>Verifying credentials…</span>
+            </span>
           ) : (
-            <span>Sign In</span>
+            <span className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4" aria-hidden="true" />
+              <span>Sign In</span>
+            </span>
           )}
         </button>
       </div>
@@ -190,97 +203,81 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
+  const [authenticating, setAuthenticating] = useState(false);
+
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center text-neutral-200 p-4 sm:p-6 lg:p-8 relative selection:bg-accent selection:text-white">
-      {/* High-Performance Animated Tech Background */}
-      <div 
-        className="fixed inset-0 overflow-hidden pointer-events-none -z-10 bg-[#0c0d10]"
-        aria-hidden="true"
-      >
+    <div className="auth-shell">
+      {/* High-Performance Animated Tech Background — theme-aware
+          via the console variables, so light mode gets the same
+          architectural grid and crimson ambience at lower ink. */}
+      <div className="auth-bg" aria-hidden="true">
         {/* Layer 1: Subtle Tech Grid with drifting animation */}
-        <div 
-          className="absolute inset-0 opacity-[0.07] animate-tech-grid"
-          style={{
-            backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.25) 1px, transparent 1px),
-                              linear-gradient(to bottom, rgba(255, 255, 255, 0.25) 1px, transparent 1px)`,
-            backgroundSize: "48px 48px",
-          }}
-        />
+        <div className="auth-bg-grid animate-tech-grid" />
 
         {/* Layer 2: Ambient Deep Crimson Breathing Glow */}
-        <div 
-          className="absolute top-1/2 left-1/2 w-[580px] h-[580px] rounded-full blur-[130px] pointer-events-none animate-ambient-pulse"
-          style={{
-            background: "radial-gradient(circle, rgba(220, 38, 38, 0.14) 0%, rgba(185, 28, 28, 0.05) 55%, transparent 75%)",
-            willChange: "transform, opacity",
-          }}
-        />
+        <div className="auth-bg-glow animate-ambient-pulse" />
 
         {/* Layer 3: Soft Radial Vignette */}
-        <div 
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: "radial-gradient(ellipse at center, transparent 35%, #0c0d10 90%)",
-          }}
-        />
-        
-        {/* Layer 4: Giant brand-mark watermark.
-            Was a bitmap named "logo-4-squares.png" — which turned out to be a
-            screenshot of a browser window rather than the mark, and was the
-            kind of stray asset that ends up indexed. The vector mark below is
-            the same four squares and cross the header renders, so there is one
-            brand graphic in the repository instead of two that disagree. */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] mix-blend-screen">
-          <LogoIcon
-            className="w-[90vw] max-w-[900px] h-auto"
-            style={{ height: "auto" }}
-          />
+        <div className="auth-bg-vignette" />
+
+        {/* Layer 4: Giant brand-mark watermark. The vector mark
+            is the same four squares and cross the header renders,
+            so there is one brand graphic in the repository
+            instead of two that disagree. */}
+        <div className="auth-bg-mark">
+          <LogoIcon className="w-[90vw] max-w-[900px] h-auto" style={{ height: "auto" }} />
         </div>
       </div>
 
       {/* Editorial Auth Card */}
-      <div className="w-full max-w-[420px] bg-[#14171c]/95 border border-white/10 shadow-2xl shadow-black/80 rounded-2xl p-8 sm:p-10 relative z-10 flex flex-col items-center backdrop-blur-sm">
-        
-        {/* Header Section with Brand Mark */}
-        <div className="flex flex-col items-center mb-6 text-center w-full">
-          <div className="flex items-center gap-2.5 mb-3">
-            <Logo variant="sans" className="text-2xl text-white" />
-            <span className="px-2 py-0.5 text-[10px] font-semibold tracking-widest uppercase bg-white/5 border border-white/10 text-neutral-400 rounded">
-              Console
-            </span>
+      <div className="auth-card-wrap">
+        <div className="auth-card">
+          {/* Header Section with Brand Mark — the signature
+              Kremlin display wordmark, exactly as the console
+              top bar and the publication header carry it. */}
+          <div className="flex flex-col items-center mb-6 text-center w-full">
+            <div className="flex items-center gap-2.5 mb-3">
+              <Logo variant="brand" className="text-[22px]" />
+              <span className="auth-badge">
+                Editorial Console
+              </span>
+            </div>
+
+            <h1 className="sr-only">Sign In to xSypher Editorial Console</h1>
+            <p className="text-xs sm:text-sm font-normal tracking-wide text-[var(--muted)]">
+              Sign in to access editorial newsroom &amp; CMS
+            </p>
           </div>
 
-          <h1 className="sr-only">Sign In to xSypher Editorial Console</h1>
-          <p className="text-neutral-400 text-xs sm:text-sm font-normal tracking-wide">
-            Sign in to access editorial newsroom & CMS
-          </p>
+          <Suspense
+            fallback={
+              <div className="py-12">
+                <BrandLoader status="INITIALIZING SECURE SESSION…" mode="inline" />
+              </div>
+            }
+          >
+            <LoginForm loading={authenticating} setLoading={setAuthenticating} />
+          </Suspense>
         </div>
-
-        <Suspense fallback={
-          <div className="flex flex-col items-center justify-center py-12 text-neutral-400 space-y-4">
-            <Loader2 className="w-6 h-6 animate-spin text-neutral-500" />
-            <p className="text-sm font-medium">Loading console...</p>
-          </div>
-        }>
-          <LoginForm />
-        </Suspense>
-
       </div>
-      
+
       {/* Return Link & Footer */}
-      <div className="mt-6 mb-3 relative z-10 flex flex-col items-center gap-3 text-center">
-        <a 
-          href={process.env.NEXT_PUBLIC_SITE_URL || "https://www.xsypher.com"} 
-          className="group inline-flex items-center gap-2 text-xs font-medium text-neutral-400 hover:text-white transition-colors duration-200 py-1.5 px-3.5 rounded-full hover:bg-white/5 border border-transparent hover:border-white/10"
+      <div className="auth-footer">
+        <a
+          href={process.env.NEXT_PUBLIC_SITE_URL || "https://www.xsypher.com"}
+          className="auth-return group"
         >
-          <ArrowLeft className="w-4 h-4 text-neutral-400 group-hover:text-white transition-transform duration-200 group-hover:-translate-x-1" />
+          <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-1" aria-hidden="true" />
           <span>Return to publication</span>
         </a>
-        <p className="text-[11px] text-neutral-500 tracking-wider uppercase">
+        <p className="text-[11px] tracking-wider uppercase text-[var(--muted)]">
           &copy; {new Date().getFullYear()} xSypher Media Network · Authorized Editorial Staff Only
         </p>
       </div>
 
+      {/* Full-viewport brand loader while the console
+          authenticates the session. */}
+      {authenticating && <BrandLoader status="VERIFYING CREDENTIALS…" />}
     </div>
   );
 }

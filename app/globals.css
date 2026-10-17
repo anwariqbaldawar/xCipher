@@ -9088,3 +9088,375 @@ body.is-article .prose pre {
         margin-top: 30px;
     }
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Industrial brand loader (components/common/BrandLoader.tsx)
+   The 4-boxes mark — three neutral theme-adaptive squares and the
+   crimson X square — locks in with a staggered cyber-grid pulse
+   over a frosted glass surface, with a monospace telemetry line.
+   Every colour resolves through the theme variables, so the loader
+   follows Dark and Light mode automatically.
+   ───────────────────────────────────────────────────────────────────── */
+.brand-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 28px;
+}
+.brand-loader-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    display: flex;
+    background: color-mix(in srgb, var(--surface) 68%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+.brand-loader-grid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, 34px);
+    grid-template-rows: repeat(2, 34px);
+    gap: 8px;
+    padding: 14px;
+}
+/* Cyber-grid the mark locks into: a faint blueprint lattice
+   that fades in radially around the quadrants. */
+.brand-loader-cybergrid {
+    position: absolute;
+    inset: -30px;
+    background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
+    background-size: 13px 13px;
+    border-radius: 12px;
+    opacity: 0;
+    animation: bl-gridlock .7s ease .1s forwards;
+    -webkit-mask-image: radial-gradient(circle at center, #000 30%, transparent 75%);
+    mask-image: radial-gradient(circle at center, #000 30%, transparent 75%);
+}
+.brand-loader-cell {
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--ink) 78%, transparent);
+    animation:
+        bl-lockin .48s cubic-bezier(.2, .9, .25, 1.25) backwards,
+        bl-pulse 2.4s ease-in-out infinite;
+}
+.brand-loader-cell-a { animation-delay: 0s, 0s; }
+.brand-loader-cell-b { animation-delay: .09s, .2s; }
+.brand-loader-cell-c { animation-delay: .18s, .4s; }
+.brand-loader-cell-x {
+    display: grid;
+    place-items: center;
+    background: var(--accent);
+    color: #fff;
+    animation:
+        bl-lockin .48s cubic-bezier(.2, .9, .25, 1.25) backwards,
+        bl-pulse 2.4s ease-in-out infinite,
+        bl-glow 2.4s ease-in-out infinite;
+    animation-delay: .27s, .6s, .6s;
+}
+.brand-loader-x {
+    width: 20px;
+    height: 20px;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / .35));
+}
+.brand-loader-telemetry {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-family: var(--f-mono);
+    font-size: 10px;
+    font-weight: 550;
+    letter-spacing: .24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+}
+.brand-loader-cursor {
+    width: 7px;
+    height: 12px;
+    border-radius: 1px;
+    background: var(--accent);
+    animation: bl-cursor 1.05s steps(2, jump-none) infinite;
+}
+@keyframes bl-lockin {
+    from { transform: scale(1.65); opacity: 0; }
+    60% { transform: scale(.93); opacity: 1; }
+    to { transform: scale(1); opacity: 1; }
+}
+@keyframes bl-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .32; }
+}
+@keyframes bl-glow {
+    0%, 100% { box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 40%, transparent); }
+    50% { box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 72%, transparent); }
+}
+@keyframes bl-gridlock {
+    from { opacity: 0; transform: scale(1.06); }
+    to { opacity: .55; transform: scale(1); }
+}
+@keyframes bl-cursor {
+    50% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .brand-loader-cell,
+    .brand-loader-cybergrid,
+    .brand-loader-cursor {
+        animation: none;
+    }
+    .brand-loader-cybergrid { opacity: .4; }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Admin authentication (app/admin/login/page.tsx)
+   Deep architectural grid, ambient crimson light and a frosted
+   glass card. Every colour resolves through the console theme
+   variables, so the screen follows Dark and Light mode exactly
+   like the rest of the publication.
+   ───────────────────────────────────────────────────────────────────── */
+.auth-shell {
+    min-height: 100dvh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    padding: 16px;
+    position: relative;
+    selection: background var(--accent);
+}
+.auth-shell ::selection { background: var(--accent); color: #fff; }
+.auth-bg {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+    background: var(--surface);
+}
+.auth-bg-grid {
+    position: absolute;
+    inset: 0;
+    opacity: .06;
+    background-image:
+        linear-gradient(to right, color-mix(in srgb, var(--ink) 30%, transparent) 1px, transparent 1px),
+        linear-gradient(to bottom, color-mix(in srgb, var(--ink) 30%, transparent) 1px, transparent 1px);
+    background-size: 48px 48px;
+}
+.auth-bg-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 580px;
+    height: 580px;
+    border-radius: 9999px;
+    filter: blur(130px);
+    pointer-events: none;
+    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 75%);
+}
+.auth-bg-vignette {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 35%, var(--surface) 90%);
+}
+.auth-bg-mark {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: .035;
+    mix-blend-mode: screen;
+    color: var(--ink);
+}
+.auth-card-wrap {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+}
+.auth-card {
+    background: color-mix(in srgb, var(--surface) 76%, transparent);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+    border-radius: 18px;
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent),
+        0 24px 70px rgb(0 0 0 / .3);
+    padding: 32px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+@media (max-width: 480px) {
+    .auth-card { padding: 26px 22px; }
+}
+.auth-badge {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    color: var(--muted);
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+    border-radius: 5px;
+    white-space: nowrap;
+}
+.auth-field {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    height: 44px;
+    padding: 0 14px 0 40px;
+    font-size: 14px;
+    color: var(--ink);
+    background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.auth-field::placeholder { color: color-mix(in srgb, var(--muted) 80%, transparent); }
+.auth-field:focus {
+    border-color: color-mix(in srgb, var(--accent) 65%, var(--line));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.auth-field-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--muted);
+    pointer-events: none;
+}
+.auth-field-action {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    transition: color .15s ease, background .15s ease;
+}
+.auth-field-action:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.auth-field-has-action { padding-right: 48px; }
+.auth-field-otp {
+    padding-left: 14px;
+    text-align: center;
+    letter-spacing: .5em;
+    font-family: var(--f-mono);
+}
+.auth-submit {
+    width: 100%;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 550;
+    letter-spacing: .02em;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 28%, transparent);
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+}
+.auth-submit:hover { background: color-mix(in srgb, var(--accent) 92%, #000); }
+.auth-submit:active { transform: scale(.99); }
+.auth-submit:disabled { opacity: .75; cursor: not-allowed; }
+.auth-submit-spinner {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    border: 2px solid rgb(255 255 255 / .35);
+    border-top-color: #fff;
+    animation: auth-spin .7s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+.auth-footer {
+    margin-top: 24px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+.auth-return {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    padding: 6px 14px;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    transition: color .2s ease, background .2s ease, border-color .2s ease;
+}
+.auth-return:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 5%, transparent); border-color: color-mix(in srgb, var(--ink) 10%, transparent); }
+
+/* ─────────────────────────────────────────────────────────────────────
+   Executive glassmorphism surfaces (admin console)
+   Translucent, theme-aware panels with a frosted backdrop, a crisp
+   1px specular border and an ambient shadow. Every colour resolves
+   through the console variables, so the glass follows Dark and
+   Light mode without a second definition. Applied to dashboard
+   quick-action tiles, KPI cards and workbench panels.
+   ───────────────────────────────────────────────────────────────────── */
+.glass-panel {
+    background: color-mix(in srgb, var(--surface) 74%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid color-mix(in srgb, var(--ink) 11%, transparent);
+    box-shadow:
+        0 1px 2px rgb(0 0 0 / .04),
+        0 10px 28px -14px rgb(0 0 0 / .14);
+}
+.glass-panel-hover {
+    transition:
+        transform .18s cubic-bezier(.22, 1, .36, 1),
+        box-shadow .18s ease,
+        border-color .18s ease,
+        background .18s ease;
+}
+.glass-panel-hover:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    box-shadow:
+        0 2px 4px rgb(0 0 0 / .05),
+        0 16px 34px -14px color-mix(in srgb, var(--accent) 20%, rgb(0 0 0 / .16));
+}
+/* Specular top-edge light on glass headers, so panel titles read
+   as floating on the same frosted surface as their body. */
+.glass-panel-header {
+    background: color-mix(in srgb, var(--surface-2) 62%, transparent);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+@media (prefers-reduced-motion: reduce) {
+    .glass-panel-hover { transition: box-shadow .18s ease, border-color .18s ease; }
+    .glass-panel-hover:hover { transform: none; }
+}

@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonForm } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading settings">
-      <SkeletonHeader />
-      <SkeletonForm fields={6} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="LOADING CONSOLE CONFIG..." />;
 }

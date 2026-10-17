@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonTable } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading users">
-      <SkeletonHeader />
-      <SkeletonTable rows={8} columns={4} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="LISTING WORKSPACE SEATS..." />;
 }

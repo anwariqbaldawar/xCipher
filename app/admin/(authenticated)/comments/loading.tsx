@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonTable } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading comments">
-      <SkeletonHeader />
-      <SkeletonTable rows={8} columns={4} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="MODERATING DISCUSSION..." />;
 }

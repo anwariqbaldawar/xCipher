@@ -3,12 +3,13 @@
 import dynamic from "next/dynamic";
 import React from "react";
 import type ArticleEditorComponent from "./ArticleEditor";
+import BrandLoader from "@/components/common/BrandLoader";
 
 const ArticleEditor = dynamic(() => import("./ArticleEditor"), {
   ssr: false,
   loading: () => (
-    <div className="p-8 text-center text-[var(--muted)]">
-      Loading editorial studio...
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <BrandLoader status="LOADING STORY CANVAS…" mode="inline" />
     </div>
   ),
 });

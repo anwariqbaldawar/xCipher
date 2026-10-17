@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonForm } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading invitation form">
-      <SkeletonHeader />
-      <SkeletonForm fields={2} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="VERIFYING INVITATION..." />;
 }

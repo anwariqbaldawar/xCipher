@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { subscriber as subscriberTable } from "@/lib/db/schema";
 import { randomHex } from "@/lib/utils";
 
-import { sendEmail } from "@/lib/email";
+import { EMAIL_BRAND, emailShell } from "@/lib/email-templates";
 import { notificationQueue } from "@/lib/queue";
 const emailSchema = z.string().email().max(320).transform((e) => e.toLowerCase().trim());
 
@@ -75,26 +75,24 @@ export async function subscribeNewsletter(
           from: from.includes("<") ? from : `xSypher Newsletter <${from}>`,
           to: normalizedEmail,
           subject: "Welcome to xSypher",
-          html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #0c0d10; color: #ffffff; padding: 40px 32px; border-radius: 12px; border: 1px solid #1f2127;">
-              <div style="text-align: center; margin-bottom: 32px; border-bottom: 1px solid #1f2127; padding-bottom: 24px;">
-                <h1 style="color: #ffffff; font-size: 28px; font-weight: 800; letter-spacing: -0.05em; margin: 0;">x<span style="color: #f04552;">Sypher</span></h1>
-              </div>
-              <h2 style="font-size: 20px; font-weight: 600; margin-top: 0; margin-bottom: 16px; color: #ffffff;">Welcome to the xSypher Desk.</h2>
-              <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 24px;">
+          html: emailShell({
+            preheader: "Uncompromising intelligence and technical analysis, in your inbox.",
+            title: "Welcome to xSypher",
+            siteUrl,
+            cta: { label: "Read Latest Dispatches", href: siteUrl },
+            ctaPlainTextUrl: siteUrl,
+            unsubscribeUrl,
+            footerNote: "You are receiving the xSypher dispatch because you subscribed to the newsletter.",
+            bodyHtml: `
+              <h2 style="font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;letter-spacing:-0.02em;line-height:1.3;margin:0 0 14px 0;color:${EMAIL_BRAND.ink};" class="xsypher-email-ink">Welcome to the xSypher Desk.</h2>
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;margin:0 0 14px 0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
                 You are now part of an exclusive list receiving uncompromising intelligence and technical analysis.
               </p>
-              <p style="font-size: 16px; color: #a1a1aa; line-height: 1.6; margin-top: 0; margin-bottom: 32px;">
+              <p style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.65;margin:0;color:${EMAIL_BRAND.muted};" class="xsypher-email-muted">
                 We'll keep you informed on our latest publications, security dispatches, and insights directly in your inbox.
               </p>
-              <div style="margin: 32px 0; text-align: center;">
-                <a href="${siteUrl}" style="background-color: #f04552; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; display: inline-block;">Read Latest Dispatches</a>
-              </div>
-              <p style="font-size: 13px; color: #52525b; border-top: 1px solid #1f2127; padding-top: 24px; margin-bottom: 0; text-align: center;">
-                To terminate your subscription, <a href="${unsubscribeUrl}" style="color: #a1a1aa; text-decoration: underline;">click here to unsubscribe</a>.
-              </p>
-            </div>
-          `,
+            `,
+          }),
         }
       });
     } catch (emailError: any) {
@@ -141,14 +139,20 @@ export async function sendNewsletterBroadcast(subject: string, htmlContent: stri
       batches.push(activeSubscribers.slice(i, i + BATCH_SIZE));
     }
 
-    const htmlWithFooter = `
-      ${htmlContent}
-      <br/><br/>
-      <hr style="border: none; border-top: 1px solid #eaeaea; margin: 20px 0;" />
-      <p style="font-size: 12px; color: #666;">
-        To unsubscribe from these emails, <a href="${siteUrl}/unsubscribe/{{params.UNSUBSCRIBE_TOKEN}}" style="color: #666;">click here</a>.
-      </p>
-    `;
+    // The broadcast body is wrapped in the publication's
+    // table-safe shell: brand header, the composed digest,
+    // the social row and a compliant one-click unsubscribe.
+    // Brevo substitutes {{params.UNSUBSCRIBE_TOKEN}} per
+    // recipient at send time, so the token stays literal here.
+    const unsubscribeUrl = `${siteUrl}/unsubscribe/{{params.UNSUBSCRIBE_TOKEN}}`;
+    const htmlWithFooter = emailShell({
+      preheader: subject,
+      title: subject,
+      siteUrl,
+      unsubscribeUrl,
+      footerNote: "You are receiving the xSypher dispatch because you subscribed to the newsletter.",
+      bodyHtml: htmlContent,
+    });
 
     for (const batch of batches) {
       const messageVersions = batch.map(sub => ({

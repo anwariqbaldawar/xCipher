@@ -1,10 +1,5 @@
-import { SkeletonPage, SkeletonHeader, SkeletonEditor } from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading article">
-      <SkeletonHeader />
-      <SkeletonEditor />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="RESTORING STORY..." />;
 }

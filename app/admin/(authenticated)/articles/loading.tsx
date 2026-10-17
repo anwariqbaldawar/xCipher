@@ -1,16 +1,5 @@
-import {
-  SkeletonPage,
-  SkeletonHeader,
-  SkeletonFilterBar,
-  SkeletonArticleList,
-} from "@/components/console/Skeleton";
+import BrandLoader from "@/components/common/BrandLoader";
 
 export default function Loading() {
-  return (
-    <SkeletonPage label="Loading articles">
-      <SkeletonHeader />
-      <SkeletonFilterBar />
-      <SkeletonArticleList rows={8} />
-    </SkeletonPage>
-  );
+  return <BrandLoader status="SYNCING ARTICLE INDEX..." />;
 }

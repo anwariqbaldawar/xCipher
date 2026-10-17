@@ -33,6 +33,8 @@ export interface FigureAttrs {
   title?: string;
   caption?: string;
   credit?: string;
+  width?: string | number | null;
+  alignment?: string | null;
 }
 
 /**

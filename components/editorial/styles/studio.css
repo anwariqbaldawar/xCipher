@@ -58,6 +58,13 @@
 .studio-find { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 11px; }
 .studio-find input:not([type=checkbox]) { padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--ink); width: 160px; }
 .studio-find button { padding: 6px; border-radius: 5px; background: var(--surface-2); }.studio-find label { display: flex; gap: 5px; align-items: center; }
+/* Find & Replace match highlights (lib/editor/find-replace.ts).
+   Every match is tinted; the one the panel is positioned on is
+   deeper and ringed so the active match is unmistakable in both
+   themes. box-decoration-break keeps the highlight continuous
+   when a match wraps across lines. */
+.find-match { background: color-mix(in srgb, var(--accent) 26%, transparent); border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.find-match-active { background: color-mix(in srgb, var(--accent) 48%, transparent); outline: 1px solid var(--accent); outline-offset: 1px; }
 .studio-dialog { margin: auto; width: min(460px, 90vw); padding: 24px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 20px 80px #0003; }
 .studio-dialog::backdrop { background: #0007; backdrop-filter: blur(3px); }
 .studio-dialog h2 { font-size: 20px; font-weight: 700; }.studio-dialog p { color: var(--muted); font-size: 13px; margin: 8px 0 20px; }
