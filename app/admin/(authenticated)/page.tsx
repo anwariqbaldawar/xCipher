@@ -9,6 +9,9 @@ import { user as userTable, article as articleTable, comment as commentTable, in
 import StatusChip from "@/components/console/StatusChip";
 import AuthorStatusBoard, { type BoardArticle } from "@/components/console/AuthorStatusBoard";
 import TopStoriesList from "@/components/console/TopStoriesList";
+import SeoAuditPanel from "@/components/console/SeoAuditPanel";
+import CategoryCoveragePanel from "@/components/console/CategoryCoveragePanel";
+import { getEditorialAuditIndex } from "@/lib/cached-queries";
 import { 
   Plus, 
   FileText, 
@@ -69,6 +72,9 @@ export default async function AdminDashboard() {
   let commentsFlagged = 0;
   let authorApplications = 0;
   let recentLogs: any[] = [];
+  // Editorial intelligence: one cached metadata snapshot feeds both
+  // the SEO readiness audit and the category coverage panel.
+  let auditArticles: Awaited<ReturnType<typeof getEditorialAuditIndex>> = [];
 
   // Resolved outside the try below: redirect() signals by throwing NEXT_REDIRECT,
   // so calling it inside a try/catch swallows the redirect and renders the page
@@ -227,6 +233,9 @@ export default async function AdminDashboard() {
       orderBy: (l, { desc }) => [desc(l.createdAt)],
       limit: 5,
     });
+    // Tagged snapshot — warm on repeat loads, invalidated by the
+    // same `articles` tag every publish/edit already drops.
+    auditArticles = await getEditorialAuditIndex(actor);
   } catch (error) {
     console.error("Dashboard DB fetch error:", error);
   }
@@ -246,13 +255,13 @@ export default async function AdminDashboard() {
         <div className="flex items-center gap-3">
           <Link
             href="/admin/articles"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-ink bg-surface-2 hover:bg-surface-3 border border-line rounded-lg transition-colors"
+            className="btn-cs"
           >
             <span>All Articles</span>
           </Link>
           {canWrite && <Link
             href="/admin/editor"
-            className="hidden md:inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-deep active:bg-accent-press text-white text-xs sm:text-sm font-semibold rounded-lg shadow-sm hover:shadow transition-all duration-150 active:scale-[0.99]"
+            className="btn-premium hidden md:inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg"
           >
             <Plus className="w-4 h-4" />
             <span>New Story</span>
@@ -468,6 +477,19 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
+      {/* ── Editorial Intelligence ──────────────────────────────────
+          Two zero-wakeup widgets computed from the cached article
+          metadata index: an SEO & quality readiness audit with
+          1-click fixes, and the category coverage/readership map. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="lg:col-span-7">
+          <SeoAuditPanel articles={auditArticles} />
+        </div>
+        <div className="lg:col-span-5">
+          <CategoryCoveragePanel articles={auditArticles} />
+        </div>
+      </div>
+
       {/* ── Author status board ──────────────────────────────────────
           Shown only to roles without article.view.all. An author cannot act on
           publication-wide totals; what they need is their own work sorted by
@@ -579,7 +601,7 @@ export default async function AdminDashboard() {
                 <p className="text-xs text-muted mb-4 max-w-[200px]">You don't have any active workspaces right now.</p>
                 <Link
                   href="/admin/editor"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-ink bg-surface border border-line hover:border-line-2 shadow-sm hover:shadow rounded-lg transition-all"
+                  className="btn-cs"
                 >
                   <Plus className="w-3 h-3 text-accent" />
                   <span>Start New Draft</span>

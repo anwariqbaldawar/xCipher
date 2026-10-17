@@ -4,6 +4,7 @@ import { dbRead as db } from "./db";
 import { CACHE_TAGS, categoryTag, authorTag, tagTag } from "./cache-tags";
 import { publicFeedWhere, queryPublicFeed } from "./feed";
 import { getArticleAuthor, maskPublicArticle } from "./personas";
+import { buildArticleScope, type Actor } from "./capabilities";
 import { eq, and, or, ne, lte, isNull, inArray, notInArray, sql } from "drizzle-orm";
 import { article as articleTable, benchmarkLeaderboard } from "@/lib/db/schema";
 import {
@@ -519,3 +520,80 @@ export const getBenchmarkLeaderboard = unstable_cache(
   ["benchmark-leaderboard"],
   { tags: ["benchmark-leaderboard"], revalidate: 3600 }
 );
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Editorial intelligence index (admin dashboard widgets)
+// ─────────────────────────────────────────────────────────────────────────────
+// One tagged snapshot of article *metadata* (never body text) powers the
+// SEO & editorial quality audit and the category coverage breakdown on
+// /admin. Both widgets therefore cost zero extra database wake-ups on
+// repeat visits, exactly like every other cached listing in this file.
+//
+// The scope is part of the cache key: an author must never see another
+// writer's drafts in the audit, so the same buildArticleScope filter the
+// rest of the console applies is rebuilt inside the cached read from the
+// serialised actor identity.
+export interface EditorialAuditEntry {
+  id: string;
+  slug: string;
+  status: string;
+  title: string;
+  deck: string | null;
+  seoTitle: string | null;
+  seoDesc: string | null;
+  img: string | null;
+  featuredImageAlt: string | null;
+  readingTime: number;
+  views: number;
+  updatedAt: Date | string;
+  categorySlug: string | null;
+  categoryName: string | null;
+}
+
+export function getEditorialAuditIndex(actor: Actor) {
+  return unstable_cache(
+    async (): Promise<EditorialAuditEntry[]> => {
+      try {
+        const rows = await db.query.article.findMany({
+          where: buildArticleScope(actor),
+          columns: {
+            id: true,
+            slug: true,
+            status: true,
+            title: true,
+            deck: true,
+            seoTitle: true,
+            seoDesc: true,
+            img: true,
+            featuredImageAlt: true,
+            readingTime: true,
+            views: true,
+            updatedAt: true,
+          },
+          with: { category: { columns: { slug: true, name: true } } },
+        });
+        return rows.map(row => ({
+          id: row.id,
+          slug: row.slug,
+          status: row.status,
+          title: row.title,
+          deck: row.deck,
+          seoTitle: row.seoTitle,
+          seoDesc: row.seoDesc,
+          img: row.img,
+          featuredImageAlt: row.featuredImageAlt,
+          readingTime: row.readingTime,
+          views: row.views,
+          updatedAt: row.updatedAt,
+          categorySlug: row.category?.slug ?? null,
+          categoryName: row.category?.name ?? null,
+        }));
+      } catch (error) {
+        console.warn("[cached-queries] Failed to fetch editorial audit index:", error);
+        return [];
+      }
+    },
+    ["editorial-audit-index-v1", actor.role, actor.authorId ?? "all"],
+    { tags: [CACHE_TAGS.articles], revalidate: 300 },
+  )();
+}

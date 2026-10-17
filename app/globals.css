@@ -474,15 +474,19 @@ a:hover>.hlink,
 
 
 
-/* Premium Buttons */
+/* Premium Buttons — tactile crimson surface (Linear/Vercel console
+   language): vertical gradient, a crisp top inner specular highlight,
+   a 1px dark-crimson border, a hover glow and a press-down scale. */
 .btn-premium {
-    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-deep) 100%);
-    color: var(--on-accent);
-    border: 1px solid transparent;
-    box-shadow: 0 4px 14px 0 var(--accent-soft);
+    background: linear-gradient(180deg, #ef1a25 0%, #c80812 100%);
+    color: #ffffff;
+    border: 1px solid #9f0610;
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .28),
+        0 4px 14px 0 rgb(239 26 37 / .22);
     position: relative;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: box-shadow .2s ease, transform .12s ease, background .2s ease;
 }
 
 .btn-premium::after {
@@ -498,13 +502,10 @@ a:hover>.hlink,
 }
 
 .btn-premium:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(230, 0, 0, 0.25);
-    background: linear-gradient(135deg, var(--accent-deep) 0%, var(--accent-press) 100%);
-}
-
-[data-theme="dark"] .btn-premium:hover {
-    box-shadow: 0 6px 20px 0 rgba(255, 26, 26, 0.25);
+    background: linear-gradient(180deg, #f5222d 0%, #d60a14 100%);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .28),
+        0 6px 22px 0 rgb(239 26 37 / .35);
 }
 
 .btn-premium:hover::after {
@@ -512,8 +513,10 @@ a:hover>.hlink,
 }
 
 .btn-premium:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 10px 0 var(--accent-soft);
+    transform: scale(.98);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .2),
+        0 2px 10px 0 rgb(239 26 37 / .18);
 }
 
 .btn-premium:disabled {
@@ -2509,15 +2512,36 @@ figcaption .credit::before {
 }
 
 
+/* ─────────────────────────────────────────────────────────────────────
+   Typography rhythm — article body
+   H2/H3 spacing follows the editorial spec: headings keep generous
+   separation from the section above but sit tight against the
+   paragraph below, so a heading reads as the start of its own
+   block rather than floating in a grey gap.
+   · H2: 2rem above (1.4rem mobile), 0.6rem below
+   · H3: 1.4rem above (1.25rem mobile), 0.45rem below
+   · Body copy: 1.1rem between paragraphs
+   · Tables/charts: balanced 1.375rem above and below
+   ───────────────────────────────────────────────────────────────────── */
 .prose p,
 .ed-body p,
 .tiptap-content p,
 .prose ul,
 .prose ol,
 .prose li {
-    margin: 0 0 1.5rem;
+    margin: 0 0 1.1rem;
     font-size: 1em;
     line-height: inherit;
+}
+
+/* A heading is glued to the paragraph it introduces. */
+.prose h2 + p,
+.ed-body h2 + p,
+.tiptap-content h2 + p,
+.prose h3 + p,
+.ed-body h3 + p,
+.tiptap-content h3 + p {
+    margin-top: 0;
 }
 
 .prose h1,
@@ -2540,7 +2564,7 @@ figcaption .credit::before {
     font-weight: 660;
     letter-spacing: var(--track-display-sm);
     line-height: 1.3;
-    margin: 3rem 0 1rem;
+    margin: 2rem 0 0.6rem;
     color: var(--ink);
 }
 
@@ -2552,7 +2576,7 @@ figcaption .credit::before {
     font-size: 1.25em;
     font-weight: 640;
     line-height: 1.4;
-    margin: 2rem 0 0.75rem;
+    margin: 1.4rem 0 0.45rem;
     color: var(--ink);
 }
 
@@ -2578,12 +2602,14 @@ figcaption .credit::before {
     .ed-body h2,
     .tiptap-content h2 {
         font-size: 1.45em;
+        margin: 1.4rem 0 0.55rem;
     }
 
     .prose h3,
     .ed-body h3,
     .tiptap-content h3 {
         font-size: 1.15em;
+        margin: 1.25rem 0 0.4rem;
     }
 }
 
@@ -2655,7 +2681,7 @@ figcaption .credit::before {
     border-collapse: collapse;
     background: transparent;
     text-align: left;
-    margin: 2em 0;
+    margin: 1.375rem 0;
 }
 
 .prose table, 
@@ -3902,32 +3928,47 @@ textarea.f-input {
     color: var(--ink);
 }
 
-/* Selected console section: solid fill, same language as the public
-           nav and the Subscribe button.
-
-           The two hardcoded rgba() values this replaces restated the accent per
-           theme, so the dark-mode variant had to be kept in sync by hand.
-           --accent and --on-accent already flip, so one rule now covers both
-           and cannot drift. */
+/* Selected console section — executive console active state
+           (Linear/Vercel language): a subtle crimson glass fill, a
+           glowing 3px vertical accent bar on the leading edge, a crisp
+           red icon and bold high-contrast text. Replaces the heavy flat
+           bright-red full-width bar, which dominated the rail. */
 .cs-nav button.on,
 .cs-nav a.on:not(.cs-profile-card) {
-    background: var(--accent);
-    color: #ffffff !important;
+    position: relative;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--ink);
     padding-left: 14px;
-    font-weight: 600;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .cs-nav button.on:hover,
 .cs-nav a.on:not(.cs-profile-card):hover {
-    background: var(--accent);
-    color: #ffffff !important;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--ink);
 }
 
-/* Icons inherit the on-accent foreground rather than staying accent
-           coloured, which would leave them invisible against the new fill. */
+/* The glowing 3px crimson accent bar on the left edge. */
+.cs-nav button.on::before,
+.cs-nav a.on:not(.cs-profile-card)::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    translate: 0 -50%;
+    width: 3px;
+    height: 55%;
+    border-radius: 0 3px 3px 0;
+    background: var(--accent);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 80%, transparent);
+}
+
+/* Icons turn crisp red on the active item rather than inheriting the
+           fill colour. */
 .cs-nav button.on svg,
 .cs-nav a.on:not(.cs-profile-card) svg {
-    color: #ffffff;
+    color: var(--accent);
 }
 
 
@@ -4445,6 +4486,9 @@ select.ed-input {
     flex: 1
 }
 
+/* Utility / secondary buttons — refined glassmorphic surface with
+   a theme-adaptive 1px border (light: zinc-300/80, dark: white/10),
+   a whisper of inner highlight and a soft hover elevation. */
 .btn-cs {
     display: inline-flex;
     align-items: center;
@@ -4452,25 +4496,45 @@ select.ed-input {
     font: 600 13px/1 var(--f-ui);
     padding: 11px 18px;
     border-radius: var(--r-sm);
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
     color: var(--ink);
-    transition: all .2s
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent),
+        0 1px 2px rgb(0 0 0 / .04);
+    transition: transform .15s ease, box-shadow .2s ease, border-color .2s ease, background .2s ease
 }
 
 .btn-cs:hover {
-    border-color: var(--muted);
-    color: var(--ink)
+    border-color: color-mix(in srgb, var(--ink) 26%, transparent);
+    color: var(--ink);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent),
+        0 6px 16px rgb(0 0 0 / .08)
+}
+
+.btn-cs:active {
+    transform: translateY(0);
+    box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent),
+        0 1px 2px rgb(0 0 0 / .04)
 }
 
 .btn-cs.primary {
-    background: var(--accent);
-    border-color: var(--accent);
+    background: linear-gradient(180deg, #ef1a25 0%, #c80812 100%);
+    border-color: #9f0610;
     color: #ffffff;
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .28),
+        0 4px 14px 0 rgb(239 26 37 / .22);
 }
 
 .btn-cs.primary:hover {
-    background: var(--accent-deep);
-    border-color: var(--accent-deep);
+    background: linear-gradient(180deg, #f5222d 0%, #d60a14 100%);
+    border-color: #9f0610;
     color: #ffffff;
 }
 
@@ -7354,8 +7418,7 @@ select.ed-rail-input option {
     min-width: 600px;
     border-collapse: collapse !important;
     table-layout: auto !important;
-    margin-top: 1.5em;
-    margin-bottom: 1.5em;
+    margin: 1.375rem 0;
 }
 
 .prose th,
@@ -9230,39 +9293,57 @@ body.is-article .prose pre {
     selection: background var(--accent);
 }
 .auth-shell ::selection { background: var(--accent); color: #fff; }
+/* ─────────────────────────────────────────────────────────────────────
+   Sign-in studio background
+   A clean architectural canvas: porcelain base in light mode, deep
+   carbon-obsidian in dark mode, a fine geometric micro-grid with a
+   dot matrix (both fading out at the edges through a radial mask),
+   and two ambient glows — a whisper of crimson-rose and a cool slate
+   wash. The previous single muddy crimson blob is gone: in light mode
+   it read as a grey-brown smudge behind the card.
+   ───────────────────────────────────────────────────────────────────── */
 .auth-bg {
     position: fixed;
     inset: 0;
     overflow: hidden;
     pointer-events: none;
     z-index: -1;
-    background: var(--surface);
+    /* Porcelain → alabaster architectural base */
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
 }
 .auth-bg-grid {
     position: absolute;
     inset: 0;
-    opacity: .06;
+    /* Fine geometric micro-grid + subtle dot matrix, sharing one
+       radial mask so both dissolve smoothly toward the edges. */
     background-image:
-        linear-gradient(to right, color-mix(in srgb, var(--ink) 30%, transparent) 1px, transparent 1px),
-        linear-gradient(to bottom, color-mix(in srgb, var(--ink) 30%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+        radial-gradient(circle, rgb(15 23 42 / 0.14) 1px, transparent 1.5px),
+        linear-gradient(to right, rgb(15 23 42 / 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(15 23 42 / 0.05) 1px, transparent 1px);
+    background-size: 32px 32px, 32px 32px, 32px 32px;
+    background-position: 16px 16px, 0 0, 0 0;
+    opacity: 1;
+    -webkit-mask-image: radial-gradient(ellipse 95% 85% at 50% 38%, #000 25%, transparent 78%);
+    mask-image: radial-gradient(ellipse 95% 85% at 50% 38%, #000 25%, transparent 78%);
 }
 .auth-bg-glow {
     position: absolute;
-    top: 50%;
+    top: -12%;
     left: 50%;
-    width: 580px;
-    height: 580px;
+    width: 720px;
+    height: 520px;
     border-radius: 9999px;
-    filter: blur(130px);
+    filter: blur(90px);
     pointer-events: none;
-    background: radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 55%, transparent 75%);
+    /* Crimson-rose ambient light, barely-there in light mode */
+    background: radial-gradient(circle, rgb(229 9 20 / 0.06) 0%, transparent 62%);
 }
 .auth-bg-vignette {
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 35%, var(--surface) 90%);
+    /* Cool slate ambient wash rising from the lower corner */
+    background: radial-gradient(ellipse 70% 60% at 85% 100%, rgb(100 116 139 / 0.10) 0%, transparent 60%);
 }
 .auth-bg-mark {
     position: absolute;
@@ -9271,9 +9352,37 @@ body.is-article .prose pre {
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    opacity: .028;
+    color: #0f172a;
+}
+/* Dark mode: precision cyber-grid on carbon-obsidian */
+:is(.dark, [data-theme="dark"]) .auth-bg {
+    background: #050608;
+}
+:is(.dark, [data-theme="dark"]) .auth-bg-grid {
+    background-image:
+        radial-gradient(circle, rgb(148 163 184 / 0.16) 1px, transparent 1.5px),
+        linear-gradient(to right, rgb(148 163 184 / 0.07) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(148 163 184 / 0.07) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(ellipse 100% 90% at 50% 40%, #000 20%, transparent 72%);
+    mask-image: radial-gradient(ellipse 100% 90% at 50% 40%, #000 20%, transparent 72%);
+}
+:is(.dark, [data-theme="dark"]) .auth-bg-glow {
+    /* Subtle top-center crimson spotlight */
+    top: -18%;
+    width: 640px;
+    height: 480px;
+    filter: blur(110px);
+    background: radial-gradient(circle, rgb(229 9 20 / 0.14) 0%, transparent 62%);
+}
+:is(.dark, [data-theme="dark"]) .auth-bg-vignette {
+    /* Radial vignette mask closing the edges into the canvas */
+    background: radial-gradient(ellipse at center, transparent 30%, #050608 92%);
+}
+:is(.dark, [data-theme="dark"]) .auth-bg-mark {
     opacity: .035;
+    color: #e2e8f0;
     mix-blend-mode: screen;
-    color: var(--ink);
 }
 .auth-card-wrap {
     width: 100%;
@@ -9282,18 +9391,31 @@ body.is-article .prose pre {
     z-index: 1;
 }
 .auth-card {
-    background: color-mix(in srgb, var(--surface) 76%, transparent);
+    /* Frosted white glass — light mode */
+    background: rgb(255 255 255 / .85);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
+    border: 1px solid rgb(226 232 240 / .9);
     border-radius: 18px;
     box-shadow:
-        inset 0 1px 0 color-mix(in srgb, var(--ink) 9%, transparent),
-        0 24px 70px rgb(0 0 0 / .3);
+        inset 0 1px 0 rgb(255 255 255 / .9),
+        0 1px 2px rgb(15 23 42 / .04),
+        0 12px 32px rgb(15 23 42 / .08),
+        0 32px 80px rgb(15 23 42 / .06);
     padding: 32px 40px;
     display: flex;
     flex-direction: column;
     align-items: center;
+}
+/* Dark mode: frosted obsidian glass */
+:is(.dark, [data-theme="dark"]) .auth-card {
+    background: rgb(24 24 27 / .75);
+    border: 1px solid rgb(255 255 255 / .1);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .06),
+        0 1px 2px rgb(0 0 0 / .3),
+        0 12px 32px rgb(0 0 0 / .35),
+        0 32px 80px rgb(0 0 0 / .4);
 }
 @media (max-width: 480px) {
     .auth-card { padding: 26px 22px; }
@@ -9370,19 +9492,26 @@ body.is-article .prose pre {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: var(--accent);
+    background: linear-gradient(180deg, #ef1a25 0%, #c80812 100%);
     color: #fff;
     font-size: 14px;
-    font-weight: 550;
+    font-weight: 600;
     letter-spacing: .02em;
-    border: 0;
+    border: 1px solid #9f0610;
     border-radius: 10px;
-    box-shadow: 0 6px 20px color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .28),
+        0 6px 20px rgb(239 26 37 / .25);
     cursor: pointer;
     transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
 }
-.auth-submit:hover { background: color-mix(in srgb, var(--accent) 92%, #000); }
-.auth-submit:active { transform: scale(.99); }
+.auth-submit:hover {
+    background: linear-gradient(180deg, #f5222d 0%, #d60a14 100%);
+    box-shadow:
+        inset 0 1px 0 rgb(255 255 255 / .28),
+        0 8px 26px rgb(239 26 37 / .35);
+}
+.auth-submit:active { transform: scale(.98); }
 .auth-submit:disabled { opacity: .75; cursor: not-allowed; }
 .auth-submit-spinner {
     width: 14px;

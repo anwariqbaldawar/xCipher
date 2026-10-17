@@ -58,3 +58,19 @@ export function getEditorFormattingState(editor: Editor) {
   formatting.set(editor, { state, value });
   return value;
 }
+
+/**
+ * The heading the caret currently sits under — the "active section"
+ * the status bar reports. The outline is memoised per immutable
+ * document, so this is a short walk over an already-cached list.
+ */
+export function getActiveSection(editor: Editor): string | null {
+  const headings = getDocumentOutline(editor);
+  const { from } = editor.state.selection;
+  let current: Heading | null = null;
+  for (const heading of headings) {
+    if (heading.pos < from) current = heading;
+    else break;
+  }
+  return current?.text ?? null;
+}

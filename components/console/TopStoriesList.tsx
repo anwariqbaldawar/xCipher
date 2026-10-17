@@ -119,7 +119,7 @@ export default function TopStoriesList({ initialStories }: { initialStories: Top
               <button
                 onClick={loadMore}
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-surface hover:bg-surface-3 active:bg-surface-2 text-ink text-xs font-semibold rounded-lg border border-line hover:border-line-2 shadow-sm transition-all duration-150 active:scale-[0.99] disabled:opacity-50 disabled:pointer-events-none"
+                className="btn-cs disabled:opacity-50 disabled:pointer-events-none"
               >
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

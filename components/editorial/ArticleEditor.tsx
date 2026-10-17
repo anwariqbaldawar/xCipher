@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { showToast } from "@/lib/utils";
-import { useEditor, EditorContent, ReactRenderer, useEditorState, type Editor } from "@tiptap/react";
+import { useEditor, EditorContent, ReactRenderer, type Editor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Heading from "@tiptap/extension-heading";
 import Underline from "@tiptap/extension-underline";
@@ -26,7 +26,7 @@ import tippy from 'tippy.js';
 
 
 import { useDraftCache, clearDraftCache } from "@/lib/use-draft-cache";
-import { Loader2, ArrowLeft, Settings, Eye } from "lucide-react";
+import { Loader2, ArrowLeft, PanelLeft, PanelRight, Eye } from "lucide-react";
 import { getAllowedMediaDomains } from "@/lib/sanitize";
 import { isStaleAsset } from "@/lib/stale-assets";
 import SeoPreview from "./SeoPreview";
@@ -57,7 +57,6 @@ import { authorize } from "@/lib/capabilities";
 import { EditorialBlock } from "./extensions/EditorialBlock";
 import { parseEditorialBlock } from "@/lib/editorial-blocks";
 import DocumentOutline from "./DocumentOutline";
-import { getDocumentCounts } from "@/lib/editor/document-state";
 import DocumentStatus from "./DocumentStatus";
 import PublishingPanel from "./PublishingPanel";
 import EditorialPersonaSettings from "./EditorialPersonaSettings";
@@ -65,21 +64,11 @@ import { getPersonaForCategory } from "@/lib/personas";
 import "./styles/studio.css";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Live word count
+// Live word count lives in the bottom status bar (DocumentStatus), which
+// subscribes to the editor state on its own so a keystroke re-renders one
+// strip instead of the whole studio. `getDocumentCounts` is memoised per
+// immutable document in lib/editor.
 // ─────────────────────────────────────────────────────────────────────────────
-// Subscribed to the editor state on its own, so a keystroke re-renders this one
-// span instead of the whole studio (form, inspector rail, toolbar, footer).
-// `getDocumentCounts` is memoised per immutable document in lib/editor.
-function EditorWordCount({ editor }: { editor: Editor }) {
-  const words = useEditorState({ editor, selector: ({ editor }) => getDocumentCounts(editor).words });
-  const isBelowMin = words < 50;
-  return (
-    <span className={`text-xs ml-2 font-medium flex items-center gap-1 ${isBelowMin ? "text-[var(--warn)] hidden sm:flex" : "text-[var(--muted)] hidden md:flex"}`}>
-      Word count: {words}
-      {isBelowMin && <span className="hidden sm:inline">(Min 50)</span>}
-    </span>
-  );
-}
 
 function hasEmptyMermaidSource(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
@@ -247,6 +236,10 @@ export default function ArticleEditor({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [outlineOpen, setOutlineOpen] = useState(true);
   const [zoom, setZoom] = useState(100);
+  // Desktop: the post-settings dock is part of the three-pane
+  // workspace (docked). Mobile: the same state drives the bottom
+  // sheet, which starts closed.
+  const [inspectorDocked, setInspectorDocked] = useState(true);
   const [isInspectorOpen, setIsInspectorOpen] = useState(false);
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [tagInput, setTagInput] = useState("");
@@ -1251,10 +1244,12 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
            </div>
         </div>
       )}
-      {/* ── Unified Sticky Header: Action Bar + Formatting Toolbar ── */}
-      <div className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] shadow-sm">
-        {/* Action Bar Row */}
-        <header className="h-14 flex-shrink-0 px-4 sm:px-6 flex items-center justify-between gap-3">
+      {/* ── MS Word Ribbon: Title & Actions Row + Formatting Row ──
+          flex-none + the studio shell's overflow:hidden keep document
+          text from ever scrolling above or behind it. */}
+      <div className="studio-ribbon-header">
+        {/* Row 1 — Title & Actions Bar */}
+        <header className="studio-title-bar px-3 sm:px-4 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
@@ -1274,8 +1269,6 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
               }`}>
               {currentFormStatus === 'SUBMITTED' ? 'In Review' : currentFormStatus}
             </span>
-
-            <EditorWordCount editor={editor} />
 
             <span
               role="status"
@@ -1298,15 +1291,32 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Dock toggles — MS Word-style panel controls. One
+                handler drives both states: on wide screens it
+                collapses the docked outline / post-settings panes,
+                on narrow ones it opens the bottom sheet. */}
             <button
               type="button"
-              onClick={() => setIsInspectorOpen(true)}
-              className="p-2 text-[var(--muted)] hover:text-[var(--ink)] rounded-lg hover:bg-[var(--surface-2)] transition-colors lg:hidden"
-              title="Settings"
-              aria-label="Open publishing details"
-              aria-haspopup="dialog"
+              onClick={() => setOutlineOpen(!outlineOpen)}
+              className="studio-dock-toggle"
+              aria-pressed={outlineOpen}
+              aria-label={outlineOpen ? "Hide document outline" : "Show document outline"}
+              title={outlineOpen ? "Hide outline" : "Show outline"}
             >
-              <Settings className="w-4 h-4" />
+              <PanelLeft className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInspectorDocked(!inspectorDocked);
+                setIsInspectorOpen(!isInspectorOpen);
+              }}
+              className="studio-dock-toggle"
+              aria-pressed={inspectorDocked}
+              aria-label="Toggle post settings"
+              title="Post settings"
+            >
+              <PanelRight className="w-4 h-4" />
             </button>
 
             <button
@@ -1452,9 +1462,9 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
           </div>
         </header>
 
-        {/* Formatting Toolbar Row — directly below action bar, inside same sticky container */}
+        {/* Row 2 — MS Word formatting ribbon */}
         {editor && (
-          <div className="border-t border-[var(--line-2)]/50 px-3 sm:px-5">
+          <div className="studio-ribbon-row">
             <EditorToolbar
               editor={editor}
               isFullscreen={isFullscreen}
@@ -1525,8 +1535,8 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
         </div>
       )}
 
-      {/* ── 2-Column Workspace ── */}
-      <div className="studio-workspace flex flex-row flex-1 w-full relative">
+      {/* ── Three-pane docked workspace: outline | canvas | inspector ── */}
+      <div className="studio-workspace">
 
         {outlineOpen && !isFullscreen && <DocumentOutline editor={editor} close={() => setOutlineOpen(false)} />}
 
@@ -1622,7 +1632,7 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
         </main>
 
         {/* ── Document Inspector Rail (Right Sidebar) ── */}
-        <PublishingPanel open={isInspectorOpen} close={() => setIsInspectorOpen(false)}>
+        <PublishingPanel open={isInspectorOpen} docked={inspectorDocked} close={() => setIsInspectorOpen(false)}>
 
           <div className="space-y-4">
             {/* ── Section A: Post Settings & Workflow ── */}
@@ -2068,7 +2078,14 @@ const canManageByline = authorize(userRole as Role, 'article.manage.byline');
         </PublishingPanel>
       </div>
 
-      <DocumentStatus editor={editor} zoom={zoom} setZoom={setZoom} status={syncStatus.label} />
+      <DocumentStatus
+        editor={editor}
+        zoom={zoom}
+        setZoom={setZoom}
+        status={syncStatus.label}
+        isFullscreen={isFullscreen}
+        toggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+      />
 
       <ThumbnailCropper
         open={!!thumbCrop}

@@ -6,8 +6,8 @@
 .console-desktop-sidebar :is(.cs-profile-card, .cs-nav-divider, .cs-nav-group) { display: flex; }
 .console-desktop-sidebar .cs-nav-group { display: block; }
 .console-top-actions { display: flex; align-items: center; }
-.console-icon-action { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; color: var(--muted); }
-.console-icon-action:hover { background: var(--surface-2); color: var(--ink); }
+.console-icon-action { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; color: var(--muted); background: color-mix(in srgb, var(--surface) 72%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent); transition: color .15s, border-color .15s, transform .15s, box-shadow .2s; }
+.console-icon-action:hover { background: var(--surface-2); color: var(--ink); border-color: color-mix(in srgb, var(--ink) 26%, transparent); transform: translateY(-1px); box-shadow: 0 4px 12px rgb(0 0 0 / .08); }
 .console-navigation-sheet { margin: 0 auto 0 0; max-height: 100dvh; height: 100dvh; width: min(360px, 92vw); max-width: 92vw; background: color-mix(in srgb, var(--surface) 82%, transparent); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); color: var(--ink); border: 0; border-right: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); box-shadow: 0 0 60px rgb(0 0 0 / .25); padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom)); overflow-y: auto; }
 .console-navigation-sheet::backdrop { background: #0008; backdrop-filter: blur(4px); }
 .console-sheet-heading { display: flex; align-items: center; justify-content: space-between; padding: 6px 0 18px; border-bottom: 1px solid var(--line); }
@@ -18,7 +18,40 @@
 .console-navigation-sheet .cs-profile-card { display: flex; }.console-navigation-sheet .cs-nav-group { display: block; margin-top: 14px; }.console-navigation-sheet .cs-nav-divider { display: block; }
 .console-sheet-actions { padding: 16px 0; border-top: 1px solid var(--line); }
 .console-bottom-nav, .console-fab, .console-menu-trigger, .console-app-avatar { display: none; }
-.studio-desktop-inspector { width: 288px; flex-shrink: 0; align-self: flex-start; position: sticky; top: 160px; max-height: calc(100dvh - 160px); padding: 24px; background: var(--surface); border-left: 1px solid var(--line); overflow-y: auto; }
+/* Docked MS Word inspector pane — flush from the ribbon to the
+   status bar with its own scroll, instead of a sticky column that
+   left a grey gap above the POST SETTINGS card. */
+.studio-desktop-inspector { width: 288px; flex-shrink: 0; align-self: stretch; height: 100%; padding: 20px; background: var(--surface); border-left: 1px solid var(--line); overflow-y: auto; }
+
+/* ── MS Word studio docking (all viewports) ──────────────────
+   Inside an editor route the console main becomes a fixed-height
+   flex column: the ribbon header and the status bar dock to the
+   viewport edges, and only the three panes between them scroll.
+   The route's own page heading is redundant chrome next to the
+   ribbon, so it steps aside. */
+.console .cs-main:has(.editor-studio) { display: flex; flex-direction: column; overflow: hidden; padding: 0; }
+.console .cs-main:has(.editor-studio) > * { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.console .cs-main:has(.editor-studio) > * > :not(.editor-studio) { flex: none; }
+.console .cs-main:has(.editor-studio) > * > h1,
+.console .cs-main:has(.editor-studio) > * > .cs-sub { display: none; }
+
+/* Writing routes: the admin navigation collapses to a compact
+   icon rail so the studio gets maximum horizontal screen
+   real estate — the same way Word keeps its navigation pane
+   out of the way while a document is open. */
+@media (min-width: 900px) {
+  .console[data-writing="true"] .cs-body { grid-template-columns: 56px 1fr; }
+  .console[data-writing="true"] .console-desktop-sidebar { padding: 0; }
+  .console[data-writing="true"] .cs-nav { padding: 12px 0; align-items: center; }
+  /* font-size:0 retires the bare text-node labels; the badge
+     spans carry their own font size, so they hide separately. */
+  .console[data-writing="true"] .cs-nav a:not(.cs-profile-card),
+  .console[data-writing="true"] .cs-nav button { justify-content: center; padding-left: 0; padding-right: 0; font-size: 0; }
+  .console[data-writing="true"] .cs-nav a:not(.cs-profile-card) > span { display: none; }
+  .console[data-writing="true"] .cs-nav-group { font-size: 0; min-height: 12px; }
+  .console[data-writing="true"] .cs-profile-card { justify-content: center; padding-left: 0; padding-right: 0; }
+  .console[data-writing="true"] .cs-profile-info { display: none; }
+}
 .studio-publishing-sheet { position: fixed; inset: auto 0 0; margin: 0; width: 100%; max-width: 100%; max-height: 88dvh; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; padding: 0 0 env(safe-area-inset-bottom); box-shadow: 0 -15px 70px #0003; }
 .studio-publishing-sheet[open] { display: flex; flex-direction: column; animation: publishing-sheet-enter .2s ease-out; }
 .studio-publishing-sheet::backdrop { background: #0008; backdrop-filter: blur(4px); }
@@ -65,8 +98,6 @@
   .mobile-console .console-avatar-initial { color: #fff; background: var(--accent); border-color: var(--accent); }
   .mobile-console .cs-main > :has(.editor-studio) { max-width: none; }
   .mobile-console .cs-main:has(.editor-studio) { padding: 0 0 calc(65px + env(safe-area-inset-bottom)); }
-  .mobile-console .editor-studio > div:first-of-type { position: sticky; top: 0; z-index: 40; }
-  .mobile-console .editor-studio > div:first-of-type > div.border-t { background: var(--surface); }
   .mobile-console .studio-ribbon { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; min-height: 58px; padding: 4px 0; }
   .mobile-console .studio-ribbon > *, .mobile-console .studio-tool-group { flex-shrink: 0; }
   .mobile-console .studio-tool { width: 44px; height: 44px; }

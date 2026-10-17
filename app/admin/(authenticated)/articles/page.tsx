@@ -208,9 +208,9 @@ export default async function AdminArticles({ searchParams }: PageProps) {
           </p>
         </div>
         {authorize(actor.role, "article.create") && (
-          <Link 
-            href="/admin/editor" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-deep active:bg-accent-press text-white text-xs sm:text-sm font-semibold rounded-lg shadow-xs hover:shadow transition-all duration-150 active:scale-[0.99] self-start sm:self-auto"
+          <Link
+            href="/admin/editor"
+            className="btn-premium inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-lg self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             <span>New article</span>

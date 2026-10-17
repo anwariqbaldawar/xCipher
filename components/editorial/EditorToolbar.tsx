@@ -132,7 +132,6 @@ export function EditorToolbar({ editor, isFullscreen, toggleFullscreen, onToggle
     <div className="studio-menu-row">
       <div className="studio-tabs" role="group" aria-label="Toolbar sections"><button type="button" aria-pressed={tab === 'write'} onClick={() => setTab('write')}>Write</button><button type="button" aria-pressed={tab === 'insert'} onClick={() => setTab('insert')}>Insert</button></div>
       <Menu title="Document"><Item onClick={exportDocument}><Download size={15} /> Export document JSON</Item><Item onClick={() => setFindOpen(true)}><Search size={15} /> Find and replace</Item>{onToggleOutline && <Item onClick={onToggleOutline}><PanelLeft size={15} /> {outlineOpen ? 'Hide' : 'Show'} outline</Item>}{toggleFullscreen && <Item onClick={toggleFullscreen}><Maximize2 size={15} /> {isFullscreen ? 'Exit' : 'Enter'} focus mode</Item>}</Menu>
-      <span className="studio-toolbar-hint">{tab === 'write' ? 'A space for your next great story' : 'Build a richer story'}</span>
     </div>
     <div className="studio-ribbon" role="toolbar" aria-label={tab === 'write' ? 'Text formatting' : 'Insert content'}>
       <div className="studio-tool-group"><Tool icon={Undo} title="Undo (Ctrl+Z)" disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} /><Tool icon={Redo} title="Redo (Ctrl+Shift+Z)" disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} /></div>
