@@ -13,6 +13,14 @@ import CodeBlockEnhancer from "@/components/article/CodeBlockEnhancer";
 import { SocialIcon } from "@/components/common/SocialIcon";
 export { SocialIcon };
 
+function formatCompactMetric(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  if (value < 1000) return String(Math.round(value));
+  const unit = value >= 1_000_000 ? 'M' : 'K';
+  const amount = value / (unit === 'M' ? 1_000_000 : 1000);
+  return `${Number(amount.toFixed(2))}${unit}`;
+}
+
 function prepareBioHtml(html: string | null | undefined): string {
   const sanitized = sanitizeBioHtml(html);
   if (!sanitized) return "";
@@ -43,7 +51,7 @@ function prepareBioHtml(html: string | null | undefined): string {
   });
 }
 
-export default function AuthorProfileView({ author, articles, socials, totalViews, articleFeed }: { author: any, articles: any[], socials: any[], totalViews: number, articleFeed?: ReactNode }) {
+export default function AuthorProfileView({ author, articles, socials, totalViews, totalWords = 0, articleFeed }: { author: any, articles: any[], socials: any[], totalViews: number, totalWords?: number, articleFeed?: ReactNode }) {
   return (
     <div className="ap-root w-full max-w-[100vw]">
       {/* ── Hero / Banner ─────────────────────────── */}
@@ -145,12 +153,12 @@ export default function AuthorProfileView({ author, articles, socials, totalView
             <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mt-1">PUBLISHED ARTICLES</span>
           </div>
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
-            <span className="text-2xl sm:text-3xl font-bold text-[var(--ink)]">{totalViews > 0 ? fmtViews(totalViews) : 0}</span>
+            <span className="text-2xl sm:text-3xl font-bold text-[var(--ink)]">{formatCompactMetric(totalViews)}</span>
             <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mt-1">TOTAL READS</span>
           </div>
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <span className="text-2xl sm:text-3xl font-bold text-[var(--ink)]">
-              {articles.reduce((sum, a) => sum + (a.readingTime || 1) * 200, 0).toLocaleString()}
+              {formatCompactMetric(totalWords)}
             </span>
             <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-[var(--muted)] mt-1">WORDS WRITTEN</span>
           </div>

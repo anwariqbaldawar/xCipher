@@ -521,7 +521,7 @@ export default function DynamicChart({ config, chartType, animateOnce = true, fu
         open={isFullViewOpen}
         onClose={() => setIsFullViewOpen(false)}
         title="Chart full view"
-        media={<div className={`w-full ${chartType === 'pie' ? 'max-w-[min(90vw,900px)]' : 'max-w-[min(96vw,1100px)]'}`}>{renderChart()}</div>}
+        media={<div className={`w-full ${chartType === 'pie' ? 'max-w-[min(90vw,900px)]' : 'max-w-[min(calc(100vw-2rem),1100px)]'}`}><div className={chartType === 'pie' ? 'w-full' : 'chart-scroll-wrapper touch-pan-x touch-pan-y'} style={{ WebkitOverflowScrolling: 'touch' }}>{renderChart()}</div></div>}
         chartInteraction
         summary={chartSummary}
       />

@@ -13,6 +13,7 @@ import SpecSheetViewer from './SpecSheetViewer';
 import ScoreBreakdownViewer from './ScoreBreakdownViewer';
 import EditorialBlockViewer from './EditorialBlockViewer';
 import SingleImageViewer from './SingleImageViewer';
+import RelatedArticleViewer from './RelatedArticleViewer';
 import { parseEditorialBlock } from '@/lib/editorial-blocks';
 
 function stripLeadingEmptyParagraphs(content: string): string {
@@ -112,6 +113,9 @@ export default function ArticleBody({ html, globalLeaderboard, deviceName }: Pro
   const options = {
     replace: (domNode: DOMNode) => {
       if (domNode instanceof Element && domNode.attribs) {
+        if (domNode.attribs['data-type'] === 'related-article') {
+          return <RelatedArticleViewer slug={domNode.attribs['data-related-slug'] || ''} title={domNode.attribs['data-related-title'] || ''} category={domNode.attribs['data-related-category'] || ''} image={domNode.attribs['data-related-image'] || ''} heading={domNode.attribs['data-related-heading'] || ''} />;
+        }
         if (domNode.attribs['data-type'] === 'editorial-block') {
           const block = parseEditorialBlock(domNode.attribs['data-editorial-block']);
           return block ? <EditorialBlockViewer block={block} /> : <></>;

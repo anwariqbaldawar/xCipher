@@ -103,7 +103,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       zoomAt(current * Math.exp(-event.deltaY * 0.002), event.clientX, event.clientY);
     };
     const onPointerDown = (event: PointerEvent) => {
-      if (chartInteraction || (event.target as Element).closest("button")) return;
+      if ((chartInteraction && zoomRef.current.scale <= 1) || (event.target as Element).closest("button")) return;
       pointersRef.current.set(event.pointerId, pointFrom(event));
       pointerStartRef.current.set(event.pointerId, pointFrom(event));
       setIsInteracting(true);
@@ -124,7 +124,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       }
     };
     const onPointerMove = (event: PointerEvent) => {
-      if (chartInteraction || !pointersRef.current.has(event.pointerId)) return;
+      if (!pointersRef.current.has(event.pointerId)) return;
       event.preventDefault();
       pointersRef.current.set(event.pointerId, pointFrom(event));
       if (pointersRef.current.size >= 2 && pinchRef.current) {
@@ -163,7 +163,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       }
     };
     const onClick = (event: MouseEvent) => {
-      if ((event.target as Element).closest("button") || Date.now() - lastTouchRef.current < 700 || zoomRef.current.scale > 1.01) return;
+      if (chartInteraction || (event.target as Element).closest("button") || Date.now() - lastTouchRef.current < 700 || zoomRef.current.scale > 1.01) return;
       if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       clickTimerRef.current = setTimeout(() => zoomAt(2, event.clientX, event.clientY), 230);
     };

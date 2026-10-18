@@ -57,7 +57,7 @@ function transformLink(tagName: string, attribs: Record<string, string>) {
 }
 
 const COMMON_ALLOWED_ATTRIBUTES = {
-  '*': ['class', 'style', 'data-type', 'data-editorial-block', 'data-callout-type', 'data-credit', 'data-youtube-video', 'data-youtube-id', 'data-config', 'data-chart-type', 'data-chart-data', 'data-chart-config', 'data-graph-definition', 'data-code', 'data-container-width', 'data-categories', 'data-overall-score', 'data-items', 'data-pros', 'data-cons', 'data-specs', 'data-scores', 'data-total-score'],
+  '*': ['class', 'style', 'data-type', 'data-editorial-block', 'data-callout-type', 'data-credit', 'data-youtube-video', 'data-youtube-id', 'data-config', 'data-chart-type', 'data-chart-data', 'data-chart-config', 'data-graph-definition', 'data-code', 'data-container-width', 'data-categories', 'data-overall-score', 'data-items', 'data-pros', 'data-cons', 'data-specs', 'data-scores', 'data-total-score', 'data-related-slug', 'data-related-title', 'data-related-category', 'data-related-image', 'data-related-heading', 'data-toc-exclude', 'data-wordcount-exclude', 'data-related-link', 'aria-label', 'aria-level'],
   'a': ['href', 'target', 'rel', 'title'],
   'img': ['src', 'alt', 'title', 'width', 'height'],
   'th': ['colspan', 'rowspan', 'colwidth'],

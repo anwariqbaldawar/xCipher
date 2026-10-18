@@ -46,6 +46,7 @@ import { ProsConsBlock } from "./extensions/ProsConsBlock";
 import { SpecSheetBlock } from "./extensions/SpecSheetBlock";
 import { ScoreBreakdownBlock } from "./extensions/ScoreBreakdownBlock";
 import { InteractiveChartBlock } from "@/lib/editor/extensions/InteractiveChartBlock";
+import { RelatedArticle } from "./extensions/RelatedArticle";
 import { SlashCommandList, getSuggestionItems } from "./SlashCommandList";
 import { EditorBubbleMenu } from "./EditorBubbleMenu";
 import ImageDropzone from "./ImageDropzone";
@@ -521,6 +522,7 @@ export default function ArticleEditor({
       ScoreBreakdownBlock,
       InteractiveChartBlock,
       EditorialBlock,
+      RelatedArticle,
       Table.configure({
         resizable: true,
         HTMLAttributes: { class: 'w-full min-w-full table-auto text-left' },

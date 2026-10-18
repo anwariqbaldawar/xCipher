@@ -357,7 +357,7 @@ export async function submitArticle(id: string): Promise<ActionResponse> {
     }
     const r2Content = await fetchFromR2(articleData.contentUrl);
     const articleHtml = typeof r2Content === "object" ? r2Content?.html : r2Content || "";
-    const textContent = articleHtml.replace(/<[^>]+>/g, '');
+    const textContent = articleHtml.replace(/<aside\b[^>]*data-type=[\"']related-article[\"'][\s\S]*?<\/aside>/gi, ' ').replace(/<[^>]+>/g, ' ');
     const wordCount = textContent.split(/\s+/).filter(Boolean).length;
     if (wordCount < 50) {
       return { ok: false, code: "VALIDATION", message: `Content must be at least 50 words. Currently: ${wordCount}` };

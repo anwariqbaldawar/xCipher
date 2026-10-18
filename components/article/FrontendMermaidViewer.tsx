@@ -106,8 +106,8 @@ export default function FrontendMermaidViewer({ graphDefinition, containerWidth 
           dangerouslySetInnerHTML={{ __html: svgContent }}
         />
         {svgContent && !svgContent.includes('mermaid-error') && (
-          <button type="button" onClick={() => setFullView(true)} aria-label="Open diagram full view" title="Open diagram full view" className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-neutral-900/60 text-white shadow-lg backdrop-blur-xl transition hover:bg-neutral-800/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-            <Maximize2 size={18} />
+          <button type="button" onClick={() => setFullView(true)} aria-label="Open diagram full view" title="Open diagram full view" className="absolute right-2 top-2 z-10 flex h-8 w-8 sm:h-[34px] sm:w-[34px] items-center justify-center rounded-lg border border-zinc-200/80 bg-white/80 text-zinc-700 shadow-sm backdrop-blur-md transition-all duration-200 hover:scale-105 hover:bg-white hover:text-zinc-950 dark:border-white/10 dark:bg-zinc-900/75 dark:text-zinc-300 dark:hover:bg-zinc-800/90 dark:hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]">
+            <Maximize2 size={16} strokeWidth={1.5} />
           </button>
         )}
       </div>
