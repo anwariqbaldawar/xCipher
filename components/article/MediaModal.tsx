@@ -37,6 +37,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
   const pointerStartRef = useRef(new Map<number, Point>());
   const pinchedPointersRef = useRef(new Set<number>());
   const dragRef = useRef<{ id: number; x: number; y: number; originX: number; originY: number } | null>(null);
+  const chartPanRef = useRef<{ pointerId?: number; touchId?: number; x: number; y: number; left: number; top: number; viewport: HTMLElement; verticalViewport: HTMLElement } | null>(null);
   const pinchRef = useRef<{ distance: number; scale: number } | null>(null);
   const lastTapRef = useRef<{ time: number; x: number; y: number } | null>(null);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -94,6 +95,50 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
 
     const pointFrom = (event: PointerEvent): Point => ({ x: event.clientX, y: event.clientY });
     const distanceBetween = (points: Point[]) => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+
+    const findChartViewport = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return null;
+      return target.closest<HTMLElement>(".chart-scroll-wrapper") || canvas.querySelector<HTMLElement>(".chart-scroll-wrapper");
+    };
+    const onChartTouchStart = (event: TouchEvent) => {
+      if (!chartInteraction || event.touches.length !== 1) return;
+      const viewport = findChartViewport(event.target);
+      if (!viewport) return;
+      viewport.style.overflowX = "auto";
+      viewport.style.overflowY = "auto";
+      chartPanRef.current = { touchId: event.touches[0].identifier, x: event.touches[0].clientX, y: event.touches[0].clientY, left: viewport.scrollLeft, top: (viewport.scrollHeight > viewport.clientHeight ? viewport : canvas).scrollTop, viewport, verticalViewport: viewport.scrollHeight > viewport.clientHeight ? viewport : canvas };
+    };
+    const onChartTouchMove = (event: TouchEvent) => {
+      const pan = chartPanRef.current;
+      if (!chartInteraction || pan?.touchId === undefined || event.touches.length !== 1) return;
+      const touch = Array.from(event.touches).find(point => point.identifier === pan.touchId);
+      if (!touch) return;
+      const dx = touch.clientX - pan.x;
+      const dy = touch.clientY - pan.y;
+      if (Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      event.preventDefault();
+      pan.viewport.scrollLeft = pan.left - dx;
+      pan.verticalViewport.scrollTop = pan.top - dy;
+    };
+    const onChartTouchEnd = () => { chartPanRef.current = null; };
+    const onChartPointerDown = (event: PointerEvent) => {
+      if (!chartInteraction || event.pointerType !== "mouse" || (event.target as Element).closest("button")) return;
+      const viewport = findChartViewport(event.target);
+      if (!viewport) return;
+      chartPanRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: (viewport.scrollHeight > viewport.clientHeight ? viewport : canvas).scrollTop, viewport, verticalViewport: viewport.scrollHeight > viewport.clientHeight ? viewport : canvas };
+    };
+    const onChartPointerMove = (event: PointerEvent) => {
+      const pan = chartPanRef.current;
+      if (!chartInteraction || pan?.pointerId !== event.pointerId) return;
+      if (event.buttons === 0) { chartPanRef.current = null; return; }
+      const dx = event.clientX - pan.x;
+      const dy = event.clientY - pan.y;
+      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      event.preventDefault();
+      pan.viewport.scrollLeft = pan.left - dx;
+      pan.verticalViewport.scrollTop = pan.top - dy;
+    };
+    const onChartPointerEnd = () => { chartPanRef.current = null; };
 
     const onWheel = (event: WheelEvent) => {
       if ((event.target as Element).closest("button")) return;
@@ -177,6 +222,16 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     const preventGesture = (event: Event) => event.preventDefault();
 
     canvas.addEventListener("wheel", onWheel, { passive: false });
+    if (chartInteraction) {
+      canvas.addEventListener("touchstart", onChartTouchStart, { passive: true, capture: true });
+      canvas.addEventListener("touchmove", onChartTouchMove, { passive: false, capture: true });
+      canvas.addEventListener("touchend", onChartTouchEnd, { passive: true, capture: true });
+      canvas.addEventListener("touchcancel", onChartTouchEnd, { passive: true, capture: true });
+      canvas.addEventListener("pointerdown", onChartPointerDown, true);
+      document.addEventListener("pointermove", onChartPointerMove, true);
+      document.addEventListener("pointerup", onChartPointerEnd, true);
+      document.addEventListener("pointercancel", onChartPointerEnd, true);
+    }
     canvas.addEventListener("pointerdown", onPointerDown, { passive: false });
     document.addEventListener("pointermove", onPointerMove, { passive: false });
     document.addEventListener("pointerup", onPointerUp);
@@ -189,6 +244,16 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     return () => {
       document.body.style.overflow = oldOverflow;
       canvas.removeEventListener("wheel", onWheel);
+      if (chartInteraction) {
+        canvas.removeEventListener("touchstart", onChartTouchStart, true);
+        canvas.removeEventListener("touchmove", onChartTouchMove, true);
+        canvas.removeEventListener("touchend", onChartTouchEnd, true);
+        canvas.removeEventListener("touchcancel", onChartTouchEnd, true);
+        canvas.removeEventListener("pointerdown", onChartPointerDown, true);
+        document.removeEventListener("pointermove", onChartPointerMove, true);
+        document.removeEventListener("pointerup", onChartPointerEnd, true);
+        document.removeEventListener("pointercancel", onChartPointerEnd, true);
+      }
       canvas.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("pointermove", onPointerMove);
       document.removeEventListener("pointerup", onPointerUp);
