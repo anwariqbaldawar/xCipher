@@ -204,7 +204,7 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
       setIsInteracting(false);
       updateZoom(INITIAL_ZOOM);
     };
-  }, [open, onClose, updateZoom, zoomAt]);
+  }, [open, onClose, updateZoom, zoomAt, chartInteraction]);
 
   useEffect(() => {
     if (!open) return;
@@ -232,14 +232,15 @@ export default function MediaModal({ open, onClose, title, media, caption, summa
     >
       <div
         ref={canvasRef}
-        className={`relative flex w-full min-h-0 flex-1 ${chartInteraction ? "touch-pan-x touch-pan-y overflow-auto [webkit-overflow-scrolling:touch]" : "touch-none overflow-hidden"} select-none items-center justify-center p-4 sm:p-8 ${hasSummary ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+        className={`relative flex w-full min-h-0 flex-1 ${chartInteraction ? "touch-pan-x touch-pan-y overflow-auto items-start justify-start" : "touch-none overflow-hidden items-center justify-center"} select-none p-4 sm:p-8 ${hasSummary ? "md:w-auto" : ""} ${zoom.scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
+        style={chartInteraction ? { touchAction: 'pan-x pan-y', WebkitOverflowScrolling: 'touch' } : undefined}
         onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
         aria-label="Interactive image canvas. Pinch or double-tap to zoom on touchscreens; use the wheel or double-click to zoom on desktop."
       >
         <div
           ref={mediaRef}
-          className="flex max-h-full max-w-full items-center justify-center will-change-transform"
-          style={{ transform: `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out", maxWidth: "calc(100vw - 2rem)", maxHeight: "calc(100dvh - 2rem)" }}
+          className={`flex max-h-full max-w-full items-center justify-center will-change-transform ${chartInteraction ? 'w-full min-w-0' : ''}`}
+          style={{ transform: `translate3d(${zoom.x}px, ${zoom.y}px, 0) scale(${zoom.scale})`, transformOrigin: "center center", transition: isInteracting ? "none" : "transform 100ms ease-out", maxWidth: chartInteraction ? "none" : "calc(100vw - 2rem)", maxHeight: chartInteraction ? "none" : "calc(100dvh - 2rem)" }}
         >
           {media}
         </div>

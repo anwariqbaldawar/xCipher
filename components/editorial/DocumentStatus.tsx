@@ -2,7 +2,7 @@
 
 import { type Editor, useEditorState } from '@tiptap/react';
 import { Maximize2, Minimize2 } from 'lucide-react';
-import { getDocumentCounts, getActiveSection } from '@/lib/editor/document-state';
+import { getDocumentCounts } from '@/lib/editor/document-state';
 
 interface DocumentStatusProps {
   editor: Editor;
@@ -27,7 +27,14 @@ export default function DocumentStatus({ editor, zoom, setZoom, status, isFullsc
     return {
       words,
       characters,
-      section: getActiveSection(editor),
+      section: (() => {
+        const position = editor.state.selection.from;
+        let section: string | null = null;
+        editor.state.doc.descendants((node, nodePosition) => {
+          if (node.type.name === 'heading' && nodePosition < position) section = node.textContent;
+        });
+        return section;
+      })(),
     };
   } });
   const isBelowMin = counts.words < 50;

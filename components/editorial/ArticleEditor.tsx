@@ -476,6 +476,9 @@ export default function ArticleEditor({
   }, []);
 
   const editor = useEditor({
+    // This editor is rendered only in the browser via ArticleEditorClient.
+    // Opt in explicitly to avoid Tiptap's Next.js hydration advisory.
+    immediatelyRender: true,
     extensions: [
       Markdown,
       StarterKit.configure({

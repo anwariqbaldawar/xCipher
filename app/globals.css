@@ -9589,3 +9589,14 @@ body.is-article .prose pre {
     .glass-panel-hover { transition: box-shadow .18s ease, border-color .18s ease; }
     .glass-panel-hover:hover { transform: none; }
 }
+
+/* Full-view Mermaid SVG keeps its native vector dimensions for reliable touch and mouse panning. */
+.mermaid-fullview-canvas .mermaid-svg-container {
+  width: max-content !important;
+  max-width: none !important;
+}
+.mermaid-fullview-canvas .mermaid-svg-container svg {
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+}
